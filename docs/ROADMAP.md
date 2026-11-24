@@ -57,7 +57,7 @@ Known gaps
 - DEM at ~45 m spacing smooths small headwalls and rollers.
 
 ## Trail-map start screen (Nov 24, 2026, shipped)
-- The start card's list is replaced by the mountain itself: the whole-mountain mesh seen from the south-east (Bear in front, Ramshead at the back), with every named trail draped as a ribbon in its difficulty colour and lifts in red (one merged mesh, ~15k triangles, shown only on the map).
+- The start card's list is replaced by the mountain itself: the whole-mountain mesh, seen (since Nov 24 evening) from the north-east over Snowshed with K-1 Base in the middle and Killington Peak, Skye Peak and Snowdon behind; first version looked from the south-east, with every named trail draped as a ribbon in its difficulty colour and lifts in red (one merged mesh, ~15k triangles, shown only on the map).
 - Pins on the seven peaks (name + elevation of the lift top) and five bases. Overlapping labels collapse to tappable dots; the selected pin always gets its label.
 - Tap a peak: the camera flies down its fall line and looks back up at it; the sheet lists its trails, "Pick a trail" (the existing picker) and "Ride up from <base>". Tap a base: the sheet lists its lifts. ✕ or a tap on empty map goes back to the overview.
 - Drag orbits (horizontal) and tilts (vertical); pinch or wheel zooms. The sheet scrolls on its own.

@@ -1,7 +1,7 @@
 /* ---------- start screen: a live 3D trail map of the mountain ----------
    Trails are draped on the terrain in their difficulty colours, lifts in red. Pins sit on the seven peaks and five bases.
    Drag to orbit, pinch (or wheel) to zoom, tap a pin: the camera flies there and a bottom sheet offers the trails or lifts. */
-const MAP_HOME={yaw:0.6,pitch:0.9,dist:6300,tx:-300,tz:-400};   /* from the south-east, Bear in front, Ramshead at the back */
+const MAP_HOME={yaw:2.04,pitch:0.49,dist:7300,tx:300,tz:-700};   /* from the north-east over Snowshed: K-1 Base centre, Killington Peak, Skye Peak and Snowdon behind (Kevin's pick) */
 const MAP={...MAP_HOME,goal:null,sel:null,on:false,pins:[]};
 /* draped ribbons: one merged mesh, visible only on the map */
 const mapLayer=(function(){
