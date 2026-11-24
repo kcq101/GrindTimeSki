@@ -188,7 +188,7 @@ function physics(dt){
   const along=gx*dx+gz*dz;
   const g=9.8;
   let a=-g*along/Math.sqrt(1+along*along);
-  const ti=trailInfo(S.x,S.z),off=(!ti.tr||ti.d>ti.w+1)&&!inPad(S.x,S.z);
+  const ti=trailInfo(S.x,S.z),off=(!ti.tr||ti.d>ti.w+1)&&!inPad(S.x,S.z)&&!S.pre;   /* the flats around a lift top are packed out, not powder */
   const mu=off?0.28:0.03;
   a-=g*mu*(S.v>0.1?1:0);
   const up=Math.max(0,-postS),cr=Math.max(0,postS);
@@ -196,7 +196,8 @@ function physics(dt){
   a-=0.7*up*(S.v>2?1:0);
   S.v+=a*dt;
   S.v*=1-Math.abs(steer)*0.22*dt;
-  if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
+  if(S.pre&&S.v<5.5)S.v+=2.2*dt;   /* skating across the top to the trail you want */
+  else if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
   else if(S.v<2.5&&S.state==='ride'&&off)S.v+=3.2*dt;
   S.v=clamp(S.v,0,36);
   const rate=steer*(2.3-Math.min(1.25,S.v/22));

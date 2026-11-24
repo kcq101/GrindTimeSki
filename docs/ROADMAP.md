@@ -83,6 +83,11 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Lift drop-off spots (Nov 24, 2026)
+- Lifts dropped you at the end of the unload ramp (then a few metres toward the main trail), which on several lifts was 5–15 m below trail starts you were meant to choose from (Skye Peak east: Skyeburst and Stash Way 14 m up). `topSpot(L)` now picks the drop-off: a 6 m grid within 50 m of the lift top, on a trail or in the cleared area, outside the top terminal (12 × 16 m past the line) with the chase camera clear of it, minimising the climb needed to reach the first 10 m of every trail off that top, then highest, then nearest. It faces the first trail with no terminal in view. ~33 ms per lift, computed in the background after load.
+- Before you've picked a trail, the flats around a lift top count as packed snow (no deep-snow drag) and you skate up to ~12 mph.
+- New test `tools/test/lift-tops.js`: from each drop-off, ski like a player to each trail's sign. 72/72 reachable (was 50/72); median 11 s, longest 25 s (Ovation from Skye Peak).
+
 ## Pause opens the trail map (Nov 24, 2026)
 - Replaced the pause card. Pause freezes the run and opens the 3D map from behind and above the skier (1,500 m out, looking 250 m down the fall line) with a blinking red "You" marker. Top bar: "Paused · trail · time" and ✕.
 - Sheet: Keep skiing, End run here (not at a lift top). Tapping a peak or base works as on the start screen; choosing a lift or "pick a trail" asks "End this run?" (time and trail; the run won't count) with Cancel. At a lift top before you've picked a trail there's nothing to lose, so no confirm.

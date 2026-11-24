@@ -52,6 +52,7 @@ npx playwright install chromium # or set CHROME=/path/to/chrome
 npm run test:shots              # screenshots + draw calls/triangles -> test-output/
 npm run test:autopilot          # ski every pickable trail; optional names: node tools/test/autopilot.js Superstar
 npm run test:terrain            # sharpest height changes along trail centrelines
+npm run test:lifttops           # from each lift's drop-off spot, can you reach every trail off that top?
 ```
 
 Tests use a software renderer, so frame rates are relative, not phone numbers. Use the Performance overlay toggle on the start card on a real phone.

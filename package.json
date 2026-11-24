@@ -7,6 +7,7 @@
     "bake": "sh tools/bake/run.sh",
     "test:shots": "node tools/test/screenshots.js",
     "test:autopilot": "node tools/test/autopilot.js",
+    "test:lifttops": "node tools/test/lift-tops.js",
     "test:terrain": "node tools/test/terrain-steps.js"
   },
   "devDependencies": {

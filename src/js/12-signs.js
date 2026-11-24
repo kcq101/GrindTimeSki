@@ -128,11 +128,25 @@ function signFrame(dt){
 }
 
 /* ---------- top of the lift: step off and ski toward a sign ---------- */
+/* where the lift drops you: the spot (6 m grid within 50 m of the lift top, on a trail or in the cleared area around it, outside
+   the top terminal, with the chase camera clear of it too) from which the least climbing reaches the first 10 m of every trail
+   off this top; ties go to the higher, then nearer, spot. Faces the first trail you can see without the terminal in the way. Computed once per lift. */
+function topSpot(L){if(L._spot)return L._spot;const sg=liftSigns(L),inTerm=(x,z)=>{const a=(x-L.tx)*L.dx+(z-L.tz)*L.dz,b=(x-L.tx)*L.px+(z-L.tz)*L.pz;return a>-4&&a<20&&Math.abs(b)<10;};
+  const goals=sg.map(e=>trailPt(e.tr,Math.min(10,e.tr.L*0.3)));let best=null;
+  for(let gx=-48;gx<=48;gx+=6)for(let gz=-48;gz<=48;gz+=6){const r=Math.hypot(gx,gz);if(r>50)continue;const x=L.tx+gx,z=L.tz+gz;
+    if(inTerm(x,z))continue;if(r>36){const t=trailInfo(x,z);if(!t.tr||t.d>t.w)continue;}
+    /* face the first trail (in list order) whose direction has a clear view (nothing of the terminal in the next 20 m) and a clear camera
+       spot 7 m behind; failing that, face straight away from the terminal */
+    const ok=t=>{const fx=Math.sin(t),fz=Math.cos(t);if(inTerm(x-fx*7,z-fz*7))return false;for(let d=4;d<=20;d+=4)if(inTerm(x+fx*d,z+fz*d))return false;return true;};
+    let th=null;for(const g of goals){if(Math.hypot(g[0]-x,g[1]-z)<4)continue;const t=Math.atan2(g[0]-x,g[1]-z);if(ok(t)){th=t;break;}}
+    if(th===null){const t=Math.atan2(x-(L.tx+L.dx*8),z-(L.tz+L.dz*8));if(!ok(t))continue;th=t;}
+    const h0=H(x,z);let climb=0;
+    for(const [qx,qz] of goals){const n=Math.max(2,Math.ceil(Math.hypot(qx-x,qz-z)/8));let mx=-1e9;for(let i=1;i<=n;i++)mx=Math.max(mx,H(x+(qx-x)*i/n,z+(qz-z)*i/n));climb+=Math.max(0,mx-h0-0.5);}
+    const score=climb*10-h0+r*0.02;if(!best||score<best.score)best={score,x,z,th};}
+  if(!best){const x=L.bx+L.dx*(L.len+16),z=L.bz+L.dz*(L.len+16);best={x,z,th:L.ry};}
+  return L._spot=[best.x,best.z,best.th];}
 function topStart(L){
-  /* face the lift's main trail (the first one on its list) */
-  const s=L.len+16,x0=L.bx+L.dx*s,z0=L.bz+L.dz*s,sg=liftSigns(L),th=sg.length?Math.atan2(sg[0].x-x0,sg[0].z-z0):L.ry,ux=Math.sin(th),uz=Math.cos(th);
-  /* step a few metres that way, so the chase camera (7 m behind) is clear of the top terminal */
-  let k=4;while(k<60&&Math.hypot(x0+ux*(k-8)-L.tx,z0+uz*(k-8)-L.tz)<28)k+=3;const x=x0+ux*k,z=z0+uz*k;
+  const [x,z,th]=topSpot(L);
   RUN={x,z,th,top:L.top,name:'',dest:null,tr:null};RUN.h0=H(x,z);RUN.h1=RUN.h0-200;
   updateTiles(x,z,999);reset();_hud.time=_hud.spd=_hud.vert=null;S.pre=L;S.go=false;S.v=0;S.state='ride';showHud(true);
   $('ttext').textContent=L.top.toUpperCase();$('ticon').innerHTML='<span style="font-size:15px">▲</span>';setTxt('lblBot','Pick a trail');
@@ -163,4 +177,6 @@ $('pauseBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropag
 $('listBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state!=='ride'||!S.pre)return;S.state='pick';showPicker(S.pre,false);pickFrom='top';$('pickBack').classList.remove('hidden');});
 $('mapResume').onclick=resumeGame;
 window.addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='p'||e.key==='P'){if(S.state==='ride')pauseGame();else if(S.state==='paused')resumeGame();}});
-Object.assign(window.__kr,{topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});
+/* work out every lift's drop-off spot in the background after load, one lift per tick, so unloading never hitches */
+setTimeout(function spots(i=0){const L=LIFTS[i];if(!L)return;if(L.trails.length)topSpot(L);setTimeout(()=>spots(i+1),120);},4000);
+Object.assign(window.__kr,{topSpot,topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});
