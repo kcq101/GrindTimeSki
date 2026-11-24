@@ -42,6 +42,35 @@
   .stats small{font-size:11px;color:#5b6b7c;font-weight:600}
   .pb{font-size:13px;text-align:center;color:#5b6b7c;margin-bottom:12px}
   .hidden{display:none!important}
+  #map{position:fixed;inset:0;touch-action:none;z-index:3}
+  #mapTop{position:absolute;top:12px;left:14px;padding:6px 11px;border-radius:14px;background:rgba(20,32,46,.6);color:#fff;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;pointer-events:none}
+  #pins{position:absolute;inset:0;pointer-events:none}
+  .pin{position:absolute;left:0;top:0;pointer-events:auto;border:0;padding:6px 10px 5px;border-radius:10px;background:#14202e;color:#fff;font:inherit;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap;margin-top:-9px;-webkit-tap-highlight-color:transparent}
+  .pin::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:inherit;border-top-color:#14202e}
+  .pin b{display:block;font-size:13px;font-weight:800;line-height:1.15}
+  .pin small{display:block;font-size:10px;font-weight:600;opacity:.75}
+  .pin.base{background:#fff;color:#14202e;padding:4px 9px 4px 7px;display:flex;gap:5px;align-items:center}
+  .pin.base::after{border-top-color:#fff}
+  .pin.base i{font-style:normal;color:#d8342a;font-size:11px}
+  .pin.base b{font-size:12px}
+  .pin.sel{background:#e8432f;color:#fff;z-index:2;transform-origin:50% 100%}
+  .pin.sel::after{border-top-color:#e8432f}
+  .pin.mini{width:14px;height:14px;padding:0;border-radius:50%;border:2px solid #fff;overflow:hidden;color:transparent;margin-top:-4px}
+  .pin.mini *{display:none}.pin.mini::after{content:'';display:block;position:absolute;inset:-14px;border:0;margin:0}
+  .pin.base.mini{background:#fff;border-color:#d8342a}
+  #sheet{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:480px;max-height:58vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;color:#14202e;border-radius:18px 18px 0 0;padding:18px 18px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.25);touch-action:pan-y}
+  #sheet h1{margin:2px 0 0;font-size:22px;font-weight:800}
+  #sheet .k{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#5b6b7c;font-weight:700;padding-right:36px}
+  #sheet p{margin:6px 0;font-size:14px;line-height:1.45;color:#334354}
+  #sheet p.attr{font-size:11px;color:#7a8896;margin:10px 0 0;text-align:center}
+  #sheet .row{display:flex;gap:8px}#sheet .row .btn{flex:1}
+  #sheet .x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:#eef2f6;color:#14202e;font-size:15px;font-weight:800;cursor:pointer}
+  #sheet{position:absolute}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:14px;padding:5px 10px 5px 8px;font-size:13px;font-weight:600}
+  .chip .dia,.chip .sq,.chip .ci{width:9px;height:9px;box-shadow:none}
+  .chip .dia{border-color:#111}
+  .chip.more{color:#5b6b7c}
   .ci{width:12px;height:12px;border-radius:50%;background:#2f9e44;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
   .tico{flex:none;width:30px;height:30px;border-radius:8px;background:#e6ecf2;justify-content:center}
   .lift.rec .tico{background:#2a3a4c}
@@ -96,10 +125,17 @@
 <div id="perf" class="hidden"></div>
 <div id="thumb"></div>
 
+<div class="hidden" id="map">
+  <div id="mapTop">Killington Run</div>
+  <div id="pins"></div>
+  <div id="sheet"></div>
+</div>
+
 <div class="ov hidden" id="start">
   <div class="card">
+    <button class="btn alt" id="startBack" style="margin:0 0 12px">‹ Back to the map</button>
     <div class="k">Killington Run · the real mountain</div>
-    <h1>Where are you dropping in?</h1>
+    <h1>All peaks</h1>
     <p style="font-size:13px;margin:6px 0 2px">USGS terrain and every OpenStreetMap trail from Ramshead to Bear Mountain: 190+ trails, 15 lifts.</p>
     <div id="peakList"></div>
     <button class="btn alt" id="goLift" style="margin-top:10px">▲ Start at K-1 Base · ride a chair up</button>
@@ -140,7 +176,7 @@
     <div id="liftList"></div>
     <div class="sess" id="sess"></div>
     <button class="btn alt" id="again">Skip the chair · ride it again</button>
-    <button class="btn alt" id="toMenu">Pick another peak</button>
+    <button class="btn alt" id="toMenu">Back to the trail map</button>
   </div>
 </div>
 
@@ -941,7 +977,7 @@ const ft=m=>Math.round(m*3.281/10)*10;
 function runFromTrail(tr,top){let i=0,hm=-1e9,im=0;for(let q=0;q<tr.s.length-2&&tr.cs[q]<Math.min(150,tr.L*0.5);q++){const h=H(tr.s[q][0],tr.s[q][1]);if(h>hm+0.3){hm=h;im=q;}}
   i=im;while(i<tr.s.length-2&&tr.cs[i]-tr.cs[im]<Math.min(10,tr.L*0.08))i++;let j=i;while(j<tr.s.length-1&&tr.cs[j]-tr.cs[i]<30)j++;const p=tr.s[i],q=tr.s[j];
   RUN={x:p[0],z:p[1],th:Math.atan2(q[0]-p[0],q[1]-p[1]),top:top||shortName(tr.name),name:tr.name,dest:tr.dest,tr};RUN.h0=H(RUN.x,RUN.z);RUN.h1=RUN.dest?Math.min(RUN.dest.h,RUN.h0-30):RUN.h0-200;}
-function dropIn(tr,top){$('pick').classList.add('hidden');$('start').classList.add('hidden');$('finish').classList.add('hidden');startAudio();
+function dropIn(tr,top){$('map').classList.add('hidden');$('pick').classList.add('hidden');$('start').classList.add('hidden');$('finish').classList.add('hidden');startAudio();
   fade(()=>{runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.path=[tr.name];toast(shortName(tr.name));});}
 /* the card at the top of a lift (or from the menu): every trail off this top, with its real length and drop */
 let pickFrom=null;
@@ -965,7 +1001,7 @@ function showLifts(base,boxId){const box=$(boxId);box.innerHTML='';
     b.onclick=()=>startLift(L);box.appendChild(b);});}
 let camSnapLift=false,lookYaw=0;
 function startLift(L){
-  $('finish').classList.add('hidden');$('start').classList.add('hidden');$('pick').classList.add('hidden');startAudio();
+  $('map').classList.add('hidden');$('finish').classList.add('hidden');$('start').classList.add('hidden');$('pick').classList.add('hidden');startAudio();
   fade(()=>{
     S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
     myChair.visible=false;myCab.visible=false;myRide=L.gond?myCab:myChair;
@@ -1011,8 +1047,8 @@ function unload(L){
 $('skipBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='lift')unload(S.lift);});
 $('endBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='ride'){S.endBase=null;S.endWhy='Run ended';S.state='done';finish();}});
 $('goLift').onclick=()=>{$('start').classList.add('hidden');$('pickK').textContent='K-1 Base';$('pickH').textContent='Pick a lift';showLifts(BASES[0],'pickList');$('pickBack').classList.remove('hidden');pickFrom='menu';$('pick').classList.remove('hidden');};
-$('pickBack').onclick=()=>{$('pick').classList.add('hidden');$('start').classList.remove('hidden');};
-$('toMenu').onclick=()=>{$('finish').classList.add('hidden');S.state='menu';showHud(false);$('start').classList.remove('hidden');};
+$('pickBack').onclick=()=>openMap();
+$('toMenu').onclick=()=>openMap();
 $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!perfOn);$('perfBtn').textContent='Performance overlay: '+(perfOn?'on':'off');};
 (function(){const box=$('peakList');['ss','k1','bear','sn6','ne','skq','rh'].map(LIFT).filter(Boolean).forEach((L,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');
   b.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.top+'</b><small>'+L.trails.slice(0,4).map(t=>shortName(t.name)+' '+DSYM[t.diff]).join(' · ')+'</small><small>Top of '+L.name+' · '+L.trails.length+' trails</small></div><div class="go">›</div>';
@@ -1191,7 +1227,7 @@ function perfHud(ms,dt){if(!perfOn)return;_pf.n++;_pf.t+=dt;_pf.ms+=ms;if(_pf.t<
 function frame(now){
   const raw=now-last,fdt=Math.min(0.1,raw/1000),dt=Math.min(0.05,raw/1000);last=now;fcount++;
   adaptRes(raw,dt);perfHud(raw,dt);
-  updateChairs(dt);updCrowd(now);
+  updateChairs(dt);updCrowd(now);mapFrame(dt);
   {const tx=S.state==='menu'?MENU.tx:S.x+Math.sin(S.th)*60,tz=S.state==='menu'?MENU.tz:S.z+Math.cos(S.th)*60;
    if(_tilePend>0||Math.abs(tx-_tileX)+Math.abs(tz-_tileZ)>12){const todo=updateTiles(tx,tz,2);_tilePend=Math.max(0,todo-2);_tileX=tx;_tileZ=tz;}}
   if(S.state==='ride'||S.state==='finishing'){
@@ -1219,8 +1255,6 @@ function frame(now){
     updLift(dt);S.shake=Math.max(0,S.shake-dt);
   } else if(S.state==='done'||S.state==='pick'){
     updModel(dt,false);const t=now/1000;camera.position.set(S.x+6*Math.sin(t*0.4),H(S.x,S.z)+2.4,S.z+6*Math.cos(t*0.4));camera.lookAt(S.x,H(S.x,S.z)+1.1,S.z);
-  } else if(S.state==='menu'){
-    const t=now/1000,a=0.2+0.32*Math.sin(t*0.045),cx=40+1300*Math.sin(a),cz=-120-1300*Math.cos(a);camera.position.set(cx,Math.max(Bm(cx,cz),880)+240,cz);camera.lookAt(-380,1010,260);
   }
   endFrame(now,dt);
 }
@@ -1254,7 +1288,124 @@ window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.
 runFromTrail(TRAILS.filter(t=>t.name==='Superstar').sort((a,b)=>b.L-a.L)[0],'Skye Peak');reset();S.state='menu';
 requestAnimationFrame(frame);
 updateTiles(MENU.tx,MENU.tz,999);
-loadModel().then(()=>{reset();document.getElementById('loading').remove();$('start').classList.remove('hidden');});
+loadModel().then(()=>{reset();document.getElementById('loading').remove();openMap();});
+/* ---------- start screen: a live 3D trail map of the mountain ----------
+   Trails are draped on the terrain in their difficulty colours, lifts in red. Pins sit on the seven peaks and five bases.
+   Drag to orbit, pinch (or wheel) to zoom, tap a pin: the camera flies there and a bottom sheet offers the trails or lifts. */
+const MAP_HOME={yaw:0.6,pitch:0.9,dist:6300,tx:-300,tz:-400};   /* from the south-east, Bear in front, Ramshead at the back */
+const MAP={...MAP_HOME,goal:null,sel:null,on:false,pins:[]};
+/* draped ribbons: one merged mesh, visible only on the map */
+const mapLayer=(function(){
+  const P=[],C=[],I=[],col={g:new THREE.Color(0x2fb34a),b:new THREE.Color(0x2463e6),k:new THREE.Color(0x111111),dd:new THREE.Color(0x111111),lift:new THREE.Color(0xd8342a)};
+  const lift=(x,z)=>Math.max(H(x,z),Bm(x,z))+5;
+  function ribbon(pts,half,c){const base=P.length/3,n=pts.length;
+    for(let i=0;i<n;i++){const a=pts[Math.max(0,i-1)],b=pts[Math.min(n-1,i+1)],dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz)||1,px=-dz/l*half,pz=dx/l*half;
+      for(const sd of [-1,1]){const x=pts[i][0]+px*sd,z=pts[i][1]+pz*sd;P.push(x,lift(x,z),z);C.push(c.r,c.g,c.b);}
+      if(i>0){const k=base+i*2;I.push(k-2,k,k-1,k-1,k,k+1);}}}
+  TRAILS.forEach(tr=>{if(!tr.name||tr.L<60)return;const s=tr.s,pts=[];for(let i=0;i<s.length;i+=4)pts.push(s[i]);if(pts[pts.length-1]!==s[s.length-1])pts.push(s[s.length-1]);
+    ribbon(pts,tr.k===1?5:7.5,col[tr.diff]||col.b);});
+  LIFTS.forEach(L=>{const pts=[],n=Math.max(2,Math.ceil(L.len/30));for(let i=0;i<=n;i++)pts.push([L.bx+L.dx*L.len*i/n,L.bz+L.dz*L.len*i/n]);ribbon(pts,4,col.lift);});
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));g.setIndex(I);
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-40,side:THREE.DoubleSide}));
+  m.renderOrder=2;m.visible=false;m.frustumCulled=false;scene.add(m);return m;})();
+
+/* pins: peaks (top of a lift) and the bottom-of-the-mountain bases */
+const ftOf=m=>Math.round(m*3.281/10)*10;
+[['ss','Skye Peak'],['k1','Killington Peak'],['bear','Bear Mountain'],['sn6','Snowdon'],['ne',"Needle's Eye"],['skq','Skye Peak east'],['rh','Ramshead Peak']].forEach(([id,label])=>{
+  const L=LIFT(id);if(!L)return;
+  /* the view for this peak: from down the fall line of its trails, looking back up, centred a third of the way down */
+  let ex=0,ez=0;L.trails.forEach(t=>{const e=t.s[Math.min(t.s.length-1,Math.floor(t.s.length*0.6))];ex+=e[0];ez+=e[1];});ex/=L.trails.length||1;ez/=L.trails.length||1;
+  const vx=ex-L.tx,vz=ez-L.tz;
+  MAP.pins.push({kind:'peak',id,label,L,x:L.tx,z:L.tz,y:H(L.tx,L.tz)+8,pri:2,view:{yaw:Math.atan2(vx,vz),tx:L.tx+vx*0.4,tz:L.tz+vz*0.4}});});
+['k1','shs','rh','bear','sky1'].forEach(id=>{const b=BASES.find(b=>b.id===id);if(!b||!b.L.length)return;
+  /* the view for a base: from below it, looking up its lifts */
+  let ux=0,uz=0;b.L.forEach(L=>{ux+=L.tx-L.bx;uz+=L.tz-L.bz;});
+  MAP.pins.push({kind:'base',id:'b-'+id,label:b.name,b,x:b.x,z:b.z,y:H(b.x,b.z)+6,pri:1,view:{yaw:Math.atan2(-ux,-uz),tx:b.x+ux/b.L.length*0.3,tz:b.z+uz/b.L.length*0.3}});});
+const pinBox=$('pins');
+MAP.pins.forEach(p=>{const e=document.createElement('button');e.className='pin '+p.kind;e.dataset.id=p.id;
+  e.innerHTML=p.kind==='peak'?'<b>'+p.label+'</b><small>'+ftOf(p.L.ht).toLocaleString()+' ft</small>':'<i>▲</i><b>'+p.label+'</b>';
+  pinBox.appendChild(e);p.el=e;p.w=0;p.h=0;});
+
+/* the bottom sheet */
+function trailChip(t){return '<span class="chip">'+diffIcon(t.diff)+shortName(t.name)+'</span>';}
+function sheetIdle(){$('sheet').innerHTML='<div class="k">Killington, Vermont · the real mountain</div><h1>Where are you dropping in?</h1>'+
+  '<p>Tap a peak to drop in, or a base to ride a lift. Drag to look around, pinch to zoom.</p>'+
+  '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+
+  '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
+  $('mapList').onclick=$('mapHow').onclick=()=>{$('map').classList.add('hidden');$('start').classList.remove('hidden');};}
+function sheetFor(p){const sh=$('sheet');
+  if(p.kind==='peak'){const L=p.L,tr=L.trails;
+    sh.innerHTML='<button class="x" id="sheetX" aria-label="Back to the map">✕</button><div class="k">Top of '+L.name+' · '+ftOf(L.ht).toLocaleString()+' ft</div><h1>'+p.label+'</h1>'+
+      '<div class="chips">'+tr.slice(0,6).map(trailChip).join('')+(tr.length>6?'<span class="chip more">+'+(tr.length-6)+' more</span>':'')+'</div>'+
+      '<button class="btn" id="sheetGo">Pick a trail · '+tr.length+' from here ›</button>'+
+      '<button class="btn alt" id="sheetRide">▲ Ride up from '+L.base+' · '+mmss(L.real)+'</button>'+
+      '<p class="attr">Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
+    $('sheetGo').onclick=()=>{$('map').classList.add('hidden');showPicker(L,true);};
+    $('sheetRide').onclick=()=>startLift(L);
+  }else{const b=p.b;
+    sh.innerHTML='<button class="x" id="sheetX" aria-label="Back to the map">✕</button><div class="k">Base area · '+b.L.length+' lift'+(b.L.length>1?'s':'')+'</div><h1>'+b.name+'</h1><div id="sheetLifts"></div>'+
+      '<p class="attr">Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
+    const box=$('sheetLifts');b.L.forEach(L=>{const e=document.createElement('button');e.className='lift';
+      e.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.name+'</b><small>To '+L.top+' · '+L.serves+'</small><small>'+mmss(L.real)+' ride</small></div><div class="go">›</div>';
+      e.onclick=()=>startLift(L);box.appendChild(e);});}
+  $('sheetX').onclick=()=>mapSelect(null);}
+function mapSelect(id){const p=MAP.pins.find(q=>q.id===id)||null;MAP.sel=p;
+  MAP.pins.forEach(q=>q.el.classList.toggle('sel',q===p));
+  if(p){MAP.goal={...p.view,dist:3600,pitch:0.72};sheetFor(p);}
+  else{MAP.goal={...MAP_HOME,yaw:MAP.yaw};sheetIdle();}}
+function openMap(){S.state='menu';showHud(false);['start','pick','finish'].forEach(i=>$(i).classList.add('hidden'));$('map').classList.remove('hidden');
+  if(MAP.sel)sheetFor(MAP.sel);else sheetIdle();}
+function mapShown(){return S.state==='menu'&&!$('map').classList.contains('hidden');}
+
+/* camera: orbit around a target; the sheet covers the bottom, so the view centre sits a little high */
+let _mapFog=false;
+function mapCam(dt){
+  if(MAP.goal){const g=MAP.goal,k=1-Math.exp(-dt*3);let done=true;
+    for(const key in g){let d=g[key]-MAP[key];if(key==='yaw')d=Math.atan2(Math.sin(d),Math.cos(d));MAP[key]+=d*k;if(Math.abs(d)>(key==='dist'||key==='tx'||key==='tz'?1:0.002))done=false;}
+    if(done)MAP.goal=null;}
+  const cp=Math.cos(MAP.pitch),ty=Bm(MAP.tx,MAP.tz);
+  let cx=MAP.tx+Math.sin(MAP.yaw)*cp*MAP.dist,cz=MAP.tz+Math.cos(MAP.yaw)*cp*MAP.dist,cy=ty+Math.sin(MAP.pitch)*MAP.dist;
+  cy=Math.max(cy,Bm(cx,cz)+120);
+  if(camera.fov!==50){camera.fov=50;camera.updateProjectionMatrix();}
+  const w=window.innerWidth,h=window.innerHeight;camera.setViewOffset(w,h,0,Math.round(h*0.17),w,h);
+  camera.position.set(cx,cy,cz);camera.lookAt(MAP.tx,ty,MAP.tz);camera.updateMatrixWorld();
+}
+const _pv=new THREE.Vector3();
+function mapPins(){const w=window.innerWidth,h=window.innerHeight,top=56,bot=h-$('sheet').offsetHeight-8,placed=[];
+  const order=MAP.pins.slice().sort((a,b)=>(b===MAP.sel)-(a===MAP.sel)||b.pri-a.pri);
+  for(const p of order){_pv.set(p.x,p.y,p.z).project(camera);const e=p.el;
+    const sx=(_pv.x+1)/2*w,sy=(1-_pv.y)/2*h;
+    if(_pv.z>1||sx<-20||sx>w+20||sy<top||sy>bot){e.style.display='none';continue;}
+    e.style.display='';if(!p.w){p.w=e.offsetWidth;p.h=e.offsetHeight;}
+    const lx=clamp(sx,p.w/2+4,w-p.w/2-4),r=[lx-p.w/2,sy-p.h-10,lx+p.w/2,sy];let hit=false;for(const q of placed)if(r[0]<q[2]&&r[2]>q[0]&&r[1]<q[3]&&r[3]>q[1]){hit=true;break;}
+    e.classList.toggle('mini',hit);if(!hit)placed.push(r);
+    e.style.transform='translate('+(hit?sx:lx).toFixed(1)+'px,'+sy.toFixed(1)+'px) translate(-50%,-100%)';}}
+function mapFrame(dt){
+  const on=mapShown();
+  if(on!==MAP.on){MAP.on=on;mapLayer.visible=on;scene.fog.near=on?3500:300;scene.fog.far=on?14000:3800;camera.far=on?16000:6000;
+    if(!on){camera.clearViewOffset();camera.fov=64;}camera.updateProjectionMatrix();}
+  /* the map is the whole-mountain mesh plus ribbons; streamed tiles (detail + trees) would show as square patches, so hide them */
+  if(on)for(const t of tiles.values()){t.mesh.visible=false;if(t.low)t.low.visible=false;}
+  else if(MAP.tilesHidden)for(const t of tiles.values()){t.mesh.visible=true;if(t.low)t.low.visible=true;}
+  MAP.tilesHidden=on;
+  if(on){mapCam(dt);mapPins();}
+}
+
+/* gestures on the map (the sheet scrolls and takes its own taps) */
+{const el=$('map'),ptr=new Map();let tap=null,pinch=null;
+  const span=()=>{const [a,b]=[...ptr.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;};
+  el.addEventListener('pointerdown',e=>{if(e.target.closest('#sheet'))return;e.preventDefault();ptr.set(e.pointerId,{x:e.clientX,y:e.clientY});try{el.setPointerCapture(e.pointerId);}catch(err){}
+    if(ptr.size===1)tap={x:e.clientX,y:e.clientY,t:performance.now(),pin:e.target.closest('.pin')};else{tap=null;pinch={d:span(),dist:MAP.dist};}});
+  el.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(ptr.size===1){if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>9)tap=null;if(!tap){MAP.goal=null;MAP.yaw-=dx*0.006;MAP.pitch=clamp(MAP.pitch+dy*0.004,0.28,1.25);}}
+    else if(ptr.size===2&&pinch){MAP.goal=null;MAP.dist=clamp(pinch.dist*pinch.d/span(),2400,8000);}});
+  const up=e=>{if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);if(ptr.size<2)pinch=null;
+    if(tap&&e.type==='pointerup'&&performance.now()-tap.t<600){const pin=tap.pin;mapSelect(pin?pin.dataset.id:null);}tap=null;};
+  el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
+  el.addEventListener('wheel',e=>{e.preventDefault();MAP.goal=null;MAP.dist=clamp(MAP.dist*Math.exp(e.deltaY*0.0012),2400,8000);},{passive:false});
+}
+$('startBack').onclick=()=>openMap();
+window.__map={MAP,select:mapSelect,open:openMap,layer:mapLayer};
 })();
 </script>
 </body>

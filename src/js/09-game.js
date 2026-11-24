@@ -22,7 +22,7 @@ const ft=m=>Math.round(m*3.281/10)*10;
 function runFromTrail(tr,top){let i=0,hm=-1e9,im=0;for(let q=0;q<tr.s.length-2&&tr.cs[q]<Math.min(150,tr.L*0.5);q++){const h=H(tr.s[q][0],tr.s[q][1]);if(h>hm+0.3){hm=h;im=q;}}
   i=im;while(i<tr.s.length-2&&tr.cs[i]-tr.cs[im]<Math.min(10,tr.L*0.08))i++;let j=i;while(j<tr.s.length-1&&tr.cs[j]-tr.cs[i]<30)j++;const p=tr.s[i],q=tr.s[j];
   RUN={x:p[0],z:p[1],th:Math.atan2(q[0]-p[0],q[1]-p[1]),top:top||shortName(tr.name),name:tr.name,dest:tr.dest,tr};RUN.h0=H(RUN.x,RUN.z);RUN.h1=RUN.dest?Math.min(RUN.dest.h,RUN.h0-30):RUN.h0-200;}
-function dropIn(tr,top){$('pick').classList.add('hidden');$('start').classList.add('hidden');$('finish').classList.add('hidden');startAudio();
+function dropIn(tr,top){$('map').classList.add('hidden');$('pick').classList.add('hidden');$('start').classList.add('hidden');$('finish').classList.add('hidden');startAudio();
   fade(()=>{runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.path=[tr.name];toast(shortName(tr.name));});}
 /* the card at the top of a lift (or from the menu): every trail off this top, with its real length and drop */
 let pickFrom=null;
@@ -46,7 +46,7 @@ function showLifts(base,boxId){const box=$(boxId);box.innerHTML='';
     b.onclick=()=>startLift(L);box.appendChild(b);});}
 let camSnapLift=false,lookYaw=0;
 function startLift(L){
-  $('finish').classList.add('hidden');$('start').classList.add('hidden');$('pick').classList.add('hidden');startAudio();
+  $('map').classList.add('hidden');$('finish').classList.add('hidden');$('start').classList.add('hidden');$('pick').classList.add('hidden');startAudio();
   fade(()=>{
     S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
     myChair.visible=false;myCab.visible=false;myRide=L.gond?myCab:myChair;
@@ -92,8 +92,8 @@ function unload(L){
 $('skipBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='lift')unload(S.lift);});
 $('endBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='ride'){S.endBase=null;S.endWhy='Run ended';S.state='done';finish();}});
 $('goLift').onclick=()=>{$('start').classList.add('hidden');$('pickK').textContent='K-1 Base';$('pickH').textContent='Pick a lift';showLifts(BASES[0],'pickList');$('pickBack').classList.remove('hidden');pickFrom='menu';$('pick').classList.remove('hidden');};
-$('pickBack').onclick=()=>{$('pick').classList.add('hidden');$('start').classList.remove('hidden');};
-$('toMenu').onclick=()=>{$('finish').classList.add('hidden');S.state='menu';showHud(false);$('start').classList.remove('hidden');};
+$('pickBack').onclick=()=>openMap();
+$('toMenu').onclick=()=>openMap();
 $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!perfOn);$('perfBtn').textContent='Performance overlay: '+(perfOn?'on':'off');};
 (function(){const box=$('peakList');['ss','k1','bear','sn6','ne','skq','rh'].map(LIFT).filter(Boolean).forEach((L,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');
   b.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.top+'</b><small>'+L.trails.slice(0,4).map(t=>shortName(t.name)+' '+DSYM[t.diff]).join(' · ')+'</small><small>Top of '+L.name+' · '+L.trails.length+' trails</small></div><div class="go">›</div>';

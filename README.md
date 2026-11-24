@@ -4,6 +4,7 @@ An arcade ski game on the real Killington, Vermont: USGS terrain, every OpenStre
 
 **Play:** https://kcq101.github.io/GrindTimeSki/ (GitHub Pages from `main`; the root `index.html` redirects to `dist/`).
 
+- **Live trail map.** The start screen is the real mountain in 3D with every trail draped in its difficulty colour and lifts in red. Drag to orbit, pinch to zoom, tap a peak or base: the camera flies to it and a sheet offers its trails, the lift ride up, or the lifts at that base.
 - **Drop in from seven peaks.** Skye Peak, Killington Peak, Bear Mountain, Snowdon, Needle's Eye, Skye Peak's east side and Ramshead. Each has a picker listing its real trails with length, vertical drop and the base they lead to.
 - **Free-ride network.** Trails link up as they do on the mountain. Ski into any base (K-1, Snowshed, Ramshead, Bear Mountain, Skyeship) to finish, then pick your next chair or gondola. Great Eastern runs the full 3.5 miles from Skye Peak to the Skyeship base.
 - **Arcade handling.** Carve, tuck, jump with double boosts, flips and 360s. Moguls on Outer Limits, Devil's Fiddle and Ovation; the Deck crowd at Bear.
@@ -23,6 +24,7 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   08-input-audio      spray particles, touch/keyboard input, wind audio
   09-game             run flow: pickers, lift rides, physics, crashes, tricks
   10-loop             camera, fixed-step loop, HUD, finish card, test hooks (window.__kr)
+  11-map              start screen: 3D trail map, pins, bottom sheet, orbit/pinch gestures (window.__map)
 assets/               skier.glb, helmet.glb (embedded into the page at build time)
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json
 tools/build.py        bundles everything into dist/index.html

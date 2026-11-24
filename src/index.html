@@ -42,6 +42,35 @@
   .stats small{font-size:11px;color:#5b6b7c;font-weight:600}
   .pb{font-size:13px;text-align:center;color:#5b6b7c;margin-bottom:12px}
   .hidden{display:none!important}
+  #map{position:fixed;inset:0;touch-action:none;z-index:3}
+  #mapTop{position:absolute;top:12px;left:14px;padding:6px 11px;border-radius:14px;background:rgba(20,32,46,.6);color:#fff;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;pointer-events:none}
+  #pins{position:absolute;inset:0;pointer-events:none}
+  .pin{position:absolute;left:0;top:0;pointer-events:auto;border:0;padding:6px 10px 5px;border-radius:10px;background:#14202e;color:#fff;font:inherit;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap;margin-top:-9px;-webkit-tap-highlight-color:transparent}
+  .pin::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:inherit;border-top-color:#14202e}
+  .pin b{display:block;font-size:13px;font-weight:800;line-height:1.15}
+  .pin small{display:block;font-size:10px;font-weight:600;opacity:.75}
+  .pin.base{background:#fff;color:#14202e;padding:4px 9px 4px 7px;display:flex;gap:5px;align-items:center}
+  .pin.base::after{border-top-color:#fff}
+  .pin.base i{font-style:normal;color:#d8342a;font-size:11px}
+  .pin.base b{font-size:12px}
+  .pin.sel{background:#e8432f;color:#fff;z-index:2;transform-origin:50% 100%}
+  .pin.sel::after{border-top-color:#e8432f}
+  .pin.mini{width:14px;height:14px;padding:0;border-radius:50%;border:2px solid #fff;overflow:hidden;color:transparent;margin-top:-4px}
+  .pin.mini *{display:none}.pin.mini::after{content:'';display:block;position:absolute;inset:-14px;border:0;margin:0}
+  .pin.base.mini{background:#fff;border-color:#d8342a}
+  #sheet{position:absolute;left:0;right:0;bottom:0;margin:0 auto;max-width:480px;max-height:58vh;overflow-y:auto;-webkit-overflow-scrolling:touch;background:#fff;color:#14202e;border-radius:18px 18px 0 0;padding:18px 18px calc(14px + env(safe-area-inset-bottom));box-shadow:0 -6px 30px rgba(0,0,0,.25);touch-action:pan-y}
+  #sheet h1{margin:2px 0 0;font-size:22px;font-weight:800}
+  #sheet .k{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#5b6b7c;font-weight:700;padding-right:36px}
+  #sheet p{margin:6px 0;font-size:14px;line-height:1.45;color:#334354}
+  #sheet p.attr{font-size:11px;color:#7a8896;margin:10px 0 0;text-align:center}
+  #sheet .row{display:flex;gap:8px}#sheet .row .btn{flex:1}
+  #sheet .x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:#eef2f6;color:#14202e;font-size:15px;font-weight:800;cursor:pointer}
+  #sheet{position:absolute}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border-radius:14px;padding:5px 10px 5px 8px;font-size:13px;font-weight:600}
+  .chip .dia,.chip .sq,.chip .ci{width:9px;height:9px;box-shadow:none}
+  .chip .dia{border-color:#111}
+  .chip.more{color:#5b6b7c}
   .ci{width:12px;height:12px;border-radius:50%;background:#2f9e44;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
   .tico{flex:none;width:30px;height:30px;border-radius:8px;background:#e6ecf2;justify-content:center}
   .lift.rec .tico{background:#2a3a4c}
@@ -96,10 +125,17 @@
 <div id="perf" class="hidden"></div>
 <div id="thumb"></div>
 
+<div class="hidden" id="map">
+  <div id="mapTop">Killington Run</div>
+  <div id="pins"></div>
+  <div id="sheet"></div>
+</div>
+
 <div class="ov hidden" id="start">
   <div class="card">
+    <button class="btn alt" id="startBack" style="margin:0 0 12px">‹ Back to the map</button>
     <div class="k">Killington Run · the real mountain</div>
-    <h1>Where are you dropping in?</h1>
+    <h1>All peaks</h1>
     <p style="font-size:13px;margin:6px 0 2px">USGS terrain and every OpenStreetMap trail from Ramshead to Bear Mountain: 190+ trails, 15 lifts.</p>
     <div id="peakList"></div>
     <button class="btn alt" id="goLift" style="margin-top:10px">▲ Start at K-1 Base · ride a chair up</button>
@@ -140,7 +176,7 @@
     <div id="liftList"></div>
     <div class="sess" id="sess"></div>
     <button class="btn alt" id="again">Skip the chair · ride it again</button>
-    <button class="btn alt" id="toMenu">Pick another peak</button>
+    <button class="btn alt" id="toMenu">Back to the trail map</button>
   </div>
 </div>
 

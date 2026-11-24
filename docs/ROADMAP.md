@@ -56,6 +56,14 @@ Known gaps
 - OSM has no trail widths; widths are heuristics plus hand overrides for signature trails.
 - DEM at ~45 m spacing smooths small headwalls and rollers.
 
+## Trail-map start screen (Nov 24, 2026, shipped)
+- The start card's list is replaced by the mountain itself: the whole-mountain mesh seen from the south-east (Bear in front, Ramshead at the back), with every named trail draped as a ribbon in its difficulty colour and lifts in red (one merged mesh, ~15k triangles, shown only on the map).
+- Pins on the seven peaks (name + elevation of the lift top) and five bases. Overlapping labels collapse to tappable dots; the selected pin always gets its label.
+- Tap a peak: the camera flies down its fall line and looks back up at it; the sheet lists its trails, "Pick a trail" (the existing picker) and "Ride up from <base>". Tap a base: the sheet lists its lifts. ✕ or a tap on empty map goes back to the overview.
+- Drag orbits (horizontal) and tilts (vertical); pinch or wheel zooms. The sheet scrolls on its own.
+- Streamed tiles are hidden on the map (they read as square forest patches from above), so the map costs ~46 draw calls / ~207k triangles headless. Fog and the far plane open up while it's showing.
+- The old list and the how-to-play text live behind "All peaks" / "How to play". OSM attribution sits on every sheet. "Back to the trail map" on the finish card.
+
 ## Bigger map: Snowshed, Ramshead, Skyeship base (Nov 24, 2026, shipped)
 - DEM grid 100 × 60 → 152 × 101: +30 rows north, +52 columns east, +11 rows south. Same spacing. The original cells are untouched; new cells come from the current USGS 3DEP 1/3″ GeoTIFF (read as a cloud-optimised GeoTIFF from the USGS S3 bucket, which the workspace can reach). That surface sits ~5 m off the older OpenTopoData NED, so new cells get a Laplace-blended correction that matches the old grid at the seam and fades out at the edges. Seam curvature is in the normal range.
 - Why south too: Pipe Dream, The Jug, Solitude, Gateway and South Ridge Link don't go north — they feed Bear Cub, which dips ~150 m south of the old grid edge on its way to the Bear base. The old bake dropped the outside points and spliced a straight jump across the gap, so those runs drifted off the south edge.

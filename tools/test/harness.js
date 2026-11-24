@@ -15,7 +15,7 @@ async function open({ file = path.join(ROOT, 'dist/index.html'), width = 390, he
   await page.route('**/three.min.js', r => r.fulfill({ body: fs.readFileSync(path.join(THREE_DIR, 'build/three.min.js')), contentType: 'text/javascript' }));
   await page.route('**/GLTFLoader.js', r => r.fulfill({ body: fs.readFileSync(path.join(THREE_DIR, 'examples/js/loaders/GLTFLoader.js')), contentType: 'text/javascript' }));
   await page.goto('file://' + file);
-  await page.waitForSelector('#start:not(.hidden)', { timeout: 180000 });
+  await page.waitForSelector('#map:not(.hidden)', { timeout: 180000 });
   return { browser, page, errors, ROOT };
 }
 /* in-page auto-pilot: steer toward a point 14 m along the nearest trail, stand tall above ~36 mph */

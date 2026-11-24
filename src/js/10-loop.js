@@ -44,7 +44,7 @@ function perfHud(ms,dt){if(!perfOn)return;_pf.n++;_pf.t+=dt;_pf.ms+=ms;if(_pf.t<
 function frame(now){
   const raw=now-last,fdt=Math.min(0.1,raw/1000),dt=Math.min(0.05,raw/1000);last=now;fcount++;
   adaptRes(raw,dt);perfHud(raw,dt);
-  updateChairs(dt);updCrowd(now);
+  updateChairs(dt);updCrowd(now);mapFrame(dt);
   {const tx=S.state==='menu'?MENU.tx:S.x+Math.sin(S.th)*60,tz=S.state==='menu'?MENU.tz:S.z+Math.cos(S.th)*60;
    if(_tilePend>0||Math.abs(tx-_tileX)+Math.abs(tz-_tileZ)>12){const todo=updateTiles(tx,tz,2);_tilePend=Math.max(0,todo-2);_tileX=tx;_tileZ=tz;}}
   if(S.state==='ride'||S.state==='finishing'){
@@ -72,8 +72,6 @@ function frame(now){
     updLift(dt);S.shake=Math.max(0,S.shake-dt);
   } else if(S.state==='done'||S.state==='pick'){
     updModel(dt,false);const t=now/1000;camera.position.set(S.x+6*Math.sin(t*0.4),H(S.x,S.z)+2.4,S.z+6*Math.cos(t*0.4));camera.lookAt(S.x,H(S.x,S.z)+1.1,S.z);
-  } else if(S.state==='menu'){
-    const t=now/1000,a=0.2+0.32*Math.sin(t*0.045),cx=40+1300*Math.sin(a),cz=-120-1300*Math.cos(a);camera.position.set(cx,Math.max(Bm(cx,cz),880)+240,cz);camera.lookAt(-380,1010,260);
   }
   endFrame(now,dt);
 }
@@ -107,4 +105,4 @@ window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.
 runFromTrail(TRAILS.filter(t=>t.name==='Superstar').sort((a,b)=>b.L-a.L)[0],'Skye Peak');reset();S.state='menu';
 requestAnimationFrame(frame);
 updateTiles(MENU.tx,MENU.tz,999);
-loadModel().then(()=>{reset();document.getElementById('loading').remove();$('start').classList.remove('hidden');});
+loadModel().then(()=>{reset();document.getElementById('loading').remove();openMap();});
