@@ -13,7 +13,7 @@ Owner: Kevin. Mobile-first arcade ski game on the real Killington terrain. He pl
 - OSM attribution must stay visible on the start card.
 
 ## Publishing
-The playable link is a claude.ai artifact (slug `af59a9c1-26d9-442d-879c-0a28d15127b4`). Republish `dist/index.html` to it after merging changes. GitHub Pages can also serve `dist/` if Kevin wants a public URL.
+The playable link is a claude.ai artifact (slug `af59a9c1-26d9-442d-879c-0a28d15127b4`). Republish `dist/index.html` to it after merging changes. The public link is https://kcq101.github.io/GrindTimeSki/ — GitHub Pages serves `main`, and the root `index.html` redirects to `dist/`, so pushing `dist/` to `main` updates it.
 
 ## Context
 `docs/ROADMAP.md` has the design rationale (vs. Bonvo Ride), what shipped and what's next. Coordinates: x = east, z = south (m), origin lat 43.61, lon −72.803.

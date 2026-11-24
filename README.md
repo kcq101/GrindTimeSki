@@ -2,6 +2,8 @@
 
 An arcade ski game on the real Killington, Vermont: USGS terrain, every OpenStreetMap trail from Killington Peak to Bear Mountain (164 trail segments) and 12 real lifts you ride between runs. It runs in a mobile browser as one self-contained page.
 
+**Play:** https://kcq101.github.io/GrindTimeSki/ (GitHub Pages from `main`; the root `index.html` redirects to `dist/`).
+
 - **Drop in from six peaks.** Skye Peak, Killington Peak, Bear Mountain, Snowdon, Needle's Eye, and Skye Peak's east side. Each has a picker listing its real trails with length, vertical drop and the base they lead to.
 - **Free-ride network.** Trails link up as they do on the mountain. Ski into any base to finish, then pick your next chair or gondola.
 - **Arcade handling.** Carve, tuck, jump with double boosts, flips and 360s. Moguls on Outer Limits, Devil's Fiddle and Ovation; the Deck crowd at Bear.
@@ -29,6 +31,7 @@ tools/fetch_dem.py    re-fetch or extend the elevation grid (OpenTopoData, USGS 
 tools/fetch_osm.py    re-fetch trails and lifts (Overpass API)
 tools/test/           headless checks: screenshots, all-trails auto-pilot, terrain-step probe
 dist/index.html       the built game (what gets published)
+index.html            redirect so the short Pages URL opens dist/
 docs/ROADMAP.md       design notes, what shipped, what's next
 ```
 
