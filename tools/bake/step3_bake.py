@@ -55,6 +55,9 @@ LIFTMETA={
  "Needle's Eye Express Quad":dict(id='ne',kind='Express quad',speed=5.0,col=0x6a3b8a,top="Needle's Eye",base='Skyeship midstation'),
  'Skyeship Express Gondola Stage 2':dict(id='sky',kind='Gondola',speed=6.0,col=0x1d3557,top='Skye Peak',base='Skyeship midstation',gond=1),
  'Northbrook Quad':dict(id='nb',kind='Fixed-grip quad',speed=2.3,col=0x3a7a7a,top='Northbrook',base='Skyeship midstation'),
+ 'Snowshed Express Quad':dict(id='shs',kind='Express quad',speed=5.0,col=0x2f7d6b,top='Upper Snowshed',base='Snowshed Base'),
+ 'Ramshead Express Quad':dict(id='rh',kind='Express quad',speed=5.0,col=0x9a4a1f,top='Ramshead Peak',base='Ramshead Base'),
+ 'Skyeship Express Gondola Stage 1':dict(id='sky1',kind='Gondola',speed=6.0,col=0x1d3557,top='Skyeship midstation',base='Skyeship Base',gond=1),
 }
 PRI=['Superstar','Outer Limits','Cascade','Skyelark - Upper','Ovation',"Devil's Fiddle",'Wildfire','Great Northern','Downdraft','Bear Trax','Bear Claw','Chute','Bunny Buster - Upper','Frolic','Double Dipper - Upper','Rime','Ridge Run','Skyeburst - Upper',"Needle's Eye",'Vertigo - Headwall','Stitch Line','Pipe Dream','Snowshed Slope','Highlander','Old Superstar','Gateway','Blue Heaven','Royal Flush - Upper','North Star','Low Rider','Panic Button','The Jug - Upper','Home Run','Powerline','High Traverse','Reason']
 lifts=[]
@@ -76,6 +79,6 @@ for l in LI:
     print(L['name'],'->',[T[i]['name'] for i in pick])
 dem=[int(round(v)) for v in G.flatten()]
 data=dict(grid=dict(ni=NI,nj=NJ,x0=round(GX0,3),dx=round(GDX,4),z0=round(GZ0,3),dz=round(GDZ,4)),dem=dem,trails=out,lifts=lifts,
-  src='USGS 3DEP 10 m DEM via OpenTopoData (sampled 41x53 m), trails/lifts from OpenStreetMap via OpenSkiMap')
+  src='USGS 3DEP 10 m DEM via OpenTopoData + USGS S3 (sampled 41x53 m), trails/lifts from OpenStreetMap via OpenSkiMap')
 s=json.dumps(data,separators=(',',':'))
 open('kdata.json','w').write(s); print(len(s),'bytes',len(out),'trails',len(lifts),'lifts')

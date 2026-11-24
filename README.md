@@ -1,11 +1,11 @@
 # GrindTimeSki · Killington Run
 
-An arcade ski game on the real Killington, Vermont: USGS terrain, every OpenStreetMap trail from Killington Peak to Bear Mountain (164 trail segments) and 12 real lifts you ride between runs. It runs in a mobile browser as one self-contained page.
+An arcade ski game on the real Killington, Vermont: USGS terrain, every OpenStreetMap trail from Ramshead and Snowshed to Bear Mountain and the Skyeship base (209 trail segments) and 15 real lifts you ride between runs. It runs in a mobile browser as one self-contained page.
 
 **Play:** https://kcq101.github.io/GrindTimeSki/ (GitHub Pages from `main`; the root `index.html` redirects to `dist/`).
 
-- **Drop in from six peaks.** Skye Peak, Killington Peak, Bear Mountain, Snowdon, Needle's Eye, and Skye Peak's east side. Each has a picker listing its real trails with length, vertical drop and the base they lead to.
-- **Free-ride network.** Trails link up as they do on the mountain. Ski into any base to finish, then pick your next chair or gondola.
+- **Drop in from seven peaks.** Skye Peak, Killington Peak, Bear Mountain, Snowdon, Needle's Eye, Skye Peak's east side and Ramshead. Each has a picker listing its real trails with length, vertical drop and the base they lead to.
+- **Free-ride network.** Trails link up as they do on the mountain. Ski into any base (K-1, Snowshed, Ramshead, Bear Mountain, Skyeship) to finish, then pick your next chair or gondola. Great Eastern runs the full 3.5 miles from Skye Peak to the Skyeship base.
 - **Arcade handling.** Carve, tuck, jump with double boosts, flips and 360s. Moguls on Outer Limits, Devil's Fiddle and Ovation; the Deck crowd at Bear.
 
 ## Layout
@@ -27,7 +27,8 @@ assets/               skier.glb, helmet.glb (embedded into the page at build tim
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json
 tools/build.py        bundles everything into dist/index.html
 tools/bake/           data pipeline: project + clean trails, lifts, widths, picker lists -> data/kdata.json
-tools/fetch_dem.py    re-fetch or extend the elevation grid (OpenTopoData, USGS 10 m)
+tools/fetch_dem.py    re-fetch the original elevation grid (OpenTopoData, USGS 10 m)
+tools/extend_dem_cog.py  extend the grid from the USGS 3DEP GeoTIFF on S3 (works from the cloud workspace)
 tools/fetch_osm.py    re-fetch trails and lifts (Overpass API)
 tools/test/           headless checks: screenshots, all-trails auto-pilot, terrain-step probe
 dist/index.html       the built game (what gets published)
@@ -52,7 +53,7 @@ Tests use a software renderer, so frame rates are relative, not phone numbers. U
 
 ## How the mountain is made
 
-- **Terrain.** USGS 3DEP 10 m elevation, sampled on a 100 × 60 grid (~41 m east-west × 53 m north-south) over lat 43.596–43.624, lon −72.828 to −72.778, then bicubic-interpolated. Axes in game: x = east, z = south, y = metres above sea level.
+- **Terrain.** USGS 3DEP 10 m elevation, sampled on a 152 × 101 grid (~41 m east-west × 53 m north-south) over lat 43.5908–43.6383, lon −72.828 to −72.7517, then bicubic-interpolated. The original 100 × 60 core came from OpenTopoData; the extension north (Snowshed, Ramshead), east (Skyeship base) and a strip south (Bear Cub, Solitude) was read from the current 3DEP GeoTIFF and blended into the core with no seam (`tools/extend_dem_cog.py`). Axes in game: x = east, z = south, y = metres above sea level.
 - **Trails.** OpenStreetMap piste ways inside the grid are projected to metres, oriented downhill, simplified, cleaned of loops and subdivided. Each gets a never-climbing centreline profile (an isotonic fit to the terrain), so small terrain/map mismatches don't cause uphill stalls. Cat tracks are cut as flat benches; open trails keep half their cross-slope.
 - **Junctions.** Up to six nearby trail passes blend by how far inside each one you are, so the surface stays continuous where trails meet.
 - **Widths.** OSM has no trail widths: they come from difficulty, a cat-track test (low average grade) and hand overrides for signature trails (`W` in `tools/bake/step3_bake.py`).
@@ -60,7 +61,7 @@ Tests use a software renderer, so frame rates are relative, not phone numbers. U
 ## Credits and licences
 
 - **Trails and lifts:** © OpenStreetMap contributors, available under the Open Database License (ODbL 1.0), first obtained via OpenSkiMap-derived extracts. `data/osm_features.json`, `data/trails_raw.json`, `data/lifts_raw.json` and the trail/lift parts of `data/kdata.json` are derived from OSM and remain under the ODbL.
-- **Terrain:** USGS 3D Elevation Program (public domain), fetched through the OpenTopoData API.
+- **Terrain:** USGS 3D Elevation Program (public domain), fetched through the OpenTopoData API and from the USGS 3DEP bucket on AWS.
 - **Engine:** three.js r128 (MIT), loaded from cdnjs.
 - **Models:** the helmet (`assets/helmet.glb`) was generated with Meshy and decimated for mobile. The skier (`assets/skier.glb`, "Alpine Adventurer", with Meshy-style animations) is assumed to come from the same workflow. Confirm the Meshy licence for your plan before distributing; free-plan generations are CC BY 4.0, which needs a credit line.
 - **Code:** no licence chosen yet, so all rights reserved by default. Add a LICENSE file if you want others to reuse it.

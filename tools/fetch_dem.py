@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Fetch the elevation grid from OpenTopoData (USGS 3DEP 10 m, dataset ned10m) into data/dem_grid.txt.
+"""Fetch the ORIGINAL elevation grid from OpenTopoData (USGS 3DEP 10 m, dataset ned10m) into data/dem_grid.txt.
 
 One request per row: 100 evenly spaced samples between two longitudes (`samples=100`). Free API limits:
 1 request/second, 1,000/day. Format of each output line: "<row>:<v0>,<v1>,...,<v99>" (metres, rounded).
 
-The current grid (rows 0-59): lat 43.596 + 0.000475*row, lon -72.828 to -72.778.
+The original grid (100 x 60): lat 43.596 + 0.000475*row, lon -72.828 to -72.778. It has since been extended with
+tools/extend_dem_cog.py (USGS 3DEP from S3), which keeps these cells; see README.
 To extend it (e.g. north to Snowshed/Ramshead, east to the Skyeship base), fetch new rows/columns with the same
 spacing, then update LAT0/DLAT/LON0/LON1 in tools/bake/common.py to match and rerun tools/bake/run.sh.
 

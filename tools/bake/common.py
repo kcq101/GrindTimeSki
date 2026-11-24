@@ -2,7 +2,7 @@ import json,math,collections,sys
 import numpy as np
 G=np.array([[float(v) for v in l.split(':')[1].split(',')] for l in open('dem_grid.txt')])
 NI,NJ=G.shape
-LAT0,DLAT=43.596,0.000475; LON0,LON1=-72.828,-72.778
+LAT0,DLAT=43.590775,0.000475; LON0,LON1=-72.828,-72.751737   # 101 rows x 152 cols: original 100x60 (OpenTopoData) + 3DEP extension (tools/extend_dem_cog.py)
 OLAT,OLON=43.61,-72.803
 KX=111320*math.cos(math.radians(OLAT)); KY=110950
 def xy(lat,lon): return ((lon-OLON)*KX, -(lat-OLAT)*KY)   # x east, z south

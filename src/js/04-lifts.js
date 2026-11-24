@@ -21,10 +21,13 @@ const BASES=[
   {id:'k1',name:'K-1 Base',x:40,z:-835,pad:235,trig:150,lifts:['ss','k1','sn6','sn3']},
   {id:'bear',name:'Bear Mountain Base',x:1565,z:858,pad:130,trig:95,lifts:['bear','skq']},
   {id:'mid',name:'Skyeship midstation',x:1320,z:-605,pad:100,trig:70,lifts:['ne','sky','nb']},
+  {id:'shs',name:'Snowshed Base',x:540,z:-1715,pad:130,trig:95,lifts:['shs']},
+  {id:'rh',name:'Ramshead Base',x:255,z:-1785,pad:85,trig:65,lifts:['rh']},
+  {id:'sky1',name:'Skyeship Base',x:3735,z:-505,pad:110,trig:80,lifts:['sky1']},
   {id:'can',name:'Canyon Quad',x:-679,z:-407,pad:45,trig:40,lifts:['can'],mid:true},
   {id:'nr',name:'North Ridge Quad',x:-1203,z:-232,pad:45,trig:40,lifts:['nr'],mid:true},
   {id:'sr',name:'South Ridge Quad',x:167,z:1041,pad:45,trig:40,lifts:['sr'],mid:true}];
-BASES.forEach(b=>{b.L=b.lifts.map(LIFT);b.h=Bm(b.x,b.z);b.L.forEach(L=>L.baseObj=b);});
+BASES.forEach(b=>{b.L=b.lifts.map(LIFT).filter(Boolean);b.h=Bm(b.x,b.z);b.L.forEach(L=>L.baseObj=b);});
 function inPad(x,z){for(const b of BASES){const dx=x-b.x,dz=z-b.z;if(dx*dx+dz*dz<b.pad*b.pad)return true;for(const L of b.L){const ex=x-L.bx,ez=z-L.bz;if(ex*ex+ez*ez<2500)return true;}}return false;}
 function inClear(x,z){if(inPad(x,z))return true;for(const L of LIFTS){const dx=x-L.tx,dz=z-L.tz;if(dx*dx+dz*dz<38*38)return true;}return false;}
 /* where does each trail lead? follow it downhill until it reaches a base */

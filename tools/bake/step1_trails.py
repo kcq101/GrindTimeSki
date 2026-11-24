@@ -8,7 +8,13 @@ for f in F:
     P=[xy(la,lo) for la,lo in f['coords']]
     ins=[inside(x,z,30) for x,z in P]
     if sum(ins)<len(P)*0.7: continue
-    P=[p for p,i in zip(P,ins) if i]
+    # keep the longest stretch that stays inside the grid (dropping outside points would splice a straight jump across the gap)
+    runs=[];cur=[]
+    for p,i in zip(P,ins):
+        if i: cur.append(p)
+        elif cur: runs.append(cur);cur=[]
+    if cur: runs.append(cur)
+    P=max(runs,key=len)
     if len(P)<2: continue
     if B(*P[0])<B(*P[-1]): P=P[::-1]
     L=sum(math.hypot(P[k+1][0]-P[k][0],P[k+1][1]-P[k][1]) for k in range(len(P)-1))

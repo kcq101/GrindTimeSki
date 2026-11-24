@@ -83,7 +83,8 @@ function carveG(tr,cx,cz,i,t,x,z,bx,d){
 function H(x,z){
   const bx=Bm(x,z),raw=bx+Nz(x,z)*0.8;trailInfo(x,z);
   let sw=0,acc=0;
-  for(let k=0;k<NK;k++){const tr=KT[k];if(!tr)break;const m=1-sstep(tr.w,tr.w+14,KDd[k]);if(m<=0)break;
+  /* cat tracks (k=1) weigh 3x where they cross fall-line trails, so a traverse keeps its bench instead of climbing the other trail's surface */
+  for(let k=0;k<NK;k++){const tr=KT[k];if(!tr)break;let m=1-sstep(tr.w,tr.w+14,KDd[k]);if(m<=0)break;if(tr.k===1)m*=3;
     acc+=m*(carveG(tr,KX[k],KZ[k],KI[k],KTT[k],x,z,bx,KDd[k])-raw);sw+=m;}
   return sw>0?raw+acc/Math.max(1,sw):raw;
 }

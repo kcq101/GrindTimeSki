@@ -136,7 +136,7 @@ function buildTile(ti,tj,lod){
   return {mesh,low,up,trees,lod};
 }
 /* the whole mountain at low detail, under the streamed tiles: real ridgelines, white trail cuts and forest out to the horizon */
-(function(){const X0=-3400,X1=3400,Z0=-3000,Z1=3000,st=46,nx=Math.round((X1-X0)/st)+1,nz=Math.round((Z1-Z0)/st)+1;
+(function(){const X0=-3400,X1=5000,Z0=-3900,Z1=3000,st=52,nx=Math.round((X1-X0)/st)+1,nz=Math.round((Z1-Z0)/st)+1;
   const P=new Float32Array(nx*nz*3),C=new Float32Array(nx*nz*3),I=[];
   const cSnow=new THREE.Color(0xe9eff6),cFor=new THREE.Color(0x5b6a64),cFrost=new THREE.Color(0x9aa8b1),c=new THREE.Color();
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const x=X0+i*st,z=Z0+j*st,k=j*nx+i;

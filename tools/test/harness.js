@@ -20,6 +20,13 @@ async function open({ file = path.join(ROOT, 'dist/index.html'), width = 390, he
 }
 /* in-page auto-pilot: steer toward a point 14 m along the nearest trail, stand tall above ~36 mph */
 const AUTOPILOT = `window.__auto=(n)=>{const k=window.__kr,S=k.S;for(let s=0;s<n;s+=3){const ti=k.trailInfo(S.x,S.z);let st=0;
-  if(ti.tr){const tx=ti.cx+ti.ux*14,tz=ti.cz+ti.uz*14;let d=Math.atan2(tx-S.x,tz-S.z)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));st=Math.max(-1,Math.min(1,-d*2.5));}
+  if(ti.tr){let cx=ti.cx,cz=ti.cz,ux=ti.ux,uz=ti.uz;
+    /* at a fork, stay on the trail you're on (a player follows the signs) */
+    const cur=S.path[S.path.length-1];if(cur&&ti.tr.name!==cur)for(let q=1;q<k.KT.length&&k.KT[q];q++){const u=k.KT[q],i=k.KI[q];if(u.name!==cur||u.L-u.cs[i]<30||k.KDd[q]>u.w+4)continue;
+      const a=u.s[i],b=u.s[Math.min(i+1,u.s.length-1)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1;cx=k.KX[q];cz=k.KZ[q];ux=(b[0]-a[0])/l;uz=(b[1]-a[1])/l;break;}
+    /* at a connector's end, follow the next blended trail that still has somewhere to go (players do this by eye) */
+    if(ti.tr.L-ti.tr.cs[ti.i]<30)for(let q=1;q<k.KT.length&&k.KT[q];q++){const u=k.KT[q],i=k.KI[q];if(u.L-u.cs[i]<30||k.KDd[q]>u.w+12)continue;
+      const a=u.s[i],b=u.s[Math.min(i+1,u.s.length-1)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1;cx=k.KX[q];cz=k.KZ[q];ux=(b[0]-a[0])/l;uz=(b[1]-a[1])/l;break;}
+    const tx=cx+ux*14,tz=cz+uz*14;let d=Math.atan2(tx-S.x,tz-S.z)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));st=Math.max(-1,Math.min(1,-d*2.5));}
   k.steerIn=st;k.postIn=S.v>16?-0.8:0;const r=k.physicsOnly(3);if(S.crashed){S.crashed=false;S.cool=0.5;S.v=3;}if(r!=='ride'&&r!=='finishing')return r;}return S.state;};`;
 module.exports = { open, AUTOPILOT, ROOT };

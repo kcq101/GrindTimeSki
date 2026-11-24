@@ -33,6 +33,9 @@ function showPicker(L,fromMenu){pickFrom=fromMenu?'menu':'lift';
     const drop=Math.max(0,tr.h0-tr.h1),to=tr.dest?' · to '+tr.dest.name:'';
     b.innerHTML='<div class="ic tico">'+diffIcon(tr.diff)+'</div><div><b>'+shortName(tr.name)+'</b><small>'+DIFF[tr.diff].label.toLowerCase()+' · '+ft(tr.L).toLocaleString()+' ft long · '+ft(drop).toLocaleString()+' ft drop'+to+'</small></div><div class="go">›</div>';
     b.onclick=()=>dropIn(tr,L.top);box.appendChild(b);});
+  const tb=BASES.find(b=>b.name===L.top);if(tb)tb.L.forEach(M=>{const b=document.createElement('button');b.className='lift';
+    b.innerHTML='<div class="chair" style="background:#'+M.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+M.name+'</b><small>To '+M.top+' · '+M.serves+'</small><small>Right here · '+mmss(M.real)+' ride</small></div><div class="go">›</div>';
+    b.onclick=()=>startLift(M);box.appendChild(b);});
   $('pickBack').classList.toggle('hidden',!fromMenu);$('pick').classList.remove('hidden');}
 /* the card at a base: its lifts first, then a few others you can skate or shuttle to */
 function showLifts(base,boxId){const box=$(boxId);box.innerHTML='';
@@ -92,7 +95,7 @@ $('goLift').onclick=()=>{$('start').classList.add('hidden');$('pickK').textConte
 $('pickBack').onclick=()=>{$('pick').classList.add('hidden');$('start').classList.remove('hidden');};
 $('toMenu').onclick=()=>{$('finish').classList.add('hidden');S.state='menu';showHud(false);$('start').classList.remove('hidden');};
 $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!perfOn);$('perfBtn').textContent='Performance overlay: '+(perfOn?'on':'off');};
-(function(){const box=$('peakList');['ss','k1','bear','sn6','ne','skq'].map(LIFT).forEach((L,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');
+(function(){const box=$('peakList');['ss','k1','bear','sn6','ne','skq','rh'].map(LIFT).filter(Boolean).forEach((L,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');
   b.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.top+'</b><small>'+L.trails.slice(0,4).map(t=>shortName(t.name)+' '+DSYM[t.diff]).join(' · ')+'</small><small>Top of '+L.name+' · '+L.trails.length+' trails</small></div><div class="go">›</div>';
   b.onclick=()=>{$('start').classList.add('hidden');showPicker(L,true);};box.appendChild(b);});})();
 let best=null;

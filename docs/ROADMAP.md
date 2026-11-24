@@ -53,9 +53,19 @@ Measured (headless Chrome, software renderer, 390×844): ~160 draw calls (was ~2
 Auto-pilot test of all 50 pickable starts (`tools/test/autopilot.js`): most reach a base. Typical times: Superstar ~1:00, Outer Limits ~1:15, Cascade from the summit ~2:30. The test bot circles at trail-end benches (e.g. bottom of Cascade) that a player skates through. Bot bails at 40+ mph come from landing crests standing tall; players crouch.
 
 Known gaps
-- Trails heading off the grid (Great Northern lower, Snowshed, Sunrise, Great Eastern) end at "Edge of the map". Extending the grid north and east (~30 more DEM rows) would add Snowshed, Ramshead and the Skyeship base.
 - OSM has no trail widths; widths are heuristics plus hand overrides for signature trails.
 - DEM at ~45 m spacing smooths small headwalls and rollers.
+
+## Bigger map: Snowshed, Ramshead, Skyeship base (Nov 24, 2026, shipped)
+- DEM grid 100 × 60 → 152 × 101: +30 rows north, +52 columns east, +11 rows south. Same spacing. The original cells are untouched; new cells come from the current USGS 3DEP 1/3″ GeoTIFF (read as a cloud-optimised GeoTIFF from the USGS S3 bucket, which the workspace can reach). That surface sits ~5 m off the older OpenTopoData NED, so new cells get a Laplace-blended correction that matches the old grid at the seam and fades out at the edges. Seam curvature is in the normal range.
+- Why south too: Pipe Dream, The Jug, Solitude, Gateway and South Ridge Link don't go north — they feed Bear Cub, which dips ~150 m south of the old grid edge on its way to the Bear base. The old bake dropped the outside points and spliced a straight jump across the gap, so those runs drifted off the south edge.
+- Bake: a trail that leaves the grid now keeps its longest inside stretch instead of splicing across the gap. 209 trails (was 164), 15 lifts (was 12).
+- New lifts: Snowshed Express Quad, Ramshead Express Quad, Skyeship Stage 1 gondola. New bases: Snowshed, Ramshead, Skyeship Base. Ramshead Peak is on the start card. At the Stage 1 top (midstation) the picker also offers the midstation lifts.
+- Existing picker lists unchanged except Superstar (Great Eastern in, Nivis Walk out) and South Ridge (+ Solitude).
+- Cat tracks weigh 3× in junction blending, so where Bear Cub crosses Devil's Den and Sunrise it keeps its bench instead of climbing their surface (was a 5 m climb that stopped skiers dead).
+- Whole-mountain mesh widened to cover the new area (52 m spacing, was 46 m).
+- Auto-pilot: 53/55 starts reach a base, none at "Edge of the map" (was 47/54 with 7 edge finishes). Bot now holds its trail at forks and moves on at connector ends; MAXSECS=700 for the long traverses (Great Eastern ~8 min for the bot, Bear Cub routes ~5 min). Left: Ridgeview (bot circles a bench), Blue Heaven (bot drifts onto Solitude's long route).
+- Cost: draw calls 160–167 → 162–164; triangles +40–57k (Superstar 528k → 567k, Outer Limits 557k → 613k), mostly from tiles and trees that now exist north and east, plus the new lifts. Feeds item 3.
 
 ## Lift network v1 (shipped)
 - Data-driven LIFTS (now from OSM): towers auto-placed, terminals, lift sign, cleared lift line
@@ -66,7 +76,6 @@ Known gaps
 Fixed-step physics (1/60 s) with render interpolation; trees cut from 182 to 18/11 tris and merged per tile; shadow map replaced by contact + decal shadows; chairs instanced; snow shader moved to noise-texture fetches; render-resolution scaling on phones; performance overlay toggle on the start card.
 
 ## Next up
-1. Extend the DEM north/east to bring in Snowshed, Ramshead and the Skyeship base, so the "edge of the map" runs finish at real bases
-2. Challenge links + ghost
-3. Measure on a real phone; if triangles hurt, drop whole-mountain mesh resolution or tree density on far tiles
-4. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link)
+1. Challenge links + ghost
+2. Measure on a real phone; triangles are now ~530–610k headless, so likely trim whole-mountain mesh resolution or far-tile tree density
+3. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too
