@@ -1,0 +1,16 @@
+{
+  "name": "grindtimeski",
+  "private": true,
+  "description": "Killington Run: an arcade ski game on the real Killington terrain, trails and lifts",
+  "scripts": {
+    "build": "python3 tools/build.py",
+    "bake": "sh tools/bake/run.sh",
+    "test:shots": "node tools/test/screenshots.js",
+    "test:autopilot": "node tools/test/autopilot.js",
+    "test:terrain": "node tools/test/terrain-steps.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0",
+    "three": "0.128.0"
+  }
+}

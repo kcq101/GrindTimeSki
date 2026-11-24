@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Killington Run — real Killington</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#9fc3e6;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #c{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
+  .hud{position:fixed;left:0;right:0;pointer-events:none;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+  #top{top:0;padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start}
+  .trail{font-weight:700;font-size:16px;letter-spacing:.5px;display:flex;align-items:center;gap:7px}
+  .ic{display:inline-flex;gap:5px;align-items:center}
+  .sq{width:11px;height:11px;background:#2f6fe0;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  .dia{width:11px;height:11px;background:#111;transform:rotate(45deg);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  .sub{font-size:12px;opacity:.9;margin-top:3px;font-weight:500}
+  .spd{text-align:right}
+  .spd b{font-size:30px;font-weight:800;line-height:1}
+  .spd span{font-size:12px;font-weight:600;margin-left:3px}
+  #bot{bottom:0;padding:0 16px 18px}
+  .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.35);position:relative;overflow:visible}
+  .fill{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:#fff}
+  .dot{position:absolute;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#e8432f;border:2px solid #fff}
+  .barlbl{display:flex;justify-content:space-between;font-size:11px;font-weight:600;margin-bottom:6px}
+  #toast{position:fixed;top:32%;left:0;right:0;text-align:center;font-size:30px;font-weight:900;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5);opacity:0;transition:opacity .25s;pointer-events:none;letter-spacing:1px}
+  #thumb{position:fixed;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.15);pointer-events:none;display:none}
+  .ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(14,30,52,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);padding:20px}
+  .card{background:#fff;border-radius:18px;max-width:360px;width:100%;padding:22px 20px 18px;color:#14202e;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  .card h1{margin:0;font-size:22px;font-weight:800}
+  .card .k{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#5b6b7c;font-weight:700}
+  .card p{margin:8px 0;font-size:14px;line-height:1.5;color:#334354}
+  .tc{display:flex;gap:10px;align-items:center;background:#f1f5f9;border-radius:12px;padding:10px 12px;margin:12px 0}
+  .tc .dia{border-color:#111;width:13px;height:13px;flex:none;box-shadow:none}
+  .tc b{display:block;font-size:15px}
+  .tc small{color:#5b6b7c;font-size:12px}
+  ul{margin:6px 0 14px;padding-left:18px;font-size:14px;line-height:1.6;color:#334354}
+  .btn{display:block;width:100%;border:0;border-radius:12px;background:#e8432f;color:#fff;font-size:17px;font-weight:800;padding:14px;cursor:pointer;letter-spacing:.5px}
+  .btn.alt{background:#eef2f6;color:#14202e;margin-top:8px;font-weight:700;font-size:15px;padding:11px}
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:14px 0}
+  .stats div{background:#f1f5f9;border-radius:10px;padding:10px 6px;text-align:center}
+  .stats b{display:block;font-size:20px;font-weight:800}
+  .stats small{font-size:11px;color:#5b6b7c;font-weight:600}
+  .pb{font-size:13px;text-align:center;color:#5b6b7c;margin-bottom:12px}
+  .hidden{display:none!important}
+  .ci{width:12px;height:12px;border-radius:50%;background:#2f9e44;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+  .tico{flex:none;width:30px;height:30px;border-radius:8px;background:#e6ecf2;justify-content:center}
+  .lift.rec .tico{background:#2a3a4c}
+  .card{max-height:calc(100vh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #endBtn{left:16px;bottom:104px;padding:6px 11px;border-radius:16px;background:rgba(20,32,46,.45);color:#fff;font-size:11px;font-weight:700;border:1px solid rgba(255,255,255,.4)}
+  .route{font-size:13px;color:#334354;font-weight:600;margin:4px 0 0;line-height:1.4}
+  .ctl{position:fixed;bottom:58px;z-index:5;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none}
+  #jumpBtn{right:16px;width:84px;height:84px;border-radius:50%;background:rgba(232,67,47,.88);color:#fff;font-weight:900;font-size:16px;letter-spacing:1px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:3px solid rgba(255,255,255,.85)}
+  #jumpBtn:active{transform:scale(.94)}
+  .pips{display:flex;gap:5px;justify-content:center;margin-top:4px}
+  .pips i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}
+  .pips i.on{background:#fff}
+  #invBtn{left:16px;padding:8px 12px;border-radius:18px;background:rgba(20,32,46,.55);color:#fff;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,.5)}
+  #skipBtn{right:16px;padding:12px 18px;border-radius:24px;background:rgba(20,32,46,.7);color:#fff;font-size:15px;font-weight:800;border:2px solid rgba(255,255,255,.8);letter-spacing:.5px}
+  #lookHint{position:fixed;bottom:118px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none}
+  #vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 52%,rgba(8,22,42,.42) 100%);opacity:.55;transition:opacity .2s}
+  #perf{position:fixed;left:8px;top:64px;z-index:30;background:rgba(10,20,32,.72);color:#9fe3a8;font:11px/1.35 ui-monospace,Menlo,monospace;padding:6px 8px;border-radius:6px;pointer-events:none;white-space:pre}
+  #fade{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .35s;z-index:20}
+  .lift{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;cursor:pointer;background:#f1f5f9;border-radius:12px;padding:10px 12px;margin:8px 0 0;font:inherit;color:#14202e}
+  .lift.rec{background:#14202e;color:#fff}
+  .lift .chair{flex:none;width:30px;height:30px;border-radius:8px;background:#e8432f;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px}
+  .lift b{display:block;font-size:15px}
+  .lift small{display:block;font-size:12px;opacity:.75;margin-top:1px}
+  .lift .go{margin-left:auto;font-weight:900;font-size:18px;opacity:.8}
+  .sess{font-size:12px;color:#5b6b7c;text-align:center;margin:12px 0 2px;font-weight:600}
+  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="loading">Carving trails…</div>
+
+<div class="hud hidden" id="top">
+  <div>
+    <div class="trail"><span id="ticon" class="ic"><div class="dia"></div></span><span id="ttext">SUPERSTAR</span></div>
+    <div class="sub" id="time">0:00.0</div>
+  </div>
+  <div class="spd"><b id="spd">0</b><span>MPH</span><div class="sub" id="vert">1,190 ft to go</div></div>
+</div>
+<div class="hud hidden" id="bot">
+  <div class="barlbl"><span id="lblTop">Skye Peak</span><span id="lblBot">K-1 Lodge</span></div>
+  <div class="bar"><div class="fill" id="fill"></div><div class="dot" id="dot"></div></div>
+</div>
+<div id="toast"></div>
+<button class="ctl hidden" id="jumpBtn">JUMP<div class="pips"><i></i><i></i></div></button>
+<button class="ctl hidden" id="invBtn">⇅ Push up = tuck</button>
+<button class="ctl hidden" id="skipBtn">Skip ▸▸</button>
+<button class="ctl hidden" id="endBtn">End run</button>
+<div id="lookHint" class="hidden">Drag to look around</div>
+<div id="vig"></div>
+<div id="fade"></div>
+<div id="perf" class="hidden"></div>
+<div id="thumb"></div>
+
+<div class="ov hidden" id="start">
+  <div class="card">
+    <div class="k">Killington Run · the real mountain</div>
+    <h1>Where are you dropping in?</h1>
+    <p style="font-size:13px;margin:6px 0 2px">USGS terrain and every OpenStreetMap trail from Killington Peak to Bear Mountain: 160+ trails, 12 lifts.</p>
+    <div id="peakList"></div>
+    <button class="btn alt" id="goLift" style="margin-top:10px">▲ Start at K-1 Base · ride a chair up</button>
+    <ul style="margin-top:12px">
+      <li><b>Drag left / right</b> to carve</li>
+      <li><b>Push up</b> to crouch and go faster, <b>pull down</b> to stand tall and slow</li>
+      <li><b>JUMP</b>, then tap again in the air for up to two boosts</li>
+      <li>In the air: <b>pull back</b> to backflip, <b>push forward</b> to front flip</li>
+      <li><b>Double-swipe</b> left or right for a 360. Land it straight or you'll eat it</li>
+      <li>Trails link up: ski into any base to finish, then pick your next chair</li>
+    </ul>
+    <button class="btn alt" id="perfBtn" style="font-size:12px;padding:7px;background:none;color:#5b6b7c">Performance overlay: off</button>
+    <p style="font-size:11px;color:#7a8896;margin:8px 0 0;text-align:center">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>
+  </div>
+</div>
+
+<div class="ov hidden" id="pick">
+  <div class="card">
+    <div class="k" id="pickK">Top of the lift</div>
+    <h1 id="pickH">Skye Peak</h1>
+    <div id="pickList"></div>
+    <button class="btn alt hidden" id="pickBack">‹ Back</button>
+  </div>
+</div>
+
+<div class="ov hidden" id="finish">
+  <div class="card">
+    <div class="k">Run complete</div>
+    <h1 id="fName">Superstar ✓</h1>
+    <div class="route" id="fRoute"></div>
+    <div class="stats">
+      <div><b id="fTime">0:00</b><small>Time</small></div>
+      <div><b id="fTop">0</b><small>Top mph</small></div>
+      <div><b id="fCr">0</b><small>Yard sales</small></div>
+    </div>
+    <div class="pb" id="fBest"></div>
+    <div class="k" id="nextK">Next chair</div>
+    <div id="liftList"></div>
+    <div class="sess" id="sess"></div>
+    <button class="btn alt" id="again">Skip the chair · ride it again</button>
+    <button class="btn alt" id="toMenu">Pick another peak</button>
+  </div>
+</div>
+
+<!--@ASSETS-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+(function(){
+<!--@GAME-->})();
+</script>
+</body>
+</html>
