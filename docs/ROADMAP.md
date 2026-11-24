@@ -75,6 +75,14 @@ Known gaps
 - Auto-pilot: 53/55 starts reach a base, none at "Edge of the map" (was 47/54 with 7 edge finishes). Bot now holds its trail at forks and moves on at connector ends; MAXSECS=700 for the long traverses (Great Eastern ~8 min for the bot, Bear Cub routes ~5 min). Left: Ridgeview (bot circles a bench), Blue Heaven (bot drifts onto Solitude's long route).
 - Cost: draw calls 160–167 → 162–164; triangles +40–57k (Superstar 528k → 567k, Outer Limits 557k → 613k), mostly from tiles and trees that now exist north and east, plus the new lifts. Feeds item 3.
 
+## Ride up and ski to a sign, junction signs, pause (Nov 24, 2026, shipped)
+- Map sheet: "Ride up from <base>" is now the main button for a peak; "Or pick a trail" is second.
+- Top of a lift: no picker. The skier steps off a few metres toward the lift's main trail (clear of the top terminal, which otherwise fills the chase camera) and stands still until you steer or tuck. Each trail off that top gets a floating sign where it has split from its neighbours (25–120 m down): name plus difficulty icon in green/blue/black with a white outline, and an arrow under it that turns every frame to point where the trail goes on screen. Signs out of view become stacked arrows on the left/right screen edges. "Trail list" opens the old picker (with a Back button).
+- The run commits once you're on exactly one of the top's trails near its sign (or 45 m down, or 15 m down a trail with no sign). The clock, best-time key and route start there.
+- Junction signs: a load-time pass walks every trail in 8 m steps to find where other trails leave its surface (forks, crossings, and what it runs into at its end): 358 junctions on 177 trails. During a run the next two junctions within 170 m get signs 12 m down each branch, plus one for the trail you're on. Overlapping labels stack upward; off-screen splits ahead get edge arrows.
+- All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
+- Pause: "End run" became ❚❚ under the timer (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
+
 ## Lift network v1 (shipped)
 - Data-driven LIFTS (now from OSM): towers auto-placed, terminals, lift sign, cleared lift line
 - Ride your own chair: 3rd-person camera, drag to look around, tower clunks, about 24 s compressed ride, Skip

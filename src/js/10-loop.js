@@ -25,7 +25,7 @@ function lerpIn(a){CUR.x=S.x;CUR.z=S.z;CUR.y=S.y||0;CUR.th=S.th;CUR.v=S.v;
 function lerpOut(){S.x=CUR.x;S.z=CUR.z;if(S.air)S.y=CUR.y;S.th=CUR.th;S.v=CUR.v;}
 function simStep(h){
   const r=physics(h);
-  if(S.state==='ride'){S.t+=h;const b=baseHit();if(b){S.endBase=b;S.state='finishing';S.finT=0;toast(b.name.toUpperCase()+'!');}
+  if(S.state==='ride'){if(!S.pre)S.t+=h;const b=baseHit();if(b){S.endBase=b;S.state='finishing';S.finT=0;toast(b.name.toUpperCase()+'!');}
     else if(S.x<XMIN+22||S.x>XMAX-22||S.z<ZMIN+22||S.z>ZMAX-22){S.endBase=null;S.endWhy='Edge of the map';S.state='finishing';S.finT=0;toast('Edge of the map');}}
   else{S.v*=1-h*1.6;S.finT+=h;if(S.finT>1.6){S.state='done';finish();}}
   S.shake=Math.max(0,S.shake-h);
@@ -63,7 +63,7 @@ function frame(now){
     placeCam(false,dt);
     if(window.__side){const yy=skier.position.y;camera.position.set(S.x-4,yy+1,S.z+0.5);camera.lookAt(S.x,yy+0.8,S.z);}
     {const f=64+Math.max(0,postS)*8+S.v*0.15;if(Math.abs(f-camera.fov)>0.01){camera.fov+=(f-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}}
-    const mph=S.v*2.237;setTxt('spd',Math.round(mph));setTxt('time',fmt(S.t));
+    const mph=S.v*2.237;setTxt('spd',Math.round(mph));setTxt('time',S.pre?'Ski toward a sign':fmt(S.t));
     const hy=S.air?S.y:H(S.x,S.z);const ft=Math.max(0,(hy-RUN.h1)*3.281);setTxt('vert',(Math.round(ft/10)*10).toLocaleString()+' ft to go');
     const pr=clamp((RUN.h0-hy)/(RUN.h0-RUN.h1),0,1);updTrailHud();setBar(pr);
     if(wind&&actx&&(fcount&3)===0){wind.gain.setTargetAtTime(Math.min(0.5,mph/140),actx.currentTime,0.1);windF.frequency.setTargetAtTime(250+mph*14,actx.currentTime,0.1);}
@@ -78,6 +78,7 @@ function frame(now){
 const _hp=new THREE.Vector3();const MENU={tx:60,tz:-560};
 function endFrame(now,dt){
   updSpray(dt);
+  signFrame(dt);
   skyDome.position.copy(camera.position);skyMat.uniforms.uTime.value=now/1000;
   {const sp=(S.state==='ride'||S.state==='finishing')?clamp(S.v/30,0,1):0;const o=Math.round((0.45+sp*0.5)*25)/25;if(o!==_vigO){_vigO=o;$('vig').style.opacity=o;}}
   if(window.__close&&BN.head){BN.head.getWorldPosition(_hp);const a=window.__close;camera.position.set(_hp.x+Math.sin(S.th+a)*1.3,_hp.y+0.15,_hp.z+Math.cos(S.th+a)*1.3);camera.lookAt(_hp.x,_hp.y+0.05,_hp.z);}

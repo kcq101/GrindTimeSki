@@ -5,15 +5,15 @@ const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
 const diffIcon=d=>d==='g'?'<div class="ci"></div>':d==='b'?'<div class="sq"></div>':d==='dd'?'<div class="dia"></div><div class="dia"></div>':'<div class="dia"></div>';
-function reset(){blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
+function reset(){S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
   S.x=RUN.x;S.z=RUN.z;S.gyp=undefined;S.gvp=undefined;setTxt('lblTop',RUN.top);setTxt('lblBot',RUN.dest?RUN.dest.name:'Base');S.th=RUN.th;S.v=2;S.t=0;S.top=0;S.crashes=0;S.cool=0;S.shake=0;S.finT=0;steer=0;steerIn=0;snapPrev();lerpIn(1);lerpOut();placeCam(true);}
 let curTrail='';
-function updTrailHud(){const t=trailInfo(S.x,S.z);if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
+function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
   if(tr.name&&tr.dest&&tr.dest!==RUN.dest){RUN.dest=tr.dest;RUN.h1=Math.min(tr.dest.h,RUN.h0-30);setTxt('lblBot',tr.dest.name);}
-  if(!tr.name||tr.name===curTrail)return;curTrail=tr.name;S.path.push(tr.name);
+  if(!tr.name)return;if(tr.name===curTrail){if(S.curTr&&S.curTr.name!==tr.name)S.curTr=tr;else if(!S.curTr)S.curTr=tr;return;}curTrail=tr.name;S.curTr=tr;S.curS=null;S.path.push(tr.name);
   $('ttext').textContent=curTrail.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);if(S.state==='ride'&&S.path.length>1)toast(shortName(curTrail));}
 function fmt(t){const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);}
-function showHud(on){['top','bot','jumpBtn','invBtn','endBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
+function showHud(on){['top','bot','jumpBtn','invBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
 function fade(fn){const f=$('fade');f.style.opacity=1;setTimeout(()=>{fn();requestAnimationFrame(()=>{f.style.opacity=0;});},360);}
 function thump(){if(!actx)return;[0,0.09].forEach(d=>{const t=actx.currentTime+d,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(45,t+0.16);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+0.25);});}
 const mmss=t=>{t=Math.round(t);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
@@ -23,7 +23,7 @@ function runFromTrail(tr,top){let i=0,hm=-1e9,im=0;for(let q=0;q<tr.s.length-2&&
   i=im;while(i<tr.s.length-2&&tr.cs[i]-tr.cs[im]<Math.min(10,tr.L*0.08))i++;let j=i;while(j<tr.s.length-1&&tr.cs[j]-tr.cs[i]<30)j++;const p=tr.s[i],q=tr.s[j];
   RUN={x:p[0],z:p[1],th:Math.atan2(q[0]-p[0],q[1]-p[1]),top:top||shortName(tr.name),name:tr.name,dest:tr.dest,tr};RUN.h0=H(RUN.x,RUN.z);RUN.h1=RUN.dest?Math.min(RUN.dest.h,RUN.h0-30):RUN.h0-200;}
 function dropIn(tr,top){$('map').classList.add('hidden');$('pick').classList.add('hidden');$('start').classList.add('hidden');$('finish').classList.add('hidden');startAudio();
-  fade(()=>{runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.path=[tr.name];toast(shortName(tr.name));});}
+  fade(()=>{runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.curTr=tr;S.path=[tr.name];toast(shortName(tr.name));});}
 /* the card at the top of a lift (or from the menu): every trail off this top, with its real length and drop */
 let pickFrom=null;
 function showPicker(L,fromMenu){pickFrom=fromMenu?'menu':'lift';
@@ -81,18 +81,15 @@ function updLift(dt){
   setTxt('vert',Math.round(Math.max(0,(L.T[L.T.length-1].y-11-L.gnd(S.ls))*3.281)).toLocaleString()+' ft to top');
   if(wind&&actx){wind.gain.setTargetAtTime(0.04,actx.currentTime,0.3);windF.frequency.setTargetAtTime(300,actx.currentTime,0.3);}
 }
-/* step off at the top, look around, pick a trail */
+/* step off at the top: the trails' signs float down the hill (12-signs.js) */
 function unload(L){
   if(S.state!=='lift')return;S.state='unloading';SES.chairs++;
-  fade(()=>{myRide.visible=false;blob.visible=true;castSh.visible=true;
-    const s=L.len+16;S.x=L.bx+L.dx*s;S.z=L.bz+L.dz*s;S.th=L.ry;S.v=0;S.air=false;S.crashed=false;
-    updateTiles(S.x,S.z,999);qAlign.setFromAxisAngle(_yA,S.th);poseSkier(H(S.x,S.z)+0.02);{const [gx,gz]=grad(S.x,S.z);placeShadows(gx,gz,0);}
-    if(mixer)setMode('ride',0);S.state='pick';showHud(false);showPicker(L,false);});
+  fade(()=>{myRide.visible=false;blob.visible=true;castSh.visible=true;topStart(L);$('listBtn').classList.remove('hidden');});
 }
 $('skipBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='lift')unload(S.lift);});
-$('endBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='ride'){S.endBase=null;S.endWhy='Run ended';S.state='done';finish();}});
 $('goLift').onclick=()=>{$('start').classList.add('hidden');$('pickK').textContent='K-1 Base';$('pickH').textContent='Pick a lift';showLifts(BASES[0],'pickList');$('pickBack').classList.remove('hidden');pickFrom='menu';$('pick').classList.remove('hidden');};
-$('pickBack').onclick=()=>openMap();
+$('pickBack').onclick=()=>{if(pickFrom==='pause'){$('pick').classList.add('hidden');S.state='paused';$('pause').classList.remove('hidden');}
+  else if(pickFrom==='top'){$('pick').classList.add('hidden');S.state='ride';simAcc=0;$('listBtn').classList.remove('hidden');}else openMap();};
 $('toMenu').onclick=()=>openMap();
 $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!perfOn);$('perfBtn').textContent='Performance overlay: '+(perfOn?'on':'off');};
 (function(){const box=$('peakList');['ss','k1','bear','sn6','ne','skq','rh'].map(LIFT).filter(Boolean).forEach((L,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');
@@ -159,6 +156,8 @@ function physics(dt){
   steer+=(si-steer)*Math.min(1,dt*7);postS+=(pi-postS)*Math.min(1,dt*6);
   const tk=postS>0.5;
   if(S.crashed){S.v=0;steer=0;return {tk:false,off:false};}
+  /* top of a lift: stand still until you steer, tuck or jump */
+  if(!S.go){if(Math.abs(si)>0.05||Math.abs(pi)>0.05||S.air)S.go=true;else{S.v=0;return {tk:false,off:false};}}
   if(S.land>0)S.land-=dt;
   if(S.air){
     S.airT+=dt;S.vy-=GRAV*dt;S.y+=S.vy*dt;S.v*=1-0.03*dt;

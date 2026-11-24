@@ -46,8 +46,8 @@ function sheetFor(p){const sh=$('sheet');
   if(p.kind==='peak'){const L=p.L,tr=L.trails;
     sh.innerHTML='<button class="x" id="sheetX" aria-label="Back to the map">✕</button><div class="k">Top of '+L.name+' · '+ftOf(L.ht).toLocaleString()+' ft</div><h1>'+p.label+'</h1>'+
       '<div class="chips">'+tr.slice(0,6).map(trailChip).join('')+(tr.length>6?'<span class="chip more">+'+(tr.length-6)+' more</span>':'')+'</div>'+
-      '<button class="btn" id="sheetGo">Pick a trail · '+tr.length+' from here ›</button>'+
-      '<button class="btn alt" id="sheetRide">▲ Ride up from '+L.base+' · '+mmss(L.real)+'</button>'+
+      '<button class="btn" id="sheetRide">▲ Ride up from '+L.base+' · '+mmss(L.real)+'</button>'+
+      '<button class="btn alt" id="sheetGo">Or pick a trail · '+tr.length+' from here ›</button>'+
       '<p class="attr">Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
     $('sheetGo').onclick=()=>{$('map').classList.add('hidden');showPicker(L,true);};
     $('sheetRide').onclick=()=>startLift(L);
