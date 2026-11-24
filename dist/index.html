@@ -45,6 +45,18 @@
   #map{position:fixed;inset:0;touch-action:none;z-index:3}
   #mapTop{position:absolute;top:12px;left:14px;padding:6px 11px;border-radius:14px;background:rgba(20,32,46,.6);color:#fff;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;pointer-events:none}
   #pins{position:absolute;inset:0;pointer-events:none}
+  #youPin{position:absolute;left:0;top:0;pointer-events:none;z-index:2}
+  #youPin i{position:absolute;left:-9px;top:-9px;width:18px;height:18px;border-radius:50%;background:#e8432f;border:3px solid #fff;box-sizing:border-box;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  #youPin i::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:3px solid #e8432f;animation:youPulse 1.1s ease-out infinite}
+  #youPin b{position:absolute;left:0;top:-36px;transform:translateX(-50%);background:#e8432f;color:#fff;font-size:12px;font-weight:800;padding:3px 8px;border-radius:9px;white-space:nowrap;animation:youBlink 1.1s ease-in-out infinite}
+  @keyframes youPulse{from{transform:scale(1);opacity:.9}to{transform:scale(3.2);opacity:0}}
+  @keyframes youBlink{0%,100%{opacity:1}50%{opacity:.55}}
+  #mapPause{position:absolute;top:10px;left:12px;right:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px 6px 14px;border-radius:22px;background:rgba(20,32,46,.78);color:#fff;font-size:13px;font-weight:800}
+  #mapPause span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #mapResume{flex:none;width:34px;height:34px;border-radius:50%;border:0;background:#fff;color:#14202e;font-size:15px;font-weight:800;cursor:pointer}
+  #confirm{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;background:rgba(14,30,52,.5);padding:24px}
+  #confirm .cfc{background:#fff;color:#14202e;border-radius:16px;padding:18px;max-width:340px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+  #confirm h2{margin:0;font-size:20px;font-weight:800}#confirm p{margin:6px 0 12px;font-size:14px;color:#334354;line-height:1.4}
   .pin{position:absolute;left:0;top:0;pointer-events:auto;border:0;padding:6px 10px 5px;border-radius:10px;background:#14202e;color:#fff;font:inherit;text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.35);cursor:pointer;white-space:nowrap;margin-top:-9px;-webkit-tap-highlight-color:transparent}
   .pin::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:inherit;border-top-color:#14202e}
   .pin b{display:block;font-size:13px;font-weight:800;line-height:1.15}
@@ -139,6 +151,9 @@
 <div class="hidden" id="map">
   <div id="mapTop">Killington Run</div>
   <div id="pins"></div>
+  <div id="youPin" class="hidden"><i></i><b>You</b></div>
+  <div id="mapPause" class="hidden"><span id="mapPauseT">Paused</span><button id="mapResume" aria-label="Keep skiing">✕</button></div>
+  <div id="confirm" class="hidden"><div class="cfc"><h2 id="cfH">End this run?</h2><p id="cfP"></p><button class="btn" id="cfGo">End run</button><button class="btn alt" id="cfBack">Cancel</button></div></div>
   <div id="sheet"></div>
 </div>
 
@@ -157,7 +172,7 @@
       <li>In the air: <b>pull back</b> to backflip, <b>push forward</b> to front flip</li>
       <li><b>Double-swipe</b> left or right for a 360. Land it straight or you'll eat it</li>
       <li>At the top of a lift, ski toward the floating sign for the trail you want. Signs show up ahead at every split too</li>
-      <li>Trails link up: ski into any base to finish, then pick your next chair. The pause button (top left) pauses</li>
+      <li>Trails link up: ski into any base to finish, then pick your next chair. The pause button (top left) opens the trail map so you can see where you are</li>
     </ul>
     <button class="btn alt" id="perfBtn" style="font-size:12px;padding:7px;background:none;color:#5b6b7c">Performance overlay: off</button>
     <p style="font-size:11px;color:#7a8896;margin:8px 0 0;text-align:center">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>
@@ -170,18 +185,6 @@
     <h1 id="pickH">Skye Peak</h1>
     <div id="pickList"></div>
     <button class="btn alt hidden" id="pickBack">‹ Back</button>
-  </div>
-</div>
-
-<div class="ov hidden" id="pause">
-  <div class="card">
-    <div class="k">Paused</div>
-    <h1 id="pauseH">Superstar</h1>
-    <div class="pb" id="pauseSub" style="text-align:left;margin:4px 0 10px"></div>
-    <button class="btn" id="pCont">▶ Continue</button>
-    <button class="btn alt" id="pTrail" style="margin-top:8px">Different trail</button>
-    <button class="btn alt" id="pPeak" style="margin-top:8px">Different peak · trail map</button>
-    <button class="btn alt" id="pEnd" style="margin-top:8px">End run here</button>
   </div>
 </div>
 
@@ -1070,8 +1073,7 @@ function unload(L){
 }
 $('skipBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='lift')unload(S.lift);});
 $('goLift').onclick=()=>{$('start').classList.add('hidden');$('pickK').textContent='K-1 Base';$('pickH').textContent='Pick a lift';showLifts(BASES[0],'pickList');$('pickBack').classList.remove('hidden');pickFrom='menu';$('pick').classList.remove('hidden');};
-$('pickBack').onclick=()=>{if(pickFrom==='pause'){$('pick').classList.add('hidden');S.state='paused';$('pause').classList.remove('hidden');}
-  else if(pickFrom==='top'){$('pick').classList.add('hidden');S.state='ride';simAcc=0;$('listBtn').classList.remove('hidden');}else openMap();};
+$('pickBack').onclick=()=>{if(pickFrom==='top'){$('pick').classList.add('hidden');S.state='ride';simAcc=0;$('listBtn').classList.remove('hidden');}else openMap();};
 $('toMenu').onclick=()=>openMap();
 $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!perfOn);$('perfBtn').textContent='Performance overlay: '+(perfOn?'on':'off');};
 (function(){const box=$('peakList');['ss','k1','bear','sn6','ne','skq','rh'].map(LIFT).filter(Boolean).forEach((L,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');
@@ -1355,11 +1357,19 @@ MAP.pins.forEach(p=>{const e=document.createElement('button');e.className='pin '
 
 /* the bottom sheet */
 function trailChip(t){return '<span class="chip">'+diffIcon(t.diff)+shortName(t.name)+'</span>';}
-function sheetIdle(){$('sheet').innerHTML='<div class="k">Killington, Vermont · the real mountain</div><h1>Where are you dropping in?</h1>'+
+function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont · the real mountain</div><h1>Where are you dropping in?</h1>'+
   '<p>Tap a peak to drop in, or a base to ride a lift. Drag to look around, pinch to zoom.</p>'+
   '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+
   '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
   $('mapList').onclick=$('mapHow').onclick=()=>{$('map').classList.add('hidden');$('start').classList.remove('hidden');};}
+/* paused mid-run: where you are, and the way back to the run */
+function sheetPaused(){const sh=$('sheet'),pre=S.pre;
+  sh.innerHTML='<button class="x" id="sheetX" aria-label="Keep skiing">✕</button><div class="k">Paused · '+(pre?'top of '+pre.name:fmt(S.t)+' on the clock')+'</div><h1>'+(pre?pre.top:shortName(RUN.name))+'</h1>'+
+    '<p>The red dot is you. Pinch to zoom and drag to look around; tap a peak or base to plan where to go next.</p>'+
+    '<button class="btn" id="sheetResume">▶ Keep skiing</button>'+(pre?'':'<button class="btn alt" id="sheetEnd">End run here</button>')+
+    '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
+  $('sheetX').onclick=$('sheetResume').onclick=()=>resumeGame();
+  if(!pre)$('sheetEnd').onclick=()=>{$('map').classList.add('hidden');$('mapPause').classList.add('hidden');S.endBase=null;S.endWhy='Run ended';S.state='done';finish();};}
 function sheetFor(p){const sh=$('sheet');
   if(p.kind==='peak'){const L=p.L,tr=L.trails;
     sh.innerHTML='<button class="x" id="sheetX" aria-label="Back to the map">✕</button><div class="k">Top of '+L.name+' · '+ftOf(L.ht).toLocaleString()+' ft</div><h1>'+p.label+'</h1>'+
@@ -1367,22 +1377,28 @@ function sheetFor(p){const sh=$('sheet');
       '<button class="btn" id="sheetRide">▲ Ride up from '+L.base+' · '+mmss(L.real)+'</button>'+
       '<button class="btn alt" id="sheetGo">Or pick a trail · '+tr.length+' from here ›</button>'+
       '<p class="attr">Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
-    $('sheetGo').onclick=()=>{$('map').classList.add('hidden');showPicker(L,true);};
-    $('sheetRide').onclick=()=>startLift(L);
+    $('sheetGo').onclick=()=>leaveRun('pick a trail',()=>{$('map').classList.add('hidden');showPicker(L,true);});
+    $('sheetRide').onclick=()=>leaveRun('ride '+shortLift(L),()=>startLift(L));
   }else{const b=p.b;
     sh.innerHTML='<button class="x" id="sheetX" aria-label="Back to the map">✕</button><div class="k">Base area · '+b.L.length+' lift'+(b.L.length>1?'s':'')+'</div><h1>'+b.name+'</h1><div id="sheetLifts"></div>'+
       '<p class="attr">Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
     const box=$('sheetLifts');b.L.forEach(L=>{const e=document.createElement('button');e.className='lift';
       e.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.name+'</b><small>To '+L.top+' · '+L.serves+'</small><small>'+mmss(L.real)+' ride</small></div><div class="go">›</div>';
-      e.onclick=()=>startLift(L);box.appendChild(e);});}
+      e.onclick=()=>leaveRun('ride '+shortLift(L),()=>startLift(L));box.appendChild(e);});}
   $('sheetX').onclick=()=>mapSelect(null);}
+const shortLift=L=>L.name.replace(/ (Express|Quad|Triple|Double|Six|Chair|Gondola|Stage 1)\b.*$/,'').trim()||L.name;
 function mapSelect(id){const p=MAP.pins.find(q=>q.id===id)||null;MAP.sel=p;
   MAP.pins.forEach(q=>q.el.classList.toggle('sel',q===p));
   if(p){MAP.goal={...p.view,dist:3600,pitch:0.72};sheetFor(p);}
   else{MAP.goal={...MAP_HOME,yaw:MAP.yaw};sheetIdle();}}
-function openMap(){S.state='menu';showHud(false);['start','pick','finish'].forEach(i=>$(i).classList.add('hidden'));$('map').classList.remove('hidden');
+function openMap(){S.state='menu';$('mapPause').classList.add('hidden');$('confirm').classList.add('hidden');$('mapTop').classList.remove('hidden');showHud(false);['start','pick','finish'].forEach(i=>$(i).classList.add('hidden'));$('map').classList.remove('hidden');
   if(MAP.sel)sheetFor(MAP.sel);else sheetIdle();}
-function mapShown(){return S.state==='menu'&&!$('map').classList.contains('hidden');}
+function mapShown(){return (S.state==='menu'||S.state==='paused')&&!$('map').classList.contains('hidden');}
+/* pause: open the map on the skier, seen from behind and above, with the selection cleared */
+function mapPause(){MAP.sel=null;MAP.pins.forEach(q=>q.el.classList.remove('sel'));$('confirm').classList.add('hidden');
+  const fx=Math.sin(S.th),fz=Math.cos(S.th);MAP.goal={yaw:Math.atan2(-fx,-fz),pitch:0.8,dist:1500,tx:S.x+fx*250,tz:S.z+fz*250};
+  $('mapPause').classList.remove('hidden');$('mapTop').classList.add('hidden');$('mapPauseT').textContent='Paused · '+(S.pre?S.pre.top:shortName(RUN.name)+' · '+fmt(S.t));
+  $('map').classList.remove('hidden');sheetPaused();}
 
 /* camera: orbit around a target; the sheet covers the bottom, so the view centre sits a little high */
 let _mapFog=false;
@@ -1407,6 +1423,11 @@ function mapPins(){const w=window.innerWidth,h=window.innerHeight,top=56,bot=h-$
     const lx=clamp(sx,p.w/2+4,w-p.w/2-4),r=[lx-p.w/2,sy-p.h-10,lx+p.w/2,sy];let hit=false;for(const q of placed)if(r[0]<q[2]&&r[2]>q[0]&&r[1]<q[3]&&r[3]>q[1]){hit=true;break;}
     e.classList.toggle('mini',hit);if(!hit)placed.push(r);
     e.style.transform='translate('+(hit?sx:lx).toFixed(1)+'px,'+sy.toFixed(1)+'px) translate(-50%,-100%)';}}
+/* the blinking "You" marker while paused */
+const youEl=$('youPin');let youOn=false;
+function youPin(on){if(on!==youOn){youOn=on;youEl.classList.toggle('hidden',!on);}if(!on)return;
+  _pv.set(S.x,H(S.x,S.z)+4,S.z).project(camera);const w=window.innerWidth,h=window.innerHeight;
+  youEl.style.transform='translate('+((_pv.x+1)/2*w).toFixed(1)+'px,'+((1-_pv.y)/2*h).toFixed(1)+'px)';youEl.style.visibility=_pv.z>1?'hidden':'';}
 function mapFrame(dt){
   const on=mapShown();
   if(on!==MAP.on){MAP.on=on;mapLayer.visible=on;scene.fog.near=on?3500:300;scene.fog.far=on?14000:3800;camera.far=on?16000:6000;
@@ -1416,6 +1437,7 @@ function mapFrame(dt){
   else if(MAP.tilesHidden)for(const t of tiles.values()){t.mesh.visible=true;if(t.low)t.low.visible=true;}
   MAP.tilesHidden=on;
   if(on){mapCam(dt);mapPins();}
+  youPin(on&&S.state==='paused');
 }
 
 /* gestures on the map (the sheet scrolls and takes its own taps) */
@@ -1425,11 +1447,11 @@ function mapFrame(dt){
     if(ptr.size===1)tap={x:e.clientX,y:e.clientY,t:performance.now(),pin:e.target.closest('.pin')};else{tap=null;pinch={d:span(),dist:MAP.dist};}});
   el.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
     if(ptr.size===1){if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>9)tap=null;if(!tap){MAP.goal=null;MAP.yaw-=dx*0.006;MAP.pitch=clamp(MAP.pitch+dy*0.004,0.28,1.25);}}
-    else if(ptr.size===2&&pinch){MAP.goal=null;MAP.dist=clamp(pinch.dist*pinch.d/span(),2400,8000);}});
+    else if(ptr.size===2&&pinch){MAP.goal=null;MAP.dist=clamp(pinch.dist*pinch.d/span(),700,8000);}});
   const up=e=>{if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);if(ptr.size<2)pinch=null;
     if(tap&&e.type==='pointerup'&&performance.now()-tap.t<600){const pin=tap.pin;mapSelect(pin?pin.dataset.id:null);}tap=null;};
   el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
-  el.addEventListener('wheel',e=>{e.preventDefault();MAP.goal=null;MAP.dist=clamp(MAP.dist*Math.exp(e.deltaY*0.0012),2400,8000);},{passive:false});
+  el.addEventListener('wheel',e=>{e.preventDefault();MAP.goal=null;MAP.dist=clamp(MAP.dist*Math.exp(e.deltaY*0.0012),700,8000);},{passive:false});
 }
 $('startBack').onclick=()=>openMap();
 window.__map={MAP,select:mapSelect,open:openMap,layer:mapLayer};
@@ -1521,14 +1543,14 @@ const _sv=new THREE.Vector3(),_sq=new THREE.Vector3(),edgeQ=[];
 /* the trail you're on and how far down it you are */
 function curS(){const tr=S.curTr;if(!tr)return null;trailInfo(S.x,S.z);for(let q=0;q<NK&&KT[q];q++)if(KT[q]===tr){S.curS=trailS(tr,KI[q],KTT[q]);break;}return S.curS;}
 function signFrame(dt){
-  const live=(S.state==='ride'||S.state==='finishing'||S.state==='paused');
+  const live=(S.state==='ride'||S.state==='finishing');   /* paused = the trail map is up: no signs */
   let list=[];
   if(live&&S.pre)list=liftSigns(S.pre);
   else if(live&&S.curTr&&S.state!=='finishing'){const s=curS(),gs=JN.get(S.curTr);
     if(s!==null&&gs){let n=0;for(const g of gs){if(g.s<s-12)continue;if(g.s>s+170||n>=2)break;n++;
       if(n===1&&g.cont)list.push(g.cont);for(const e of g.ents)if(list.length<SG_MAX&&e.tr!==S.curTr&&!list.some(o=>o.key===e.key))list.push(e);}}}
   setSigns(list);sgMesh.visible=list.length>0;
-  const showEdges=live&&S.state!=='paused';
+  const showEdges=live;
   if(!list.length){for(let i=0;i<SG_MAX;i++)edgeHide(i);return;}
   camera.updateMatrixWorld();const VI=camera.matrixWorldInverse,A=sgGeo.attributes.ang.array,AL=sgGeo.attributes.alpha.array,Y=sgGeo.attributes.yo.array,w=innerWidth,h=innerHeight,placed=[];
   const order=list.map((e,i)=>[i,(e.x-camera.position.x)**2+(e.z-camera.position.z)**2]).sort((p,q)=>p[1]-q[1]).map(p=>p[0]);
@@ -1582,20 +1604,21 @@ function preCommit(){if(!S.go||Math.hypot(S.x-S.x0,S.z-S.z0)<8)return;const L=S.
   S.pre=null;$('listBtn').classList.add('hidden');RUN.name=pick.name;RUN.tr=pick;RUN.top=L.top;RUN.h0=H(S.x,S.z);if(pick.dest){RUN.dest=pick.dest;RUN.h1=Math.min(pick.dest.h,RUN.h0-30);setTxt('lblBot',pick.dest.name);}else RUN.h1=Math.max(pick.h1,RUN.h0-400);
   S.t=0;S.path=[];curTrail='';S.curTr=null;S.top=0;updTrailHud();toast(shortName(pick.name));}
 
-/* ---------- pause ---------- */
+/* ---------- pause: the run freezes and the trail map opens on where you are (11-map.js draws the "You" marker) ---------- */
 function pauseGame(){if(S.state!=='ride')return;S.state='paused';if(wind&&actx)wind.gain.setTargetAtTime(0,actx.currentTime,0.1);
-  $('pauseH').textContent=S.pre?'Top of '+S.pre.name:shortName(RUN.name);$('pauseSub').textContent=S.pre?'Pick a trail':fmt(S.t)+' on the clock';
-  $('pEnd').classList.toggle('hidden',!!S.pre);$('pause').classList.remove('hidden');}
-function resumeGame(){$('pause').classList.add('hidden');$('pick').classList.add('hidden');if(S.state==='paused'||S.state==='pick'){S.state='ride';simAcc=0;}}
-/* the lift whose top this run started from (or the closest lift top) */
-function runLift(){if(S.pre)return S.pre;let best=LIFTS.find(L=>RUN.tr&&L.trails.includes(RUN.tr)&&L.top===RUN.top)||LIFTS.find(L=>RUN.tr&&L.trails.includes(RUN.tr));if(best)return best;
-  let bd=1e9;LIFTS.forEach(L=>{if(!L.trails.length)return;const d=Math.hypot(L.tx-S.x,L.tz-S.z);if(d<bd){bd=d;best=L;}});return best;}
+  showHud(false);for(let i=0;i<SG_MAX;i++)edgeHide(i);sgMesh.visible=false;mapPause();}
+function resumeGame(){if(S.state!=='paused')return;$('map').classList.add('hidden');$('confirm').classList.add('hidden');$('mapPause').classList.add('hidden');
+  S.state='ride';simAcc=0;showHud(true);if(S.pre)$('listBtn').classList.remove('hidden');}
+/* leaving a paused run for something else on the map: confirm first (nothing to lose at a lift top before you've picked a trail) */
+function leaveRun(what,go){if(S.state!=='paused'){go();return;}
+  const doIt=()=>{$('confirm').classList.add('hidden');$('mapPause').classList.add('hidden');S.pre=null;S.state='menu';go();};
+  if(S.pre){doIt();return;}
+  $('cfH').textContent='End this run?';$('cfP').textContent=fmt(S.t)+' into '+shortName(RUN.name)+'. This run won\'t count toward your times.';
+  $('cfGo').textContent='End run · '+what;$('cfGo').onclick=doIt;$('cfBack').onclick=()=>$('confirm').classList.add('hidden');
+  $('confirm').classList.remove('hidden');}
 $('pauseBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();pauseGame();});
 $('listBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state!=='ride'||!S.pre)return;S.state='pick';showPicker(S.pre,false);pickFrom='top';$('pickBack').classList.remove('hidden');});
-$('pCont').onclick=resumeGame;
-$('pTrail').onclick=()=>{$('pause').classList.add('hidden');S.state='pick';showPicker(runLift(),false);pickFrom='pause';$('pickBack').classList.remove('hidden');};
-$('pPeak').onclick=()=>{$('pause').classList.add('hidden');S.pre=null;openMap();};
-$('pEnd').onclick=()=>{$('pause').classList.add('hidden');S.endBase=null;S.endWhy='Run ended';S.state='done';finish();};
+$('mapResume').onclick=resumeGame;
 window.addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='p'||e.key==='P'){if(S.state==='ride')pauseGame();else if(S.state==='paused')resumeGame();}});
 Object.assign(window.__kr,{topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});
 })();

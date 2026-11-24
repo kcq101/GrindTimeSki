@@ -83,6 +83,11 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Pause opens the trail map (Nov 24, 2026)
+- Replaced the pause card. Pause freezes the run and opens the 3D map from behind and above the skier (1,500 m out, looking 250 m down the fall line) with a blinking red "You" marker. Top bar: "Paused · trail · time" and ✕.
+- Sheet: Keep skiing, End run here (not at a lift top). Tapping a peak or base works as on the start screen; choosing a lift or "pick a trail" asks "End this run?" (time and trail; the run won't count) with Cancel. At a lift top before you've picked a trail there's nothing to lose, so no confirm.
+- Map zoom now goes in to 700 m (was 2,400) so you can look at nearby splits.
+
 ## Corduroy moiré fix (Nov 24, 2026)
 - On a phone, groomed patches showed a grainy, pixelated web just behind the skier. Cause: corduroy was a hard-edged ridge every 32 cm, faded only by distance, and fed into the per-pixel bump normals. Close to a low camera the ridges were finer than a pixel, and with dynamic resolution scaling they aliased into moiré.
 - Now a cosine ridge, faded out by its screen-space frequency (fwidth) so it only draws where a ridge spans ~15–30+ render pixels. Checked at full and minimum render scale on Alpine Training Venue.

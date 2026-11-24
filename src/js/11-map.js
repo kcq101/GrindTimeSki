@@ -37,11 +37,19 @@ MAP.pins.forEach(p=>{const e=document.createElement('button');e.className='pin '
 
 /* the bottom sheet */
 function trailChip(t){return '<span class="chip">'+diffIcon(t.diff)+shortName(t.name)+'</span>';}
-function sheetIdle(){$('sheet').innerHTML='<div class="k">Killington, Vermont · the real mountain</div><h1>Where are you dropping in?</h1>'+
+function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont · the real mountain</div><h1>Where are you dropping in?</h1>'+
   '<p>Tap a peak to drop in, or a base to ride a lift. Drag to look around, pinch to zoom.</p>'+
   '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+
   '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
   $('mapList').onclick=$('mapHow').onclick=()=>{$('map').classList.add('hidden');$('start').classList.remove('hidden');};}
+/* paused mid-run: where you are, and the way back to the run */
+function sheetPaused(){const sh=$('sheet'),pre=S.pre;
+  sh.innerHTML='<button class="x" id="sheetX" aria-label="Keep skiing">✕</button><div class="k">Paused · '+(pre?'top of '+pre.name:fmt(S.t)+' on the clock')+'</div><h1>'+(pre?pre.top:shortName(RUN.name))+'</h1>'+
+    '<p>The red dot is you. Pinch to zoom and drag to look around; tap a peak or base to plan where to go next.</p>'+
+    '<button class="btn" id="sheetResume">▶ Keep skiing</button>'+(pre?'':'<button class="btn alt" id="sheetEnd">End run here</button>')+
+    '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
+  $('sheetX').onclick=$('sheetResume').onclick=()=>resumeGame();
+  if(!pre)$('sheetEnd').onclick=()=>{$('map').classList.add('hidden');$('mapPause').classList.add('hidden');S.endBase=null;S.endWhy='Run ended';S.state='done';finish();};}
 function sheetFor(p){const sh=$('sheet');
   if(p.kind==='peak'){const L=p.L,tr=L.trails;
     sh.innerHTML='<button class="x" id="sheetX" aria-label="Back to the map">✕</button><div class="k">Top of '+L.name+' · '+ftOf(L.ht).toLocaleString()+' ft</div><h1>'+p.label+'</h1>'+
@@ -49,22 +57,28 @@ function sheetFor(p){const sh=$('sheet');
       '<button class="btn" id="sheetRide">▲ Ride up from '+L.base+' · '+mmss(L.real)+'</button>'+
       '<button class="btn alt" id="sheetGo">Or pick a trail · '+tr.length+' from here ›</button>'+
       '<p class="attr">Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
-    $('sheetGo').onclick=()=>{$('map').classList.add('hidden');showPicker(L,true);};
-    $('sheetRide').onclick=()=>startLift(L);
+    $('sheetGo').onclick=()=>leaveRun('pick a trail',()=>{$('map').classList.add('hidden');showPicker(L,true);});
+    $('sheetRide').onclick=()=>leaveRun('ride '+shortLift(L),()=>startLift(L));
   }else{const b=p.b;
     sh.innerHTML='<button class="x" id="sheetX" aria-label="Back to the map">✕</button><div class="k">Base area · '+b.L.length+' lift'+(b.L.length>1?'s':'')+'</div><h1>'+b.name+'</h1><div id="sheetLifts"></div>'+
       '<p class="attr">Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
     const box=$('sheetLifts');b.L.forEach(L=>{const e=document.createElement('button');e.className='lift';
       e.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.name+'</b><small>To '+L.top+' · '+L.serves+'</small><small>'+mmss(L.real)+' ride</small></div><div class="go">›</div>';
-      e.onclick=()=>startLift(L);box.appendChild(e);});}
+      e.onclick=()=>leaveRun('ride '+shortLift(L),()=>startLift(L));box.appendChild(e);});}
   $('sheetX').onclick=()=>mapSelect(null);}
+const shortLift=L=>L.name.replace(/ (Express|Quad|Triple|Double|Six|Chair|Gondola|Stage 1)\b.*$/,'').trim()||L.name;
 function mapSelect(id){const p=MAP.pins.find(q=>q.id===id)||null;MAP.sel=p;
   MAP.pins.forEach(q=>q.el.classList.toggle('sel',q===p));
   if(p){MAP.goal={...p.view,dist:3600,pitch:0.72};sheetFor(p);}
   else{MAP.goal={...MAP_HOME,yaw:MAP.yaw};sheetIdle();}}
-function openMap(){S.state='menu';showHud(false);['start','pick','finish'].forEach(i=>$(i).classList.add('hidden'));$('map').classList.remove('hidden');
+function openMap(){S.state='menu';$('mapPause').classList.add('hidden');$('confirm').classList.add('hidden');$('mapTop').classList.remove('hidden');showHud(false);['start','pick','finish'].forEach(i=>$(i).classList.add('hidden'));$('map').classList.remove('hidden');
   if(MAP.sel)sheetFor(MAP.sel);else sheetIdle();}
-function mapShown(){return S.state==='menu'&&!$('map').classList.contains('hidden');}
+function mapShown(){return (S.state==='menu'||S.state==='paused')&&!$('map').classList.contains('hidden');}
+/* pause: open the map on the skier, seen from behind and above, with the selection cleared */
+function mapPause(){MAP.sel=null;MAP.pins.forEach(q=>q.el.classList.remove('sel'));$('confirm').classList.add('hidden');
+  const fx=Math.sin(S.th),fz=Math.cos(S.th);MAP.goal={yaw:Math.atan2(-fx,-fz),pitch:0.8,dist:1500,tx:S.x+fx*250,tz:S.z+fz*250};
+  $('mapPause').classList.remove('hidden');$('mapTop').classList.add('hidden');$('mapPauseT').textContent='Paused · '+(S.pre?S.pre.top:shortName(RUN.name)+' · '+fmt(S.t));
+  $('map').classList.remove('hidden');sheetPaused();}
 
 /* camera: orbit around a target; the sheet covers the bottom, so the view centre sits a little high */
 let _mapFog=false;
@@ -89,6 +103,11 @@ function mapPins(){const w=window.innerWidth,h=window.innerHeight,top=56,bot=h-$
     const lx=clamp(sx,p.w/2+4,w-p.w/2-4),r=[lx-p.w/2,sy-p.h-10,lx+p.w/2,sy];let hit=false;for(const q of placed)if(r[0]<q[2]&&r[2]>q[0]&&r[1]<q[3]&&r[3]>q[1]){hit=true;break;}
     e.classList.toggle('mini',hit);if(!hit)placed.push(r);
     e.style.transform='translate('+(hit?sx:lx).toFixed(1)+'px,'+sy.toFixed(1)+'px) translate(-50%,-100%)';}}
+/* the blinking "You" marker while paused */
+const youEl=$('youPin');let youOn=false;
+function youPin(on){if(on!==youOn){youOn=on;youEl.classList.toggle('hidden',!on);}if(!on)return;
+  _pv.set(S.x,H(S.x,S.z)+4,S.z).project(camera);const w=window.innerWidth,h=window.innerHeight;
+  youEl.style.transform='translate('+((_pv.x+1)/2*w).toFixed(1)+'px,'+((1-_pv.y)/2*h).toFixed(1)+'px)';youEl.style.visibility=_pv.z>1?'hidden':'';}
 function mapFrame(dt){
   const on=mapShown();
   if(on!==MAP.on){MAP.on=on;mapLayer.visible=on;scene.fog.near=on?3500:300;scene.fog.far=on?14000:3800;camera.far=on?16000:6000;
@@ -98,6 +117,7 @@ function mapFrame(dt){
   else if(MAP.tilesHidden)for(const t of tiles.values()){t.mesh.visible=true;if(t.low)t.low.visible=true;}
   MAP.tilesHidden=on;
   if(on){mapCam(dt);mapPins();}
+  youPin(on&&S.state==='paused');
 }
 
 /* gestures on the map (the sheet scrolls and takes its own taps) */
@@ -107,11 +127,11 @@ function mapFrame(dt){
     if(ptr.size===1)tap={x:e.clientX,y:e.clientY,t:performance.now(),pin:e.target.closest('.pin')};else{tap=null;pinch={d:span(),dist:MAP.dist};}});
   el.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
     if(ptr.size===1){if(tap&&Math.hypot(e.clientX-tap.x,e.clientY-tap.y)>9)tap=null;if(!tap){MAP.goal=null;MAP.yaw-=dx*0.006;MAP.pitch=clamp(MAP.pitch+dy*0.004,0.28,1.25);}}
-    else if(ptr.size===2&&pinch){MAP.goal=null;MAP.dist=clamp(pinch.dist*pinch.d/span(),2400,8000);}});
+    else if(ptr.size===2&&pinch){MAP.goal=null;MAP.dist=clamp(pinch.dist*pinch.d/span(),700,8000);}});
   const up=e=>{if(!ptr.has(e.pointerId))return;ptr.delete(e.pointerId);if(ptr.size<2)pinch=null;
     if(tap&&e.type==='pointerup'&&performance.now()-tap.t<600){const pin=tap.pin;mapSelect(pin?pin.dataset.id:null);}tap=null;};
   el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);
-  el.addEventListener('wheel',e=>{e.preventDefault();MAP.goal=null;MAP.dist=clamp(MAP.dist*Math.exp(e.deltaY*0.0012),2400,8000);},{passive:false});
+  el.addEventListener('wheel',e=>{e.preventDefault();MAP.goal=null;MAP.dist=clamp(MAP.dist*Math.exp(e.deltaY*0.0012),700,8000);},{passive:false});
 }
 $('startBack').onclick=()=>openMap();
 window.__map={MAP,select:mapSelect,open:openMap,layer:mapLayer};

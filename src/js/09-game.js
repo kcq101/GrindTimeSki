@@ -88,8 +88,7 @@ function unload(L){
 }
 $('skipBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state==='lift')unload(S.lift);});
 $('goLift').onclick=()=>{$('start').classList.add('hidden');$('pickK').textContent='K-1 Base';$('pickH').textContent='Pick a lift';showLifts(BASES[0],'pickList');$('pickBack').classList.remove('hidden');pickFrom='menu';$('pick').classList.remove('hidden');};
-$('pickBack').onclick=()=>{if(pickFrom==='pause'){$('pick').classList.add('hidden');S.state='paused';$('pause').classList.remove('hidden');}
-  else if(pickFrom==='top'){$('pick').classList.add('hidden');S.state='ride';simAcc=0;$('listBtn').classList.remove('hidden');}else openMap();};
+$('pickBack').onclick=()=>{if(pickFrom==='top'){$('pick').classList.add('hidden');S.state='ride';simAcc=0;$('listBtn').classList.remove('hidden');}else openMap();};
 $('toMenu').onclick=()=>openMap();
 $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!perfOn);$('perfBtn').textContent='Performance overlay: '+(perfOn?'on':'off');};
 (function(){const box=$('peakList');['ss','k1','bear','sn6','ne','skq','rh'].map(LIFT).filter(Boolean).forEach((L,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');

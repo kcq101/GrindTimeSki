@@ -86,14 +86,14 @@ const _sv=new THREE.Vector3(),_sq=new THREE.Vector3(),edgeQ=[];
 /* the trail you're on and how far down it you are */
 function curS(){const tr=S.curTr;if(!tr)return null;trailInfo(S.x,S.z);for(let q=0;q<NK&&KT[q];q++)if(KT[q]===tr){S.curS=trailS(tr,KI[q],KTT[q]);break;}return S.curS;}
 function signFrame(dt){
-  const live=(S.state==='ride'||S.state==='finishing'||S.state==='paused');
+  const live=(S.state==='ride'||S.state==='finishing');   /* paused = the trail map is up: no signs */
   let list=[];
   if(live&&S.pre)list=liftSigns(S.pre);
   else if(live&&S.curTr&&S.state!=='finishing'){const s=curS(),gs=JN.get(S.curTr);
     if(s!==null&&gs){let n=0;for(const g of gs){if(g.s<s-12)continue;if(g.s>s+170||n>=2)break;n++;
       if(n===1&&g.cont)list.push(g.cont);for(const e of g.ents)if(list.length<SG_MAX&&e.tr!==S.curTr&&!list.some(o=>o.key===e.key))list.push(e);}}}
   setSigns(list);sgMesh.visible=list.length>0;
-  const showEdges=live&&S.state!=='paused';
+  const showEdges=live;
   if(!list.length){for(let i=0;i<SG_MAX;i++)edgeHide(i);return;}
   camera.updateMatrixWorld();const VI=camera.matrixWorldInverse,A=sgGeo.attributes.ang.array,AL=sgGeo.attributes.alpha.array,Y=sgGeo.attributes.yo.array,w=innerWidth,h=innerHeight,placed=[];
   const order=list.map((e,i)=>[i,(e.x-camera.position.x)**2+(e.z-camera.position.z)**2]).sort((p,q)=>p[1]-q[1]).map(p=>p[0]);
@@ -147,19 +147,20 @@ function preCommit(){if(!S.go||Math.hypot(S.x-S.x0,S.z-S.z0)<8)return;const L=S.
   S.pre=null;$('listBtn').classList.add('hidden');RUN.name=pick.name;RUN.tr=pick;RUN.top=L.top;RUN.h0=H(S.x,S.z);if(pick.dest){RUN.dest=pick.dest;RUN.h1=Math.min(pick.dest.h,RUN.h0-30);setTxt('lblBot',pick.dest.name);}else RUN.h1=Math.max(pick.h1,RUN.h0-400);
   S.t=0;S.path=[];curTrail='';S.curTr=null;S.top=0;updTrailHud();toast(shortName(pick.name));}
 
-/* ---------- pause ---------- */
+/* ---------- pause: the run freezes and the trail map opens on where you are (11-map.js draws the "You" marker) ---------- */
 function pauseGame(){if(S.state!=='ride')return;S.state='paused';if(wind&&actx)wind.gain.setTargetAtTime(0,actx.currentTime,0.1);
-  $('pauseH').textContent=S.pre?'Top of '+S.pre.name:shortName(RUN.name);$('pauseSub').textContent=S.pre?'Pick a trail':fmt(S.t)+' on the clock';
-  $('pEnd').classList.toggle('hidden',!!S.pre);$('pause').classList.remove('hidden');}
-function resumeGame(){$('pause').classList.add('hidden');$('pick').classList.add('hidden');if(S.state==='paused'||S.state==='pick'){S.state='ride';simAcc=0;}}
-/* the lift whose top this run started from (or the closest lift top) */
-function runLift(){if(S.pre)return S.pre;let best=LIFTS.find(L=>RUN.tr&&L.trails.includes(RUN.tr)&&L.top===RUN.top)||LIFTS.find(L=>RUN.tr&&L.trails.includes(RUN.tr));if(best)return best;
-  let bd=1e9;LIFTS.forEach(L=>{if(!L.trails.length)return;const d=Math.hypot(L.tx-S.x,L.tz-S.z);if(d<bd){bd=d;best=L;}});return best;}
+  showHud(false);for(let i=0;i<SG_MAX;i++)edgeHide(i);sgMesh.visible=false;mapPause();}
+function resumeGame(){if(S.state!=='paused')return;$('map').classList.add('hidden');$('confirm').classList.add('hidden');$('mapPause').classList.add('hidden');
+  S.state='ride';simAcc=0;showHud(true);if(S.pre)$('listBtn').classList.remove('hidden');}
+/* leaving a paused run for something else on the map: confirm first (nothing to lose at a lift top before you've picked a trail) */
+function leaveRun(what,go){if(S.state!=='paused'){go();return;}
+  const doIt=()=>{$('confirm').classList.add('hidden');$('mapPause').classList.add('hidden');S.pre=null;S.state='menu';go();};
+  if(S.pre){doIt();return;}
+  $('cfH').textContent='End this run?';$('cfP').textContent=fmt(S.t)+' into '+shortName(RUN.name)+'. This run won\'t count toward your times.';
+  $('cfGo').textContent='End run · '+what;$('cfGo').onclick=doIt;$('cfBack').onclick=()=>$('confirm').classList.add('hidden');
+  $('confirm').classList.remove('hidden');}
 $('pauseBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();pauseGame();});
 $('listBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();if(S.state!=='ride'||!S.pre)return;S.state='pick';showPicker(S.pre,false);pickFrom='top';$('pickBack').classList.remove('hidden');});
-$('pCont').onclick=resumeGame;
-$('pTrail').onclick=()=>{$('pause').classList.add('hidden');S.state='pick';showPicker(runLift(),false);pickFrom='pause';$('pickBack').classList.remove('hidden');};
-$('pPeak').onclick=()=>{$('pause').classList.add('hidden');S.pre=null;openMap();};
-$('pEnd').onclick=()=>{$('pause').classList.add('hidden');S.endBase=null;S.endWhy='Run ended';S.state='done';finish();};
+$('mapResume').onclick=resumeGame;
 window.addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='p'||e.key==='P'){if(S.state==='ride')pauseGame();else if(S.state==='paused')resumeGame();}});
 Object.assign(window.__kr,{topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});
