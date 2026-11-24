@@ -76,7 +76,8 @@
   .lift.rec .tico{background:#2a3a4c}
   .card{max-height:calc(100vh - 40px);overflow-y:auto;-webkit-overflow-scrolling:touch}
   #pauseBtn,#listBtn{position:fixed;top:60px;left:14px;z-index:5;height:34px;border-radius:17px;background:rgba(20,32,46,.55);color:#fff;border:1.5px solid rgba(255,255,255,.6);font:inherit;font-weight:800;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none}
-  #pauseBtn{width:34px;font-size:11px;letter-spacing:-1px;padding:0}
+  #pauseBtn{width:34px;padding:0}
+  #pauseBtn::before,#pauseBtn::after{content:'';position:absolute;top:10px;width:4px;height:12px;border-radius:1px;background:#fff}#pauseBtn::before{left:11px}#pauseBtn::after{right:11px}
   #listBtn{left:56px;padding:0 12px;font-size:12px}
   #edges{position:fixed;inset:0;pointer-events:none;z-index:4}
   .edge{position:absolute;left:0;top:0;width:0;height:0}
@@ -126,7 +127,7 @@
 <button class="ctl hidden" id="jumpBtn">JUMP<div class="pips"><i></i><i></i></div></button>
 <button class="ctl hidden" id="invBtn">⇅ Push up = tuck</button>
 <button class="ctl hidden" id="skipBtn">Skip ▸▸</button>
-<button class="hidden" id="pauseBtn" aria-label="Pause">❚❚</button>
+<button class="hidden" id="pauseBtn" aria-label="Pause"></button>
 <button class="hidden" id="listBtn">☰ Trail list</button>
 <div id="edges"></div>
 <div id="lookHint" class="hidden">Drag to look around</div>
@@ -156,7 +157,7 @@
       <li>In the air: <b>pull back</b> to backflip, <b>push forward</b> to front flip</li>
       <li><b>Double-swipe</b> left or right for a 360. Land it straight or you'll eat it</li>
       <li>At the top of a lift, ski toward the floating sign for the trail you want. Signs show up ahead at every split too</li>
-      <li>Trails link up: ski into any base to finish, then pick your next chair. <b>❚❚</b> pauses</li>
+      <li>Trails link up: ski into any base to finish, then pick your next chair. The pause button (top left) pauses</li>
     </ul>
     <button class="btn alt" id="perfBtn" style="font-size:12px;padding:7px;background:none;color:#5b6b7c">Performance overlay: off</button>
     <p style="font-size:11px;color:#7a8896;margin:8px 0 0;text-align:center">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>

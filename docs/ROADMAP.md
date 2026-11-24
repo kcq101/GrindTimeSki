@@ -81,7 +81,11 @@ Known gaps
 - The run commits once you're on exactly one of the top's trails near its sign (or 45 m down, or 15 m down a trail with no sign). The clock, best-time key and route start there.
 - Junction signs: a load-time pass walks every trail in 8 m steps to find where other trails leave its surface (forks, crossings, and what it runs into at its end): 358 junctions on 177 trails. During a run the next two junctions within 170 m get signs 12 m down each branch, plus one for the trail you're on. Overlapping labels stack upward; off-screen splits ahead get edge arrows.
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
-- Pause: "End run" became ❚❚ under the timer (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
+- Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
+
+## Corduroy moiré fix (Nov 24, 2026)
+- On a phone, groomed patches showed a grainy, pixelated web just behind the skier. Cause: corduroy was a hard-edged ridge every 32 cm, faded only by distance, and fed into the per-pixel bump normals. Close to a low camera the ridges were finer than a pixel, and with dynamic resolution scaling they aliased into moiré.
+- Now a cosine ridge, faded out by its screen-space frequency (fwidth) so it only draws where a ridge spans ~15–30+ render pixels. Checked at full and minimum render scale on Alpine Training Venue.
 
 ## Lift network v1 (shipped)
 - Data-driven LIFTS (now from OSM): towers auto-placed, terminals, lift sign, cleared lift line

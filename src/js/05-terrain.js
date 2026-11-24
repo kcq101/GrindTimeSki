@@ -40,7 +40,10 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
      float traffic=onP*smoothstep(.42,.72,nA.r+.22*(1.-clamp(vT.y,0.,1.)));
      sIce=traffic*smoothstep(.64,.82,nA.g);
      float cordMask=onP*(1.-traffic)*smoothstep(.7,.84,nA.b)*.7;
-     float cord=cordMask*(1.-smoothstep(0.,.06,abs(fract(q.x/.32)-.5)-.38))*near;
+     /* corduroy: a smooth (cosine) ridge every 32 cm, faded out where a ridge spans fewer than ~15–30 px on screen (the bump normals come from 2×2-pixel derivatives).
+        The old hard-edged ridge was finer than a pixel close behind the skier and moiréd into a grainy web, worst at low render scale. */
+     float cq=q.x/.32,cfw=fwidth(cq);
+     float cord=cordMask*(.5+.5*cos(6.2832*cq))*(1.-smoothstep(.035,.07,cfw))*near;
      sHgt=near*((nB.g-.5)*(.045+.08*edge+.03*(1.-onP)+.035*traffic)+(nB.b-.5)*.008-trk*.03-cord*.01);
      vec3 c=diffuseColor.rgb;
      c*=1.-onP*.035*(1.-nA.r);
@@ -61,7 +64,7 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
     float fr=pow(1.-clamp(abs(dot(normal,normalize(vViewPosition))),0.,1.),4.);
     outgoingLight=mix(outgoingLight,vec3(.97,.985,1.),fr*.28);
     #include <envmap_fragment>`);};
-  mat.customProgramCacheKey=()=>'snow4';}
+  mat.customProgramCacheKey=()=>'snow5';}
 snowify(terrMat);snowify(terrMatFine);
 function branchy(g,lobes){const P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i),r=Math.hypot(x,z);if(r<1e-4)continue;const a=Math.atan2(x,z),k=0.8+0.2*Math.cos(a*lobes)+0.06*Math.sin(a*3.1);P.setX(i,x*k);P.setZ(i,z*k);}g.computeVertexNormals();return g;}
 /* two reusable tree models (origin at the ground, both tiers in one geometry, upper tier a touch lighter).
