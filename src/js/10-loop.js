@@ -85,6 +85,7 @@ function endFrame(now,dt){
   {const sp=(S.state==='ride'||S.state==='finishing')?clamp(S.v/30,0,1):0;const o=Math.round((0.45+sp*0.5)*25)/25;if(o!==_vigO){_vigO=o;$('vig').style.opacity=o;}}
   if(window.__close&&BN.head){BN.head.getWorldPosition(_hp);const a=window.__close;camera.position.set(_hp.x+Math.sin(S.th+a)*1.3,_hp.y+0.15,_hp.z+Math.cos(S.th+a)*1.3);camera.lookAt(_hp.x,_hp.y+0.05,_hp.z);}
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.style.opacity=0;}
+  weatherFrame(dt,now);
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
 }

@@ -28,6 +28,7 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   10-loop             camera, fixed-step loop, HUD, finish card, test hooks (window.__kr)
   11-map              start screen: 3D trail map, pins, bottom sheet, orbit/pinch gestures (window.__map)
   12-signs            floating trail signs (lift tops + junctions, one billboard mesh), screen-edge arrows, lift-top free-ski, pause menu
+  13-weather          weather cycle (seeded per trail): altitude fog + sky/ridge wash, falling snow, summit cloud wisps
 assets/               skier.glb, helmet.glb (embedded into the page at build time)
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json
 tools/build.py        bundles everything into dist/index.html
@@ -54,6 +55,7 @@ npm run test:autopilot          # ski every pickable trail; optional names: node
 npm run test:terrain            # sharpest height changes along trail centrelines
 npm run test:lifttops           # from each lift's drop-off spot, can you reach every trail off that top?
 npm run test:landings           # jumps (with/without boosts, tucked, pulling back) from spots on every trail: % clean landings
+npm run test:weather            # summit + mid-mountain at clear / flurries / socked in, map while foggy -> test-output/weather/
 npm run test:poses              # close-up skier shots (straight, carves, transitions, tuck, jump, landing, bumps) + joint checks -> test-output/poses/
 ```
 

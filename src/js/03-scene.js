@@ -26,9 +26,9 @@ scene.background=new THREE.Color(0xcfe0f2);
 scene.fog=new THREE.Fog(0xcfe0f2,300,3800);
 const SUN_DIR=new THREE.Vector3(0.55,0.52,0.72).normalize();
 /* sky dome: gradient, sun glow and drifting cumulus in one cheap fragment shader */
-const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,uniforms:{uSun:{value:SUN_DIR},uTime:{value:0},uNoise:{value:noiseTex}},
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,uniforms:{uSun:{value:SUN_DIR},uTime:{value:0},uNoise:{value:noiseTex},uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0}},
   vertexShader:'varying vec3 vDir;void main(){vDir=position;vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=p.xyww;}',
-  fragmentShader:`uniform vec3 uSun;uniform float uTime;uniform sampler2D uNoise;varying vec3 vDir;
+  fragmentShader:`uniform vec3 uSun;uniform float uTime;uniform sampler2D uNoise;uniform vec3 uFogC;uniform float uFogK;varying vec3 vDir;
   float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
   float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*vn(p);p=p*2.03+17.1;a*=.5;}return s;}
@@ -39,6 +39,7 @@ const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,dept
     if(h>.01){vec2 uv=d.xz/(h+.18)*1.15+vec2(uTime*.004,uTime*.0015);float n=texture2D(uNoise,uv*.11).r*.62+texture2D(uNoise,uv*.37+.3).g*.38;
       float cl=smoothstep(.52,.82,n)*smoothstep(.01,.22,h);vec3 cc=mix(vec3(.80,.85,.92),vec3(1.),smoothstep(.5,.9,n))+vec3(1.,.9,.75)*pow(s,6.)*.25;c=mix(c,cc,cl*.85);}
     c+=vec3(1.,.88,.68)*(pow(s,10.)*.28+pow(s,600.)*2.);
+    c=mix(c,uFogC,uFogK*(1.-.35*smoothstep(.0,.6,h)));   /* weather: overcast sky, whitest at the horizon */
     gl_FragColor=linearToOutputTexel(vec4(c,1.));}`});
 const skyDome=new THREE.Mesh(new THREE.SphereGeometry(4000,32,16),skyMat);skyDome.frustumCulled=false;skyDome.renderOrder=-1;scene.add(skyDome);
 /* environment map from the same sky, so glossy gear reflects the real sky and snow */
@@ -59,6 +60,7 @@ const glintTex=canvasTex(256,256,(g,w,h)=>{g.fillStyle='rgb(60,60,60)';g.fillRec
 glintTex.wrapS=glintTex.wrapT=THREE.RepeatWrapping;
 snowTex.wrapS=snowTex.wrapT=THREE.RepeatWrapping;
 
+const RIDGE_U={uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0}};
 /* ---------- distant mountains: three layered ridgeline rings, flat-shaded, haze baked in ---------- */
 (function(){
   const cx=0,cz=0,yb=430,hz=new THREE.Color(0xcfe0f2),sn=new THREE.Color(),lo=new THREE.Color(),cc=new THREE.Color();
@@ -68,6 +70,8 @@ snowTex.wrapS=snowTex.wrapT=THREE.RepeatWrapping;
     {r:4300,h:[260,540],snow:0xe8edf3,low:0x7a90a6,haze:.6,lob:7,sd:4.1},
     {r:5400,h:[330,640],snow:0xeef2f7,low:0x9db2c6,haze:.75,lob:5,sd:7.7}];
   const mat=new THREE.MeshBasicMaterial({vertexColors:true,fog:false,side:THREE.DoubleSide});
+  /* weather (13-weather.js) washes the ridgelines out toward the fog colour */
+  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,RIDGE_U);sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 uFogC;uniform float uFogK;').replace('#include <fog_fragment>','gl_FragColor.rgb=mix(gl_FragColor.rgb,uFogC,uFogK);');};
   LAYERS.forEach(L=>{const seg=144,P=new Float32Array((seg+1)*3*3),C=new Float32Array((seg+1)*3*3),I=[];
     sn.set(L.snow).lerp(hz,L.haze*.6);lo.set(L.low).lerp(hz,L.haze);
     for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;

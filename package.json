@@ -10,7 +10,8 @@
     "test:lifttops": "node tools/test/lift-tops.js",
     "test:landings": "node tools/test/landings.js",
     "test:terrain": "node tools/test/terrain-steps.js",
-    "test:poses": "node tools/test/skier-poses.js"
+    "test:poses": "node tools/test/skier-poses.js",
+    "test:weather": "node tools/test/weather.js"
   },
   "devDependencies": {
     "playwright": "^1.49.0",

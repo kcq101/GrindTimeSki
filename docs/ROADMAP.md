@@ -83,6 +83,15 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Weather: altitude fog, falling snow, summit cloud wisps (Nov 24, 2026)
+- New `src/js/13-weather.js`. One slow cloudiness cycle (two sines, ≈82 s and ≈190 s) drives everything: about half the time clear, the rest flurries building to thick cloud. During a run it runs on run time with a phase seeded by the trail name, so a trail always gets the same weather (fair best times); on lifts and menus it runs on the clock.
+- Altitude scales it between 780 m and 1,180 m. Socked in at the summit, fog is 6–200 m (never under ~200 m, so signs and the next pitch stay readable at 40 mph); at the same moment mid-mountain (~900 m) it's 150–2,150 m. Fog colour shifts to an overcast grey, the sky dome and distant ridgelines wash out to match (new `uFogC/uFogK` uniforms), and the sun dims up to 35%.
+- Falling snow: 4,000 points in a 22 m box that wraps around the camera, all motion in the vertex shader (no per-frame CPU), density = weather. Skipped when clear.
+- Cloud wisps: 18 camera-facing soft quads in one mesh, spawned 70–320 m out over ground above ~760 m, drifting with the wind, fading out near the camera (no screen-filling) and into the fog. Skipped when clear.
+- The trail map/pause view turns all of it off and restores clear fog.
+- Cost: +2 draw calls only while snowing / cloudy (Superstar 168, Outer Limits 165), +~40 triangles; no physics changes. New test `tools/test/weather.js` (`npm run test:weather`): summit and mid-mountain at clear / 0.5 / 1, plus the map while foggy. `__wx.force = 0..1` pins the weather for testing.
+- Not done: fog pooling in low ground (needs terrain shader work); flakes don't streak at speed.
+
 ## Skier biomechanics pass (Nov 24, 2026)
 - Before: the whole body (legs included) rolled as one block by `steer*0.4` while the skis stayed flat, so legs never split into inside/outside, knees didn't track the skis, elbows winged out with hands near the shoulders, poles shrank to stay out of the snow and stuck out sideways in a tuck.
 - Architecture kept: the air_squat clip scrubbed by `crouch` sets base flex; everything below is procedural in `updModel` (07-skier.js), driven by the existing controller (`steer`, `postS`, `S.v`, `S.air`, `S.land`). No new clips, meshes, physics bodies or per-frame allocations.
