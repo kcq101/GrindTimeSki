@@ -192,19 +192,19 @@ function updModel(dt,tk){
     /* whole body: roll into the turn about the snow, slight pitch with the tuck, absorption lowers the hips */
     /* skate stroke: the pushing ski splays out, edges and drives sideways, then lifts and comes back; weight rides the other ski */
     const sk=(S.skT>=0&&!S.air&&!S.crashed)?S.skT/SKATE_T:-1,skE=sk<0?0:(sk<0.5?sstep(0,0.3,sk):1-sstep(0.5,1,sk)),skL=sk>0.45?Math.sin(clamp((sk-0.45)/0.55,0,1)*Math.PI):0;
-    rig.rotation.set(S.crashed?0:(0.04+Math.max(0,postS)*0.1-Math.max(0,-postS)*0.03+0.08*skE),0,lean+(S.skSide===0?1:-1)*0.1*skE);
+    rig.rotation.set(S.crashed?0:(0.04+Math.max(0,postS)*0.1-Math.max(0,-postS)*0.03+0.2*skE),0,lean+(S.skSide===0?1:-1)*0.1*skE);
     /* the roll pivots about the outside boot, so the outside leg stays long and the inside leg folds (long leg / short leg) */
-    {const px=(lean>0?skiG[0]:skiG[1]).position.x,cl=Math.cos(lean),sl=Math.sin(lean);rig.position.set(px-px*cl,-px*sl-ab,0);}
+    {const px=(lean>0?skiG[0]:skiG[1]).position.x,cl=Math.cos(lean),sl=Math.sin(lean);rig.position.set(px-px*cl,-px*sl-ab-0.07*skE,0);}   /* sinks into each push */
     {const e=lean*LEAN.edge,ins=lean>0?1:0,ld=LEAN.lead*Math.min(1,Math.abs(lean)/LEAN.max);
      skiG.forEach((g,i)=>{g.rotation.z=e;g.position.y=0.05*Math.abs(Math.sin(e));g.position.z=i===ins?ld:-ld*0.3;g.rotation.y=0;if(g.userData.x0!=null)g.position.x=g.userData.x0;
-       if(skE>0){const out=i===0?1:-1;if(i===S.skSide){g.rotation.y=out*0.4*skE;g.position.x+=out*0.24*skE;g.position.z-=0.14*skE;g.position.y+=0.1*skL;g.rotation.z+=out*0.28*skE*(1-skL);}
+       if(skE>0){const out=i===0?1:-1;if(i===S.skSide){g.rotation.y=out*0.3*skE;g.position.x+=out*0.11*skE;g.position.z-=0.34*skE;g.position.y+=0.1*skL;g.rotation.z+=out*0.28*skE*(1-skL);}
          else{g.rotation.y=out*0.14*skE;g.position.x-=out*0.06*skE;}}});}
     skier.updateMatrixWorld(true);_rw.set(1,0,0).applyQuaternion(skier.quaternion);_fw.set(0,0,1).applyQuaternion(skier.quaternion);
     /* if the outside leg can't reach its ski, sink the hips until it can */
     for(let it=0;it<2;it++){let ex=0;for(let i=0;i<2;i++){const L=LEG[i];if(!L)continue;L.up.getWorldPosition(_lh);_lt.copy(L.off);skiG[i].localToWorld(_lt);ex=Math.max(ex,_lh.distanceTo(_lt)-(L.l1+L.l2)*0.985);}
       if(ex<=0)break;rig.position.y-=ex*1.15;rig.updateMatrixWorld(true);}
     /* athletic stance: fold forward from the waist; angulate back against the lean */
-    rotBone(BN.spine0,_rw,POSE.spine0*(1-tq));rotBone(BN.spine0,_fw,-lean*LEAN.ang);
+    rotBone(BN.spine0,_rw,POSE.spine0*(1-tq)+0.18*skE);   /* skating: chest forward over the push */rotBone(BN.spine0,_fw,-lean*LEAN.ang);
     rotBone(BN.spine,_rw,POSE.spine*tq);
     rotBone(BN.armL,_rw,POSE.arm*c);rotBone(BN.armR,_rw,POSE.arm*c);
     rotBone(BN.foreL,_rw,-POSE.fore*tq-POSE.foreUp*(1-tq));rotBone(BN.foreR,_rw,-POSE.fore*tq-POSE.foreUp*(1-tq));

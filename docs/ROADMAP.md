@@ -85,6 +85,7 @@ Known gaps
 
 ## Lift-top plateaus + skating (Nov 24, 2026)
 - Kevin: the ground right around lift drop-offs had ridges, drops and big height changes, an awkward start. Each unload area (centred 10 m past the top station) is now a least-squares plane through the ground within 30 m, tilted at most 3.5% the way the terrain falls, blended back into the real slope between 26 and 62 m (`PLAT` in 02-mountain/04-lifts; `H()` wraps the old height as `H0()`, so towers, terminals, tiles, physics and the drop-off search all sit on it). Within 30 m of every drop-off the ground now varies ~1.7–2.6 m. Lift-top reachability still 72/72, no new terrain steps, autopilot 47/55 (was 46).
+- Skating (revised after Kevin: lean forward, push down and back rather than sideways): body pitches 0.2 rad forward and the chest folds 0.18 rad over each push, hips sink 7 cm, the pushing ski goes 34 cm back and only 11 cm out at 17°.
 - Skating: a quick flick up (< 0.28 s, mostly vertical; E on a keyboard) is one stroke, alternating skis. Each pushes for 0.28 s (5.5 m/s², fading out between ~7 and ~22 mph, so it gets you across flats but doesn't add top speed); a flick mid-stroke queues the next, so rapid flicks become a steady rhythm. Animation through the per-ski groups and leg IK: the pushing ski splays ~23°, edges, drives out 24 cm and back, then lifts and returns while the weight rides the other ski; a short edge scrape sound per stroke. Holding up is still the tuck. Listed in How to play.
 
 ## Steadier camera in quick turns (Nov 24, 2026)
