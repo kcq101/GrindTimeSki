@@ -58,20 +58,22 @@ function loadModel(){return new Promise(res=>{
 });}
 const _v=new THREE.Vector3(),_t=new THREE.Vector3(),_u=new THREE.Vector3(0,1,0),_d=new THREE.Vector3();
 const _pd=new THREE.Vector3(),_pd2=new THREE.Vector3();
-const POLE={out:0.22,rise:-0.2,len:1.15,sOut:0.2,sBack:0.6};window.__poleCfg=POLE;
-const _fw=new THREE.Vector3();
+const POLE={out:0.22,rise:-0.2,len:1.15,sOut:0.09,sDown:0.64,sBack:0.8,roll:0.8,yaw:0.6};window.__poleCfg=POLE;
+const _fw=new THREE.Vector3(),_poZ=new THREE.Vector3(0,0,1),_poY=new THREE.Vector3(0,1,0);
 /* ---- upright arm/pole motion (from ski-instruction references):
    elbows low and slightly out, forearms forward, fists ~waist height a little wider than the elbows;
    pole plant at each turn change with the new inside hand, tip just off the ski tip, mostly wrist;
    upper body partly faces the fall line while the skis turn underneath. Fades out as the skier tucks. */
-const ARM={elbowOut:0.14,elbowFwd:0.45,foreFwd:1,foreUp:-0.3,foreOut:0.16,plantDur:0.55,counter:0.45};window.__arm=ARM;
+/* Nov 25 (from a Bonvo reference): upper arms hang close to the ribs with the elbows by the hips, forearms forward at ~90°,
+   fists in front of and just outside the hips at belt height. Not reaching down and out. */
+const ARM={elbowOut:0.1,elbowFwd:0.16,foreFwd:1,foreUp:0.04,foreOut:0.3,plantDur:0.55,counter:0.45};window.__arm=ARM;
 const _amS=new THREE.Vector3(),_amE=new THREE.Vector3(),_amC=new THREE.Vector3(),_amX=new THREE.Vector3(),_aL=new THREE.Vector3(),_aF=new THREE.Vector3(),_aU=new THREE.Vector3(),_amT=new THREE.Vector3(),_amY=new THREE.Vector3(0,1,0);
 const plantT=[-1,-1];let lastTurn=0,counterYaw=0;
 function aimBone(b,child,dir,w){if(!b||!child||w<=0)return;b.getWorldPosition(_amS);child.getWorldPosition(_amE);_amC.subVectors(_amE,_amS).normalize();
   const ang=Math.acos(Math.max(-1,Math.min(1,_amC.dot(dir))));if(ang<1e-4)return;_amX.crossVectors(_amC,dir);if(_amX.lengthSq()<1e-10)return;_amX.normalize();rotBone(b,_amX,ang*w);}
 const sm01=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 function plantEnv(i){const t=plantT[i];if(t<0)return 0;const p=t/ARM.plantDur;return p<0.3?sm01(p/0.3):p<0.6?1:1-sm01((p-0.6)/0.4);}
-const POSE={foreUp:0,armOut:0,spine0:0.2,spine:0.75,arm:0.9,fore:1.2,neck:-0.42,head:-0.52,neck0:-0.08,head0:-0.12};window.__pose=POSE;
+const POSE={foreUp:0,armOut:0,spine0:0.3,spine:0.75,arm:0.9,fore:1.2,neck:-0.42,head:-0.52,neck0:-0.08,head0:-0.12};window.__pose=POSE;
 let gear=null,helmEdge=null;
 function addHeadGear(head,top){
   model.updateMatrixWorld(true);const ws=new THREE.Vector3();head.getWorldScale(ws);
@@ -142,7 +144,7 @@ function rotBone(b,axW,ang){if(!b||!ang)return;b.parent.getWorldQuaternion(_q1);
    angulation   the lower spine bends back against the lean and the neck levels the head, so shoulders stay calmer than legs
    absorption   a spring on the ground's vertical acceleration (from fixed-step physics) flexes the knees over bumps and on landings;
                 legs reach for the snow just before touchdown */
-const LEAN={max:0.6,gain:0.85,w:9,edge:0.95,ang:0.4,head:0.3,armRoll:0.5,lead:0.07,knee:0.5};window.__lean=LEAN;
+const LEAN={max:0.7,gain:0.95,w:9,edge:0.95,ang:0.4,head:0.3,armRoll:0.6,lead:0.07,knee:0.5};window.__lean=LEAN;
 const SKID={yaw:1.05,counter:0.7,sink:0.11};window.__skid=SKID;let skidY=0;
 const ABS={w:12,k:0.17,kick:0.18,min:-0.06,max:0.14};window.__abs=ABS;
 let lean=0,leanV=0,ab=0,abV=0,ikW=0,wasAir=false;const LEG=[],poleD=[new THREE.Vector3(0.2,-0.76,-0.6).normalize(),new THREE.Vector3(-0.2,-0.76,-0.6).normalize()];
@@ -207,7 +209,7 @@ function updModel(dt,tk){
     for(let it=0;it<2;it++){let ex=0;for(let i=0;i<2;i++){const L=LEG[i];if(!L)continue;L.up.getWorldPosition(_lh);_lt.copy(L.off);skiG[i].localToWorld(_lt);ex=Math.max(ex,_lh.distanceTo(_lt)-(L.l1+L.l2)*0.985);}
       if(ex<=0)break;rig.position.y-=ex*1.15;rig.updateMatrixWorld(true);}
     /* athletic stance: fold forward from the waist; angulate back against the lean */
-    rotBone(BN.spine0,_rw,POSE.spine0*(1-tq)+0.18*skE);   /* skating: chest forward over the push */rotBone(BN.spine0,_fw,-lean*LEAN.ang);
+    rotBone(BN.spine0,_rw,(POSE.spine0+0.16*Math.abs(lean)/LEAN.max)*(1-tq)+0.18*skE);   /* folds a little further forward in a turn (compact, not sitting back) */   /* skating: chest forward over the push */rotBone(BN.spine0,_fw,-lean*LEAN.ang);
     rotBone(BN.spine,_rw,POSE.spine*tq);
     rotBone(BN.spine0,_amY,-skidY*SKID.counter);
     rotBone(BN.armL,_rw,POSE.arm*c);rotBone(BN.armR,_rw,POSE.arm*c);
@@ -232,7 +234,7 @@ function updModel(dt,tk){
         /* upper arm: down, elbow forward and a little out; reaches forward on a plant; inside arm leads in the carve, outside stays wide for balance */
         _amT.copy(_aU).multiplyScalar(-1).addScaledVector(_aF,ARM.elbowFwd+0.3*pe+0.12*Math.max(0,inside)).addScaledVector(_aL,sx*(ARM.elbowOut+0.08*Math.max(0,-inside))).normalize();aimBone(ua,fa,_amT,wU);
         /* forearm: forward and slightly down toward the grip; drops toward the snow on a plant */
-        _amT.copy(_aF).multiplyScalar(ARM.foreFwd).addScaledVector(_aU,ARM.foreUp-0.55*pe+0.05*Math.max(0,-inside)).addScaledVector(_aL,sx*ARM.foreOut).normalize();aimBone(fa,hd,_amT,wU);});}
+        _amT.copy(_aF).multiplyScalar(ARM.foreFwd).addScaledVector(_aU,ARM.foreUp-0.55*pe-0.22*Math.abs(inside)).addScaledVector(_aL,sx*ARM.foreOut).normalize();aimBone(fa,hd,_amT,wU);});}
     for(let i=0;i<2;i++)legIK(LEG[i],skiG[i],ikW);
   }
   if(poles.length===2&&poles[0].visible){skier.updateMatrixWorld(true);
@@ -240,7 +242,9 @@ function updModel(dt,tk){
     hands.forEach((h,i)=>{h.getWorldPosition(_v);if(grips[i]){grips[i].getWorldPosition(_t);_v.lerp(_t,0.65);}skier.worldToLocal(_v);   /* grip in the fist, not at the wrist */
       /* standing: poles hang down and back, tips behind the boots. Tucked: racer style, shafts run back under the arms, tips rising behind */
       const sx=i===0?1:-1,tk=tq*tq*(3-2*tq),pt=plantT[i];
-      _d.set(sx*(POLE.sOut+(POLE.out-POLE.sOut)*tk),-0.76+(0.76+POLE.rise)*tk,-POLE.sBack-(1-POLE.sBack)*tk);
+      _d.set(sx*(POLE.sOut+(POLE.out-POLE.sOut)*tk),-POLE.sDown+(POLE.sDown+POLE.rise)*tk,-POLE.sBack-(1-POLE.sBack)*tk);
+      /* shafts angle back, close to the body; in a turn they tip over with the body (the inside one trails, the outside one hangs) and swing with a skid */
+      if(!S.air){_d.normalize().applyAxisAngle(_poZ,lean*POLE.roll);if(skidY)_d.applyAxisAngle(_poY,skidY*POLE.yaw);}
       if(S.air&&!S.crashed)_d.x+=sx*0.12,_d.y+=0.25;   /* in the air: tips kick back and a little out for balance */
       _d.normalize();
       if(pt>=0&&tk<0.6){const p=pt/ARM.plantDur;/* reach: tip swings forward next to the ski tip; plant: tip holds while the skier passes; release back */
@@ -259,4 +263,10 @@ function updModel(dt,tk){
 window.__probe=()=>{if(!LEG[0])return null;const o={air:S.air,lean:+lean.toFixed(3),ab:+ab.toFixed(3),crouch:+crouch.toFixed(2)};
   skier.updateMatrixWorld(true);o.gap=LEG.map((L,i)=>{L.foot.getWorldPosition(_lh);_lt.copy(L.off);skiG[i].localToWorld(_lt);return +_lh.distanceTo(_lt).toFixed(3);});
   o.knee=LEG.map(L=>{L.up.getWorldPosition(_lh);L.low.getWorldPosition(_lk);L.foot.getWorldPosition(_lt);_lu.subVectors(_lh,_lk).normalize();_lp.subVectors(_lt,_lk).normalize();return Math.round(Math.acos(clamp(_lu.dot(_lp),-1,1))*57.3);});
+  /* arms, in the skier's frame: upper arm angle forward of straight down, elbow bend (180 = straight), hand height above the snow */
+  {const R=[[BN.armL,BN.foreL,hands[0]],[BN.armR,BN.foreR,hands[1]]];_aU.set(0,1,0).applyQuaternion(skier.quaternion);_aF.set(0,0,1).applyQuaternion(skier.quaternion);
+   o.uaFwd=R.map(([a,f])=>{if(!a)return 0;a.getWorldPosition(_lh);f.getWorldPosition(_lk);_lu.subVectors(_lk,_lh).normalize();return Math.round(Math.atan2(_lu.dot(_aF),-_lu.dot(_aU))*57.3);});
+   o.elbow=R.map(([a,f,h])=>{if(!a||!h)return 0;a.getWorldPosition(_lh);f.getWorldPosition(_lk);h.getWorldPosition(_lt);_lu.subVectors(_lh,_lk).normalize();_lp.subVectors(_lt,_lk).normalize();return Math.round(Math.acos(clamp(_lu.dot(_lp),-1,1))*57.3);});
+   o.handY=R.map(([a,f,h])=>{if(!h)return 0;h.getWorldPosition(_lt);skier.worldToLocal(_lt);return +_lt.y.toFixed(2);});
+   o.handZ=R.map(([a,f,h])=>{if(!h)return 0;h.getWorldPosition(_lt);skier.worldToLocal(_lt);return +_lt.z.toFixed(2);});}
   o.tipY=poles.map(p=>+p.position.y.toFixed(2));o.tipZ=poles.map(p=>+p.position.z.toFixed(2));return o;};

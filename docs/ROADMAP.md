@@ -83,6 +83,13 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Arms, poles, lean and a lazier camera (Nov 25, 2026)
+From a Bonvo reference clip.
+- Arms: upper arms hang close to the ribs (elbows by the hips, ~10° forward), forearms forward at ~100–115°, fists in front of and just outside the hips at belt height. In a carve the hands stay low instead of lifting toward the chest; the arm frame rolls with the torso (0.6 of the lean). `__probe()` now reports `uaFwd`, `elbow`, `handY`, `handZ`.
+- Poles: shafts angle back and close to the body (tips behind the boots, not splayed out); they tip over with the body in a turn and swing with a skid. `__poleCfg` gained `sDown`, `roll`, `yaw`.
+- Lean: max 0.6 → 0.7 rad, gain 0.85 → 0.95; the upper body folds forward a little more (0.2 → 0.3, +0.16 deeper in a turn) so it's compact rather than sitting back.
+- Camera (`__camf`): follows the heading more slowly (yaw rate 3.2 → 1.8/s) and lets the skier drift up to ~1.6 m off the view line (sideways catch-up 30 → 6/s), so in a turn you see the skier's side and they move across the frame. Lower (3.0 → 2.55 m) and looking further down the hill (14 → 21 m ahead, 1 m up), so the horizon sits higher and more of the slope ahead shows.
+
 ## Boost button (Nov 25, 2026)
 Blue BOOST button above JUMP (keyboard: B or Shift). A small shove of speed, about +9 mph over half a second, on the snow or in the air, with a puff of snow behind. 2.5 s recharge shown as a ring that refills around the button. Tunables: `window.__boost`.
 
