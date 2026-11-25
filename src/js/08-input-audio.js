@@ -8,7 +8,7 @@ function updSpray(dt){for(let i=0;i<SPN;i++){if(spLife[i]<=0)continue;spLife[i]-
 
 /* ---------- input ---------- */
 let steerIn=0,steer=0,postIn=0,postS=0,touchId=null,x0=0,y0=0;const thumb=document.getElementById('thumb');
-let invert=false;try{invert=localStorage.getItem('kr_invert')==='1';}catch(e){}
+let invert=false;   /* push up = tuck (the on-screen toggle was removed) */
 let tDown=0,lastSw=null,pendSpin=null;
 function registerSwipe(d){const now=performance.now();if(lastSw&&lastSw.d===d&&now-lastSw.t<520){spinTrick(d);lastSw=null;}else lastSw={d,t:now};}
 canvas.addEventListener('pointerdown',e=>{if(touchId!==null)return;touchId=e.pointerId;x0=e.clientX;y0=e.clientY;tDown=performance.now();thumb.style.display='block';thumb.style.left=x0+'px';thumb.style.top=y0+'px';});
@@ -18,10 +18,8 @@ canvas.addEventListener('pointermove',e=>{if(e.pointerId!==touchId)return;const 
 function endTouch(e){if(e.pointerId!==touchId)return;{const dx=e.clientX-x0,dy=e.clientY-y0;if(performance.now()-tDown<300&&Math.abs(dx)>35&&Math.abs(dx)>1.4*Math.abs(dy))registerSwipe(Math.sign(dx));}touchId=null;steerIn=0;postIn=0;thumb.style.display='none';}
 canvas.addEventListener('pointerup',endTouch);canvas.addEventListener('pointercancel',endTouch);
 const keys={};window.addEventListener('keydown',e=>{keys[e.key]=true;if(!e.repeat&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))registerSwipe(e.key==='ArrowRight'?1:-1);if(e.code==='Space'){e.preventDefault();if(!e.repeat)jump();}});window.addEventListener('keyup',e=>{keys[e.key]=false;});
-const jumpBtn=document.getElementById('jumpBtn'),invBtn=document.getElementById('invBtn');
+const jumpBtn=document.getElementById('jumpBtn');
 jumpBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();jump();});
-function invLabel(){invBtn.textContent=invert?'⇅ Pull down = tuck':'⇅ Push up = tuck';}invLabel();
-invBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();invert=!invert;invLabel();postIn=-postIn;try{localStorage.setItem('kr_invert',invert?'1':'0');}catch(err){}toast(invert?'Pull down to tuck':'Push up to tuck');});
 function updPips(){const on=S.air?2-S.boosts:2;jumpBtn.querySelectorAll('.pips i').forEach((el,i)=>el.classList.toggle('on',i<on));}
 const GRAV=13;
 function spinTrick(d){if(S.state!=='ride'||S.crashed)return;if(S.air){S.spinT+=-d*TAU;}else pendSpin={d,t:performance.now()};}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>Killington Run — real Killington</title>
+<title>Killington Run</title>
 <style>
   html,body{margin:0;height:100%;overflow:hidden;background:#9fc3e6;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
   #c{position:fixed;inset:0;width:100%;height:100%;touch-action:none;display:block}
@@ -99,12 +99,11 @@
   .edge.r span{left:auto;right:16px}
   .route{font-size:13px;color:#334354;font-weight:600;margin:4px 0 0;line-height:1.4}
   .ctl{position:fixed;bottom:58px;z-index:5;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none}
-  #jumpBtn{right:16px;width:84px;height:84px;border-radius:50%;background:rgba(232,67,47,.88);color:#fff;font-weight:900;font-size:16px;letter-spacing:1px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:3px solid rgba(255,255,255,.85)}
+  #jumpBtn{left:16px;width:84px;height:84px;border-radius:50%;background:rgba(232,67,47,.88);color:#fff;font-weight:900;font-size:16px;letter-spacing:1px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:3px solid rgba(255,255,255,.85)}
   #jumpBtn:active{transform:scale(.94)}
   .pips{display:flex;gap:5px;justify-content:center;margin-top:4px}
   .pips i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}
   .pips i.on{background:#fff}
-  #invBtn{left:16px;padding:8px 12px;border-radius:18px;background:rgba(20,32,46,.55);color:#fff;font-size:12px;font-weight:700;border:1px solid rgba(255,255,255,.5)}
   #skipBtn{right:16px;padding:12px 18px;border-radius:24px;background:rgba(20,32,46,.7);color:#fff;font-size:15px;font-weight:800;border:2px solid rgba(255,255,255,.8);letter-spacing:.5px}
   #lookHint{position:fixed;bottom:118px;left:0;right:0;text-align:center;color:#fff;font-size:12px;font-weight:600;text-shadow:0 1px 3px rgba(0,0,0,.5);pointer-events:none}
   #vig{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 52%,rgba(8,22,42,.42) 100%);opacity:.55;transition:opacity .2s}
@@ -137,7 +136,6 @@
 </div>
 <div id="toast"></div>
 <button class="ctl hidden" id="jumpBtn">JUMP<div class="pips"><i></i><i></i></div></button>
-<button class="ctl hidden" id="invBtn">⇅ Push up = tuck</button>
 <button class="ctl hidden" id="skipBtn">Skip ▸▸</button>
 <button class="hidden" id="pauseBtn" aria-label="Pause"></button>
 <button class="hidden" id="listBtn">☰ Trail list</button>
@@ -160,7 +158,7 @@
 <div class="ov hidden" id="start">
   <div class="card">
     <button class="btn alt" id="startBack" style="margin:0 0 12px">‹ Back to the map</button>
-    <div class="k">Killington Run · the real mountain</div>
+    <div class="k">Killington Run</div>
     <h1>All peaks</h1>
     <p style="font-size:13px;margin:6px 0 2px">USGS terrain and every OpenStreetMap trail from Ramshead to Bear Mountain: 190+ trails, 15 lifts.</p>
     <div id="peakList"></div>
@@ -1047,7 +1045,7 @@ function updSpray(dt){for(let i=0;i<SPN;i++){if(spLife[i]<=0)continue;spLife[i]-
 
 /* ---------- input ---------- */
 let steerIn=0,steer=0,postIn=0,postS=0,touchId=null,x0=0,y0=0;const thumb=document.getElementById('thumb');
-let invert=false;try{invert=localStorage.getItem('kr_invert')==='1';}catch(e){}
+let invert=false;   /* push up = tuck (the on-screen toggle was removed) */
 let tDown=0,lastSw=null,pendSpin=null;
 function registerSwipe(d){const now=performance.now();if(lastSw&&lastSw.d===d&&now-lastSw.t<520){spinTrick(d);lastSw=null;}else lastSw={d,t:now};}
 canvas.addEventListener('pointerdown',e=>{if(touchId!==null)return;touchId=e.pointerId;x0=e.clientX;y0=e.clientY;tDown=performance.now();thumb.style.display='block';thumb.style.left=x0+'px';thumb.style.top=y0+'px';});
@@ -1057,10 +1055,8 @@ canvas.addEventListener('pointermove',e=>{if(e.pointerId!==touchId)return;const 
 function endTouch(e){if(e.pointerId!==touchId)return;{const dx=e.clientX-x0,dy=e.clientY-y0;if(performance.now()-tDown<300&&Math.abs(dx)>35&&Math.abs(dx)>1.4*Math.abs(dy))registerSwipe(Math.sign(dx));}touchId=null;steerIn=0;postIn=0;thumb.style.display='none';}
 canvas.addEventListener('pointerup',endTouch);canvas.addEventListener('pointercancel',endTouch);
 const keys={};window.addEventListener('keydown',e=>{keys[e.key]=true;if(!e.repeat&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))registerSwipe(e.key==='ArrowRight'?1:-1);if(e.code==='Space'){e.preventDefault();if(!e.repeat)jump();}});window.addEventListener('keyup',e=>{keys[e.key]=false;});
-const jumpBtn=document.getElementById('jumpBtn'),invBtn=document.getElementById('invBtn');
+const jumpBtn=document.getElementById('jumpBtn');
 jumpBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();jump();});
-function invLabel(){invBtn.textContent=invert?'⇅ Pull down = tuck':'⇅ Push up = tuck';}invLabel();
-invBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();invert=!invert;invLabel();postIn=-postIn;try{localStorage.setItem('kr_invert',invert?'1':'0');}catch(err){}toast(invert?'Pull down to tuck':'Push up to tuck');});
 function updPips(){const on=S.air?2-S.boosts:2;jumpBtn.querySelectorAll('.pips i').forEach((el,i)=>el.classList.toggle('on',i<on));}
 const GRAV=13;
 function spinTrick(d){if(S.state!=='ride'||S.crashed)return;if(S.air){S.spinT+=-d*TAU;}else pendSpin={d,t:performance.now()};}
@@ -1094,7 +1090,7 @@ function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}
   if(!tr.name)return;if(tr.name===curTrail){if(S.curTr&&S.curTr.name!==tr.name)S.curTr=tr;else if(!S.curTr)S.curTr=tr;return;}curTrail=tr.name;S.curTr=tr;S.curS=null;S.path.push(tr.name);
   $('ttext').textContent=curTrail.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);if(S.state==='ride'&&S.path.length>1)toast(shortName(curTrail));}
 function fmt(t){const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);}
-function showHud(on){['top','bot','jumpBtn','invBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
+function showHud(on){['top','bot','jumpBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
 function fade(fn){const f=$('fade');f.style.opacity=1;setTimeout(()=>{fn();requestAnimationFrame(()=>{f.style.opacity=0;});},360);}
 function thump(){if(!actx)return;[0,0.09].forEach(d=>{const t=actx.currentTime+d,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(45,t+0.16);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+0.25);});}
 const mmss=t=>{t=Math.round(t);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
@@ -1151,7 +1147,7 @@ function updLift(dt){
   S.x=myRide.position.x;S.z=myRide.position.z;S.th=L.ry;
   qAlign.setFromAxisAngle(_yA,L.ry);poseSkier(cy-2.95);rig.rotation.set(0,0,0);updModel(dt,false);
   /* camera: a few metres behind and above the chair, drag to look around */
-  lookYaw+=(steerIn*1.5-lookYaw)*Math.min(1,dt*4);
+  lookYaw+=(-steerIn*1.5-lookYaw)*Math.min(1,dt*4);
   const yaw=L.ry+lookYaw,fx=Math.sin(yaw),fz=Math.cos(yaw);
   const tx=S.x-L.dx*4.6-L.px*2.8,tz=S.z-L.dz*4.6-L.pz*2.8,ty=Math.max(cy+0.9,H(tx,tz)+2.5);
   const ahead=S.ls+28,lx=S.x+fx*28,lz=S.z+fz*28,ly=(Math.abs(lookYaw)<0.4?cableY(L,Math.min(L.len,ahead)):cy)-7+postIn*6;
@@ -1465,7 +1461,7 @@ MAP.pins.forEach(p=>{const e=document.createElement('button');e.className='pin '
 
 /* the bottom sheet */
 function trailChip(t){return '<span class="chip">'+diffIcon(t.diff)+shortName(t.name)+'</span>';}
-function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont · the real mountain</div><h1>Where are you dropping in?</h1>'+
+function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont</div><h1>Where are you dropping in?</h1>'+
   '<p>Tap a peak to drop in, or a base to ride a lift. Drag to look around, pinch to zoom.</p>'+
   '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+
   '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';

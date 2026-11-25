@@ -37,7 +37,7 @@ MAP.pins.forEach(p=>{const e=document.createElement('button');e.className='pin '
 
 /* the bottom sheet */
 function trailChip(t){return '<span class="chip">'+diffIcon(t.diff)+shortName(t.name)+'</span>';}
-function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont · the real mountain</div><h1>Where are you dropping in?</h1>'+
+function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont</div><h1>Where are you dropping in?</h1>'+
   '<p>Tap a peak to drop in, or a base to ride a lift. Drag to look around, pinch to zoom.</p>'+
   '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+
   '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';

@@ -13,7 +13,7 @@ function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}
   if(!tr.name)return;if(tr.name===curTrail){if(S.curTr&&S.curTr.name!==tr.name)S.curTr=tr;else if(!S.curTr)S.curTr=tr;return;}curTrail=tr.name;S.curTr=tr;S.curS=null;S.path.push(tr.name);
   $('ttext').textContent=curTrail.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);if(S.state==='ride'&&S.path.length>1)toast(shortName(curTrail));}
 function fmt(t){const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);}
-function showHud(on){['top','bot','jumpBtn','invBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
+function showHud(on){['top','bot','jumpBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
 function fade(fn){const f=$('fade');f.style.opacity=1;setTimeout(()=>{fn();requestAnimationFrame(()=>{f.style.opacity=0;});},360);}
 function thump(){if(!actx)return;[0,0.09].forEach(d=>{const t=actx.currentTime+d,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(45,t+0.16);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+0.25);});}
 const mmss=t=>{t=Math.round(t);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
@@ -70,7 +70,7 @@ function updLift(dt){
   S.x=myRide.position.x;S.z=myRide.position.z;S.th=L.ry;
   qAlign.setFromAxisAngle(_yA,L.ry);poseSkier(cy-2.95);rig.rotation.set(0,0,0);updModel(dt,false);
   /* camera: a few metres behind and above the chair, drag to look around */
-  lookYaw+=(steerIn*1.5-lookYaw)*Math.min(1,dt*4);
+  lookYaw+=(-steerIn*1.5-lookYaw)*Math.min(1,dt*4);
   const yaw=L.ry+lookYaw,fx=Math.sin(yaw),fz=Math.cos(yaw);
   const tx=S.x-L.dx*4.6-L.px*2.8,tz=S.z-L.dz*4.6-L.pz*2.8,ty=Math.max(cy+0.9,H(tx,tz)+2.5);
   const ahead=S.ls+28,lx=S.x+fx*28,lz=S.z+fz*28,ly=(Math.abs(lookYaw)<0.4?cableY(L,Math.min(L.len,ahead)):cy)-7+postIn*6;
