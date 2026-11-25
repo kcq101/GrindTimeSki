@@ -1,0 +1,62 @@
+{
+ "glide": {
+  "n": 192000,
+  "rate": 32000,
+  "loop": true
+ },
+ "edge": {
+  "n": 192000,
+  "rate": 32000,
+  "loop": true
+ },
+ "wind": {
+  "n": 192000,
+  "rate": 32000,
+  "loop": true
+ },
+ "crunch1": {
+  "n": 8662,
+  "rate": 32000,
+  "loop": false
+ },
+ "crunch2": {
+  "n": 12110,
+  "rate": 32000,
+  "loop": false
+ },
+ "crunch3": {
+  "n": 10318,
+  "rate": 32000,
+  "loop": false
+ },
+ "crunch4": {
+  "n": 8400,
+  "rate": 32000,
+  "loop": false
+ },
+ "crunch5": {
+  "n": 9852,
+  "rate": 32000,
+  "loop": false
+ },
+ "chop1": {
+  "n": 8971,
+  "rate": 32000,
+  "loop": false
+ },
+ "chop2": {
+  "n": 6620,
+  "rate": 32000,
+  "loop": false
+ },
+ "clank1": {
+  "n": 5705,
+  "rate": 32000,
+  "loop": false
+ },
+ "clank2": {
+  "n": 4284,
+  "rate": 32000,
+  "loop": false
+ }
+}

@@ -33,8 +33,9 @@ function jump(){
   updPips();
 }
 
-/* ---------- audio (wind) ---------- */
+/* ---------- audio: wind (filtered noise until the real recordings in 14-sfx.js are decoded, then a real wind loop) ---------- */
 let actx=null,wind=null,windF=null;
-function startAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const len=actx.sampleRate*2,buf=actx.createBuffer(1,len,actx.sampleRate),d=buf.getChannelData(0);let b=0;for(let i=0;i<len;i++){b=(b+0.02*(Math.random()*2-1))/1.02;d[i]=b*3.5;}
-  const src=actx.createBufferSource();src.buffer=buf;src.loop=true;windF=actx.createBiquadFilter();windF.type='lowpass';windF.frequency.value=400;wind=actx.createGain();wind.gain.value=0;src.connect(windF);windF.connect(wind);wind.connect(actx.destination);src.start();if(actx.state==='suspended')actx.resume();}catch(err){actx=null;}}
+function startAudio(){if(actx&&wind){if(actx.state==='suspended')actx.resume();return;}   /* once: later calls used to stack another wind chain each run */
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const len=actx.sampleRate*2,buf=actx.createBuffer(1,len,actx.sampleRate),d=buf.getChannelData(0);let b=0;for(let i=0;i<len;i++){b=(b+0.02*(Math.random()*2-1))/1.02;d[i]=b*3.5;}
+  const src=actx.createBufferSource();src.buffer=buf;src.loop=true;windF=actx.createBiquadFilter();windF.type='lowpass';windF.frequency.value=400;wind=actx.createGain();wind.gain.value=0;src.connect(windF);windF.connect(wind);wind.connect(actx.destination);src.start();if(actx.state==='suspended')actx.resume();SFX.noiseSrc=src;}catch(err){actx=null;}sfxInit();}
 

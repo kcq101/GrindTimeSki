@@ -68,7 +68,7 @@ function frame(now){
     const mph=S.v*2.237;setTxt('spd',Math.round(mph));setTxt('time',S.pre?'Ski toward a sign':fmt(S.t));
     const hy=S.air?S.y:H(S.x,S.z);const ft=Math.max(0,(hy-RUN.h1)*3.281);setTxt('vert',(Math.round(ft/10)*10).toLocaleString()+' ft to go');
     const pr=clamp((RUN.h0-hy)/(RUN.h0-RUN.h1),0,1);updTrailHud();setBar(pr);
-    if(wind&&actx&&(fcount&3)===0){wind.gain.setTargetAtTime(Math.min(0.5,mph/140),actx.currentTime,0.1);windF.frequency.setTargetAtTime(250+mph*14,actx.currentTime,0.1);}
+    if(wind&&actx&&(fcount&3)===0){wind.gain.setTargetAtTime(Math.min(0.45,mph/150),actx.currentTime,0.1);windF.frequency.setTargetAtTime(SFX.on?700+mph*60:250+mph*14,actx.currentTime,0.1);}
     lerpOut();
   } else if(S.state==='lift'){
     updLift(dt);S.shake=Math.max(0,S.shake-dt);
@@ -85,7 +85,7 @@ function endFrame(now,dt){
   {const sp=(S.state==='ride'||S.state==='finishing')?clamp(S.v/30,0,1):0;const o=Math.round((0.45+sp*0.5)*25)/25;if(o!==_vigO){_vigO=o;$('vig').style.opacity=o;}}
   if(window.__close&&BN.head){BN.head.getWorldPosition(_hp);const a=window.__close;camera.position.set(_hp.x+Math.sin(S.th+a)*1.3,_hp.y+0.15,_hp.z+Math.cos(S.th+a)*1.3);camera.lookAt(_hp.x,_hp.y+0.05,_hp.z);}
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.style.opacity=0;}
-  weatherFrame(dt,now);
+  weatherFrame(dt,now);sfxFrame(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
 }

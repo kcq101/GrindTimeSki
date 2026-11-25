@@ -6,6 +6,7 @@ src/index.html   page markup + CSS, with two markers:
                  <!--@GAME-->    replaced by src/js/*.js, concatenated in filename order
 src/js/*.js      the game, one closure split into ordered files (they share scope, so order matters)
 assets/*.glb     skier and helmet models
+assets/sfx/       sound effects (tools/sfx/build_sfx.py), inlined as one JSON tag
 data/kdata.json  baked mountain data (terrain grid, trails, lifts), injected at /*@KDATA*/null
 
 Usage: python3 tools/build.py [--out dist/index.html]
@@ -19,6 +20,10 @@ ASSETS = [('glbdata', 'assets/skier.glb'), ('helmdata', 'assets/helmet.glb')]
 def build():
     page = open(os.path.join(ROOT, 'src/index.html'), encoding='utf-8').read()
     tags = []
+    meta = json.load(open(os.path.join(ROOT, 'assets/sfx/sfx.json')))
+    for k in meta:
+        meta[k]['b64'] = base64.b64encode(open(os.path.join(ROOT, 'assets/sfx', k + '.mp3'), 'rb').read()).decode()
+    tags.append(f'<script type="text/plain" id="sfxdata">{json.dumps(meta, separators=(",", ":"))}</script>')
     for tag_id, path in ASSETS:
         b64 = base64.b64encode(open(os.path.join(ROOT, path), 'rb').read()).decode()
         tags.append(f'<script type="text/plain" id="{tag_id}">{b64}</script>')

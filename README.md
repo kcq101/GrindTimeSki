@@ -29,7 +29,8 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   11-map              start screen: 3D trail map, pins, bottom sheet, orbit/pinch gestures (window.__map)
   12-signs            floating trail signs (lift tops + junctions, one billboard mesh), screen-edge arrows, lift-top free-ski, pause menu
   13-weather          weather cycle (seeded per trail): altitude fog + sky/ridge wash, falling snow, summit cloud wisps
-assets/               skier.glb, helmet.glb (embedded into the page at build time)
+  14-sfx              sound: glide + edge loops shaped by speed and lean, landings, falls, tree hits, pole plants, lift towers
+assets/               skier.glb, helmet.glb, sfx/ (sounds + SOURCES.md credits), all embedded into the page at build time
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json
 tools/build.py        bundles everything into dist/index.html
 tools/bake/           data pipeline: project + clean trails, lifts, widths, picker lists -> data/kdata.json
@@ -45,6 +46,7 @@ docs/ROADMAP.md       design notes, what shipped, what's next
 ## Build and test
 
 ```sh
+python3 tools/sfx/build_sfx.py   # after changing assets/sfx/src or the sound recipes: rebuild assets/sfx/*.mp3
 python3 tools/build.py          # -> dist/index.html (~3 MB, self-contained except three.js r128 from cdnjs)
 sh tools/bake/run.sh            # after changing data/ or tools/bake/: rebuild kdata.json, then the page
 
@@ -55,6 +57,7 @@ npm run test:autopilot          # ski every pickable trail; optional names: node
 npm run test:terrain            # sharpest height changes along trail centrelines
 npm run test:lifttops           # from each lift's drop-off spot, can you reach every trail off that top?
 npm run test:landings           # jumps (with/without boosts, tucked, pulling back) from spots on every trail: % clean landings
+npm run test:sfx                # decode sounds, check loop points, ride and log layer levels, fire every one-shot
 npm run test:weather            # summit + mid-mountain at clear / flurries / socked in, map while foggy -> test-output/weather/
 npm run test:poses              # close-up skier shots (straight, carves, transitions, tuck, jump, landing, bumps) + joint checks -> test-output/poses/
 ```

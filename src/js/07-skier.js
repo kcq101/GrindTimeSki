@@ -30,7 +30,7 @@ function placeShadows(gx,gz,hgt){const k=1/(1+hgt*0.3);
   _bm.makeBasis(_br,_bf,_bn);castSh.quaternion.setFromRotationMatrix(_bm);castSh.position.copy(blob.position).addScaledVector(_bf,hgt*0.9);castSh.material.opacity=0.13*k*k;
   castSh.visible=blob.visible;}
 const CLIP={ride:'air_squat',fall:'Fall3',arise:'Arise',wave:'Wave_for_Help_2'};
-function setMode(m,fade){animMode=m;crashT=0;if(!mixer)return;const target=CLIP[m];const fd=fade===undefined?(m==='fall'?0.25:0.6):fade;
+function setMode(m,fade){if(m==='fall'&&animMode!=='fall')sfxFall();animMode=m;crashT=0;if(!mixer)return;const target=CLIP[m];const fd=fade===undefined?(m==='fall'?0.25:0.6):fade;
   for(const k in acts){const a=acts[k];
     if(k===target){a.reset();a.setLoop(m==='wave'?THREE.LoopRepeat:THREE.LoopOnce,Infinity);a.clampWhenFinished=true;a.timeScale=(m==='fall'||m==='arise')?1.4:1;a.setEffectiveWeight(1);if(fd>0)a.fadeIn(fd);a.play();
       if(m==='fall')a.time=0.3;if(m==='ride'){a.paused=true;a.time=0.3;}}
@@ -210,7 +210,7 @@ function updModel(dt,tk){
     const wU=1-sm01((tq-0.15)/0.6);   /* 1 upright → 0 in the tuck */
     /* turn change → plant with the new inside hand (steer>0 turns right; right hand sits at local -x) */
     const ts=steer>0.22?1:steer<-0.22?-1:0;
-    if(ts!==0&&ts!==lastTurn){if(lastTurn!==0&&S.state==='ride'&&!S.air&&!S.crashed&&S.v>4&&wU>0.4){const hi=ts>0?1:0;plantT[hi]=0;}lastTurn=ts;}
+    if(ts!==0&&ts!==lastTurn){if(lastTurn!==0&&S.state==='ride'&&!S.air&&!S.crashed&&S.v>4&&wU>0.4){const hi=ts>0?1:0;plantT[hi]=0;sfxPlant();}lastTurn=ts;}
     for(let i=0;i<2;i++)if(plantT[i]>=0){plantT[i]+=dt;if(plantT[i]>ARM.plantDur)plantT[i]=-1;}
     /* upper body faces partly down the fall line */
     {const g=grad(S.x,S.z);let rel=Math.atan2(-g[0],-g[1])-S.th;rel=Math.atan2(Math.sin(rel),Math.cos(rel));const tgt=(S.air||Math.hypot(g[0],g[1])<0.05)?0:clamp(rel,-0.7,0.7)*ARM.counter;

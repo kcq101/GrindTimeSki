@@ -15,7 +15,7 @@ function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}
 function fmt(t){const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);}
 function showHud(on){['top','bot','jumpBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
 function fade(fn){const f=$('fade');f.style.opacity=1;setTimeout(()=>{fn();requestAnimationFrame(()=>{f.style.opacity=0;});},360);}
-function thump(){if(!actx)return;[0,0.09].forEach(d=>{const t=actx.currentTime+d,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(45,t+0.16);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+0.25);});}
+function thump(){if(!actx)return;if(SFX.on){sfxClank();return;}[0,0.09].forEach(d=>{const t=actx.currentTime+d,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(45,t+0.16);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+0.25);});}
 const mmss=t=>{t=Math.round(t);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
 const ft=m=>Math.round(m*3.281/10)*10;
 /* a run starts a few metres down the chosen trail, facing along it */
@@ -143,7 +143,7 @@ function treeHit(gy,dt){
   const ci=Math.floor(S.x/TILE),cj=Math.floor(S.z/TILE);
   for(let a=ci-1;a<=ci+1;a++)for(let b=cj-1;b<=cj+1;b++){const tl=tiles.get(a+','+b);if(!tl)continue;
     for(const t of tl.trees){const ddx=S.x-t[0],ddz=S.z-t[1];const r=1.1*t[2]+0.3;if(ddx*ddx+ddz*ddz<r*r){
-      S.crashes++;S.cool=1.2;S.shake=0.5;const sp=S.v;S.v*=0.15;if(mixer&&sp>9){S.crashed=true;S.v=0;S.air=false;updPips();setMode('fall');}
+      S.crashes++;S.cool=1.2;S.shake=0.5;const sp=S.v;sfxTree(sp);S.v*=0.15;if(mixer&&sp>9){S.crashed=true;S.v=0;S.air=false;updPips();setMode('fall');}
       const L=Math.hypot(ddx,ddz)||1;S.x+=ddx/L*1.2;S.z+=ddz/L*1.2;S.th+=(rnd()<0.5?-1:1)*0.9;
       toast(sp>14?'YARD SALE!':'Oof — tree!');
       for(let i=0;i<45;i++)emit(S.x,H(S.x,S.z)+0.6,S.z,(rnd()-0.5)*5,rnd()*3.5,(rnd()-0.5)*5,0.9);
