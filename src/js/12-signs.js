@@ -144,7 +144,11 @@ function topSpot(L){if(L._spot)return L._spot;const sg=liftSigns(L),inTerm=(x,z)
     for(const [qx,qz] of goals){const n=Math.max(2,Math.ceil(Math.hypot(qx-x,qz-z)/8));let mx=-1e9;for(let i=1;i<=n;i++)mx=Math.max(mx,H(x+(qx-x)*i/n,z+(qz-z)*i/n));climb+=Math.max(0,mx-h0-0.5);}
     const score=climb*10-h0+r*0.02;if(!best||score<best.score)best={score,x,z,th};}
   if(!best){const x=L.bx+L.dx*(L.len+16),z=L.bz+L.dz*(L.len+16);best={x,z,th:L.ry};}
-  return L._spot=[best.x,best.z,best.th];}
+  L._spot=[best.x,best.z,best.th];
+  /* trees within 24 m of the spot are cleared (inClear): rebuild any tile already streamed in around it */
+  for(const [k,t] of [...tiles]){const [i,j]=k.split(',').map(Number),x0=i*TILE,z0=j*TILE;
+    if(best.x>x0-30&&best.x<x0+TILE+30&&best.z>z0-30&&best.z<z0+TILE+30){dropTile(t);tiles.delete(k);_tilePend=Math.max(_tilePend,1);}}
+  return L._spot;}
 function topStart(L){
   const [x,z,th]=topSpot(L);
   RUN={x,z,th,top:L.top,name:'',dest:null,tr:null};RUN.h0=H(x,z);RUN.h1=RUN.h0-200;

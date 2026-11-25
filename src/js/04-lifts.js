@@ -38,7 +38,10 @@ const BASES=[
   {id:'sr',name:'South Ridge Quad',x:167,z:1041,pad:45,trig:40,lifts:['sr'],mid:true}];
 BASES.forEach(b=>{b.L=b.lifts.map(LIFT).filter(Boolean);b.h=Bm(b.x,b.z);b.L.forEach(L=>L.baseObj=b);});
 function inPad(x,z){for(const b of BASES){const dx=x-b.x,dz=z-b.z;if(dx*dx+dz*dz<b.pad*b.pad)return true;for(const L of b.L){const ex=x-L.bx,ez=z-L.bz;if(ex*ex+ez*ez<2500)return true;}}return false;}
-function inClear(x,z){if(inPad(x,z))return true;for(const L of LIFTS){const dx=x-L.tx,dz=z-L.tz;if(dx*dx+dz*dz<38*38)return true;}return false;}
+/* open ground, no trees: base pads, 38 m round each top station, the whole lift-top plateau, and 24 m round each drop-off spot once it's known */
+function inClear(x,z){if(inPad(x,z))return true;for(const L of LIFTS){const dx=x-L.tx,dz=z-L.tz;if(dx*dx+dz*dz<38*38)return true;
+    const s=L._spot;if(s){const ex=x-s[0],ez=z-s[1];if(ex*ex+ez*ez<24*24)return true;}}
+  for(const p of PLAT){const dx=x-p.x,dz=z-p.z;if(dx*dx+dz*dz<(PLAT_R0+6)*(PLAT_R0+6))return true;}return false;}
 /* where does each trail lead? follow it downhill until it reaches a base */
 (function(){
   function nearBase(x,z,r){let best=null,bd=1e9;for(const b of BASES){const d=Math.hypot(x-b.x,z-b.z)-b.trig;if(d<bd){bd=d;best=b;}}return bd<r?best:null;}
