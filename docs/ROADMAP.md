@@ -100,7 +100,8 @@ Known gaps
 
 ## Corduroy moiré fix (Nov 24, 2026)
 - On a phone, groomed patches showed a grainy, pixelated web just behind the skier. Cause: corduroy was a hard-edged ridge every 32 cm, faded only by distance, and fed into the per-pixel bump normals. Close to a low camera the ridges were finer than a pixel, and with dynamic resolution scaling they aliased into moiré.
-- Now a cosine ridge, faded out by its screen-space frequency (fwidth) so it only draws where a ridge spans ~15–30+ render pixels. Checked at full and minimum render scale on Alpine Training Venue.
+- Now a cosine ridge, faded out by its screen-space frequency (fwidth). Checked at full and minimum render scale on Alpine Training Venue.
+- Follow-up (same evening): Kevin still saw dotted lines all over the snow on Solitude. Cause: the snow bump normals came from dFdx/dFdy, which GPUs evaluate per 2×2 pixel block; on the phone (render ratio 1.0–1.4) that chopped every thin ski track (and corduroy ridge) into dashes. Tracks and corduroy now tilt the normal through an exact per-pixel slope (sCordG: analytic for corduroy, two extra track-texture samples 8 cm over for tracks). Only the slow, wide noise bumps still use derivatives. Tested at render ratios 1.4 and 0.96 with corduroy forced on everywhere.
 
 ## Lift network v1 (shipped)
 - Data-driven LIFTS (now from OSM): towers auto-placed, terminals, lift sign, cleared lift line

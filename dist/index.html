@@ -527,7 +527,7 @@ const bumpTex=canvasTex(128,128,(g,w,h)=>{g.fillStyle='#fbfdff';g.fillRect(0,0,w
 bumpTex.wrapS=bumpTex.wrapT=THREE.RepeatWrapping;
 const terrMatFine=new THREE.MeshPhongMaterial({vertexColors:true,map:bumpTex,specularMap:glintTex,specular:0xbfc8d4,shininess:80,side:THREE.DoubleSide});
 /* snow: blue-tinted shade, sun glitter that twinkles as you move, bright sheen at grazing angles */
-/* snow surface, cheap: 3 noise-texture fetches + 1 track-texture fetch per pixel, no loops.
+/* snow surface, cheap: 3 noise-texture fetches + 3 track-texture fetches per pixel, no loops.
    on piste   – a few soft ski-track pairs where people actually ski (middle of the trail, fading toward the edges),
                 scraped hardpack in busy spots, corduroy only in a few untouched patches
    trail edge – brighter, softly lumpy pushed-off snow
@@ -549,7 +549,7 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
   sh.uniforms.uNoise={value:noiseTex};sh.uniforms.uTrk={value:trackTex};
   sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec4 aT;varying vec3 vWP;varying vec4 vT;')
     .replace('#include <project_vertex>','#include <project_vertex>\nvWP=(modelMatrix*vec4(transformed,1.)).xyz;vT=aT;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\n'+SNOW_GLSL+'\nfloat sIce=0.;float sHgt=0.;float sGl=0.;')
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\n'+SNOW_GLSL+'\nfloat sIce=0.;float sHgt=0.;float sGl=0.;vec2 sCordG=vec2(0.);')
   .replace('#include <color_fragment>',`#include <color_fragment>
     {vec2 p=vWP.xz;vec2 ud=vT.zw/max(length(vT.zw),1e-3);vec2 q=vec2(p.x*ud.y-p.y*ud.x,dot(p,ud));float cd=distance(cameraPosition,vWP);float near=1.-smoothstep(25.,95.,cd);
      float onP=1.-smoothstep(-1.5,1.5,vT.x);
@@ -558,15 +558,21 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
      vec4 nB=texture2D(uNoise,p*(1./24.));
      sGl=texture2D(uNoise,p*(1./11.)).a;
      float lane=onP*smoothstep(1.02,.62,vT.y)*smoothstep(.3,.62,nA.r+.12);
-     float trk=texture2D(uTrk,vec2(q.x*(1./32.),q.y*(1./48.))).r*lane*near;
+     /* ski tracks: the groove's slope comes from two neighbouring texture samples (8 cm over), per pixel, not from 2×2-block
+        screen derivatives, which chopped each thin track into a dashed line */
+     vec2 tq=vec2(q.x*(1./32.),q.y*(1./48.));float t0=texture2D(uTrk,tq).r;
+     float trk=t0*lane*near;
+     vec2 tg=vec2(texture2D(uTrk,tq+vec2(.08/32.,0.)).r-t0,texture2D(uTrk,tq+vec2(0.,.08/48.)).r-t0)*(-.03*lane*near/.08);
      float traffic=onP*smoothstep(.42,.72,nA.r+.22*(1.-clamp(vT.y,0.,1.)));
      sIce=traffic*smoothstep(.64,.82,nA.g);
      float cordMask=onP*(1.-traffic)*smoothstep(.7,.84,nA.b)*.7;
-     /* corduroy: a smooth (cosine) ridge every 32 cm, faded out where a ridge spans fewer than ~15–30 px on screen (the bump normals come from 2×2-pixel derivatives).
-        The old hard-edged ridge was finer than a pixel close behind the skier and moiréd into a grainy web, worst at low render scale. */
-     float cq=q.x/.32,cfw=fwidth(cq);
-     float cord=cordMask*(.5+.5*cos(6.2832*cq))*(1.-smoothstep(.035,.07,cfw))*near;
-     sHgt=near*((nB.g-.5)*(.045+.08*edge+.03*(1.-onP)+.035*traffic)+(nB.b-.5)*.008-trk*.03-cord*.01);
+     /* corduroy: a smooth (cosine) ridge every 32 cm. Its lighting uses the exact slope of the ridge (sCordG, world xz), not
+        screen-space derivatives: those are computed per 2×2 pixel block, which at reduced render scale broke each ridge into
+        a row of dots. Faded out where a ridge spans fewer than ~7 render pixels, so it never aliases into moiré. */
+     float cq=q.x/.32,cfw=fwidth(cq),cfade=cordMask*(1.-smoothstep(.07,.15,cfw))*near;
+     float cord=cfade*(.5+.5*cos(6.2832*cq));
+     sCordG=vec2(ud.y,-ud.x)*(.0982*cfade*sin(6.2832*cq)+tg.x)+ud*tg.y;
+     sHgt=near*((nB.g-.5)*(.045+.08*edge+.03*(1.-onP)+.035*traffic)+(nB.b-.5)*.008/* tracks and corduroy tilt the normal through sCordG */);
      vec3 c=diffuseColor.rgb;
      c*=1.-onP*.035*(1.-nA.r);
      c=mix(c,c*vec3(.88,.92,.97),sIce*.8);
@@ -575,7 +581,8 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
      diffuseColor.rgb=c;}`)
   .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
     {vec3 sx=dFdx(-vViewPosition),sy=dFdy(-vViewPosition);vec3 r1=cross(sy,normal),r2=cross(normal,sx);float det=dot(sx,r1);
-     vec3 grad=sign(det)*(dFdx(sHgt)*r1+dFdy(sHgt)*r2);normal=normalize(abs(det)*normal-grad);}`)
+     vec3 grad=sign(det)*(dFdx(sHgt)*r1+dFdy(sHgt)*r2);normal=normalize(abs(det)*normal-grad);
+     normal=normalize(normal-(viewMatrix*vec4(sCordG.x,0.,sCordG.y,0.)).xyz);}`)
   .replace('#include <specularmap_fragment>','#include <specularmap_fragment>\nspecularStrength=specularStrength*(1.-sIce)+sIce*.9;')
   .replace('#include <envmap_fragment>',`
     float dl=length(reflectedLight.directDiffuse);
@@ -586,7 +593,7 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
     float fr=pow(1.-clamp(abs(dot(normal,normalize(vViewPosition))),0.,1.),4.);
     outgoingLight=mix(outgoingLight,vec3(.97,.985,1.),fr*.28);
     #include <envmap_fragment>`);};
-  mat.customProgramCacheKey=()=>'snow5';}
+  mat.customProgramCacheKey=()=>'snow7';}
 snowify(terrMat);snowify(terrMatFine);
 function branchy(g,lobes){const P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i),r=Math.hypot(x,z);if(r<1e-4)continue;const a=Math.atan2(x,z),k=0.8+0.2*Math.cos(a*lobes)+0.06*Math.sin(a*3.1);P.setX(i,x*k);P.setZ(i,z*k);}g.computeVertexNormals();return g;}
 /* two reusable tree models (origin at the ground, both tiers in one geometry, upper tier a touch lighter).
