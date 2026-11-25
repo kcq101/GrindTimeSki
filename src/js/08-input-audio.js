@@ -15,9 +15,10 @@ canvas.addEventListener('pointerdown',e=>{if(touchId!==null)return;touchId=e.poi
 canvas.addEventListener('pointermove',e=>{if(e.pointerId!==touchId)return;const dx=e.clientX-x0,dy=y0-e.clientY;
   steerIn=clamp(dx/70,-1,1);const pv=Math.abs(dy)<10?0:clamp((dy-Math.sign(dy)*10)/50,-1,1);postIn=invert?-pv:pv;
   thumb.style.left=(x0+clamp(dx,-70,70))+'px';thumb.style.top=(y0-clamp(dy,-60,60))+'px';});
-function endTouch(e){if(e.pointerId!==touchId)return;{const dx=e.clientX-x0,dy=e.clientY-y0;if(performance.now()-tDown<300&&Math.abs(dx)>35&&Math.abs(dx)>1.4*Math.abs(dy))registerSwipe(Math.sign(dx));}touchId=null;steerIn=0;postIn=0;thumb.style.display='none';}
+function endTouch(e){if(e.pointerId!==touchId)return;{const dx=e.clientX-x0,dy=e.clientY-y0;if(performance.now()-tDown<300&&Math.abs(dx)>35&&Math.abs(dx)>1.4*Math.abs(dy))registerSwipe(Math.sign(dx));
+    else if(performance.now()-tDown<280&&dy<-28&&-dy>1.4*Math.abs(dx))skate();}   /* quick flick up = one skate stroke */touchId=null;steerIn=0;postIn=0;thumb.style.display='none';}
 canvas.addEventListener('pointerup',endTouch);canvas.addEventListener('pointercancel',endTouch);
-const keys={};window.addEventListener('keydown',e=>{keys[e.key]=true;if(!e.repeat&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))registerSwipe(e.key==='ArrowRight'?1:-1);if(e.code==='Space'){e.preventDefault();if(!e.repeat)jump();}});window.addEventListener('keyup',e=>{keys[e.key]=false;});
+const keys={};window.addEventListener('keydown',e=>{keys[e.key]=true;if(!e.repeat&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))registerSwipe(e.key==='ArrowRight'?1:-1);if(e.code==='Space'){e.preventDefault();if(!e.repeat)jump();}if((e.key==='e'||e.key==='E')&&!e.repeat)skate();});window.addEventListener('keyup',e=>{keys[e.key]=false;});
 const jumpBtn=document.getElementById('jumpBtn');
 jumpBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();jump();});
 function updPips(){const on=S.air?2-S.boosts:2;jumpBtn.querySelectorAll('.pips i').forEach((el,i)=>el.classList.toggle('on',i<on));}

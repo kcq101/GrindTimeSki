@@ -2,7 +2,7 @@
 const skier=new THREE.Group();const rig=new THREE.Group();skier.add(rig);const skiParts=[],skiG=[];   /* skiG[0] left (+x), skiG[1] right (-x): one group per ski so it can tip on edge under its boot */
 (function(){
   const jacket=new THREE.MeshLambertMaterial({color:0xe8432f}),pants=new THREE.MeshLambertMaterial({color:0x1f2a44}),skiM=new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.3,metalness:0.1,envMap:envTex,envMapIntensity:0.9,map:canvasTex(16,256,(g,w,h)=>{g.fillStyle='#14181d';g.fillRect(0,0,w,h);g.fillStyle='#e8432f';g.fillRect(0,h*0.12,w,h*0.1);g.fillRect(0,h*0.78,w,h*0.05);g.fillStyle='#f2f4f6';g.fillRect(w*0.3,h*0.28,w*0.4,h*0.42);g.fillStyle='#f2b705';g.fillRect(0,h*0.9,w,h*0.03);})}),helm=new THREE.MeshLambertMaterial({color:0xf4f4f4}),gog=new THREE.MeshLambertMaterial({color:0xf2a900,emissive:0x553300});
-  [0.17,-0.17].forEach(x=>{const G=new THREE.Group();G.position.x=x;skier.add(G);skiG.push(G);
+  [0.17,-0.17].forEach(x=>{const G=new THREE.Group();G.position.x=x;G.userData.x0=x;skier.add(G);skiG.push(G);
     const s=new THREE.Mesh(new THREE.BoxGeometry(0.11,0.05,1.75),skiM);s.castShadow=true;s.position.set(0,0.03,0.1);G.add(s);skiParts.push(s);
     const tip=new THREE.Mesh(new THREE.BoxGeometry(0.11,0.05,0.2),skiM);tip.position.set(0,0.08,1.0);tip.rotation.x=-0.5;G.add(tip);skiParts.push(tip);});
   [-0.16,0.16].forEach(x=>{const l=new THREE.Mesh(new THREE.BoxGeometry(0.17,0.75,0.2),pants);l.position.set(x,0.42,0);rig.add(l);});
@@ -151,7 +151,7 @@ function captureLegs(){rig.rotation.set(0,0,0);rig.position.set(0,0,0);skier.upd
   skier.getWorldQuaternion(_q1);_q1.invert();
   ['Left','Right'].forEach((sd,i)=>{const B=n=>model.getObjectByName('mixamorig'+sd+n);const L={up:B('UpLeg'),low:B('Leg'),foot:B('Foot')};if(!L.up||!L.low||!L.foot)return;
     const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();L.up.getWorldPosition(a);L.low.getWorldPosition(b);L.foot.getWorldPosition(c);
-    L.l1=a.distanceTo(b);L.l2=b.distanceTo(c);skier.worldToLocal(c);skiG[i].position.set(c.x,0,0);L.off=new THREE.Vector3(0,c.y,c.z);
+    L.l1=a.distanceTo(b);L.l2=b.distanceTo(c);skier.worldToLocal(c);skiG[i].position.set(c.x,0,0);skiG[i].userData.x0=c.x;L.off=new THREE.Vector3(0,c.y,c.z);
     L.rel=_q1.clone().multiply(L.foot.getWorldQuaternion(new THREE.Quaternion()));LEG[i]=L;});}
 function legIK(L,G,w){if(!L||w<=0)return;
   L.up.getWorldPosition(_lh);_lt.copy(L.off);G.localToWorld(_lt);
@@ -164,7 +164,7 @@ function legIK(L,G,w){if(!L||w<=0)return;
   L.low.getWorldPosition(_lk);_lu.subVectors(_lt,_lk).normalize();aimBone(L.low,L.foot,_lu,w);
   /* boot flat on its ski (keeps the rest-pose relation, so edging tips the boot too) */
   _lq.multiply(L.rel);L.foot.parent.getWorldQuaternion(_lq2).invert();_lq2.multiply(_lq);L.foot.quaternion.slerp(_lq2,w);L.foot.updateMatrixWorld(true);}
-function resetSkis(){skiG.forEach(g=>{g.rotation.z=0;g.position.y=0;g.position.z=0;});}
+function resetSkis(){skiG.forEach(g=>{g.rotation.z=0;g.rotation.y=0;g.position.y=0;g.position.z=0;if(g.userData.x0!=null)g.position.x=g.userData.x0;});}
 function updModel(dt,tk){
   if(!mixer)return;
   const riding=animMode==='ride';
@@ -190,11 +190,15 @@ function updModel(dt,tk){
   const c=clamp(crouch,0,1),tq=sstep(0.45,1,c);
   if(riding&&BN.spine){BN.saved=new Map();[BN.spine0,BN.spine,BN.armL,BN.armR,BN.foreL,BN.foreR,BN.neck,BN.head].concat(...LEG.map(L=>L?[L.up,L.low,L.foot]:[])).forEach(b=>{if(b)BN.saved.set(b,b.quaternion.clone());});
     /* whole body: roll into the turn about the snow, slight pitch with the tuck, absorption lowers the hips */
-    rig.rotation.set(S.crashed?0:(0.04+Math.max(0,postS)*0.1-Math.max(0,-postS)*0.03),0,lean);
+    /* skate stroke: the pushing ski splays out, edges and drives sideways, then lifts and comes back; weight rides the other ski */
+    const sk=(S.skT>=0&&!S.air&&!S.crashed)?S.skT/SKATE_T:-1,skE=sk<0?0:(sk<0.5?sstep(0,0.3,sk):1-sstep(0.5,1,sk)),skL=sk>0.45?Math.sin(clamp((sk-0.45)/0.55,0,1)*Math.PI):0;
+    rig.rotation.set(S.crashed?0:(0.04+Math.max(0,postS)*0.1-Math.max(0,-postS)*0.03+0.08*skE),0,lean+(S.skSide===0?1:-1)*0.1*skE);
     /* the roll pivots about the outside boot, so the outside leg stays long and the inside leg folds (long leg / short leg) */
     {const px=(lean>0?skiG[0]:skiG[1]).position.x,cl=Math.cos(lean),sl=Math.sin(lean);rig.position.set(px-px*cl,-px*sl-ab,0);}
     {const e=lean*LEAN.edge,ins=lean>0?1:0,ld=LEAN.lead*Math.min(1,Math.abs(lean)/LEAN.max);
-     skiG.forEach((g,i)=>{g.rotation.z=e;g.position.y=0.05*Math.abs(Math.sin(e));g.position.z=i===ins?ld:-ld*0.3;});}
+     skiG.forEach((g,i)=>{g.rotation.z=e;g.position.y=0.05*Math.abs(Math.sin(e));g.position.z=i===ins?ld:-ld*0.3;g.rotation.y=0;if(g.userData.x0!=null)g.position.x=g.userData.x0;
+       if(skE>0){const out=i===0?1:-1;if(i===S.skSide){g.rotation.y=out*0.4*skE;g.position.x+=out*0.24*skE;g.position.z-=0.14*skE;g.position.y+=0.1*skL;g.rotation.z+=out*0.28*skE*(1-skL);}
+         else{g.rotation.y=out*0.14*skE;g.position.x-=out*0.06*skE;}}});}
     skier.updateMatrixWorld(true);_rw.set(1,0,0).applyQuaternion(skier.quaternion);_fw.set(0,0,1).applyQuaternion(skier.quaternion);
     /* if the outside leg can't reach its ski, sink the hips until it can */
     for(let it=0;it<2;it++){let ex=0;for(let i=0;i<2;i++){const L=LEG[i];if(!L)continue;L.up.getWorldPosition(_lh);_lt.copy(L.off);skiG[i].localToWorld(_lt);ex=Math.max(ex,_lh.distanceTo(_lt)-(L.l1+L.l2)*0.985);}

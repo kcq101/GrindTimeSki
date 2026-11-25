@@ -50,6 +50,7 @@ function sfxFall(){                                                  /* a body h
 function sfxTree(sp){const k=clamp(sp/15,0.2,1);
   sfx('chop1',{g:0.5+0.5*k,r:0.62,lp:3500});sfx(crunch(),{g:0.6*k,r:0.7,d:0.01});
   sfx('edge',{g:0.3*k,r:1.25,hp:2500,off:Math.random()*4,dur:1.4,fade:0.5,d:0.12});}   /* snow sifting off the branches */
+function sfxSkate(){sfx('edge',{g:0.32,r:1.15,hp:900,off:Math.random()*4,dur:0.3,fade:0.1,d:0.04});sfx(crunch(),{g:0.16,r:1.3,hp:700,d:0.05});}   /* edge scrape of the push */
 function sfxPlant(){sfx(crunch(),{g:0.14,r:1.5,hp:1200,d:0.15});}
 function sfxClank(){sfx('clank1',{g:0.5,r:0.7,lp:4000});sfx('clank2',{g:0.32,r:0.62,lp:3000,d:0.09});}
 /* per frame: shape the loops from the controller, catch landings / jolts / takeoffs */

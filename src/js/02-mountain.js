@@ -80,7 +80,13 @@ function carveG(tr,cx,cz,i,t,x,z,bx,d){
   if(tr.mog){const mk=mogK(tr,i,t);if(mk>0)g+=mogul(x,z)*sstep(tr.w-1,tr.w-7,d)*mk;}
   return g;
 }
-function H(x,z){
+/* lift-top plateaus (filled in 04-lifts.js): {x,z,h,sx,sz} = a gentle plane over each unload area, blended out between PLAT_R0 and PLAT_R1 */
+let PLAT=[];const PLAT_R0=26,PLAT_R1=62;
+function H(x,z){const h=H0(x,z);if(!PLAT.length)return h;
+  let sw=0,acc=0;for(let i=0;i<PLAT.length;i++){const p=PLAT[i],dx=x-p.x,dz=z-p.z,d2=dx*dx+dz*dz;if(d2>=PLAT_R1*PLAT_R1)continue;
+    const w=1-sstep(PLAT_R0,PLAT_R1,Math.sqrt(d2));sw+=w;acc+=w*(p.h+p.sx*dx+p.sz*dz);}
+  return sw>0?h+(acc/sw-h)*Math.min(1,sw):h;}
+function H0(x,z){
   const bx=Bm(x,z),raw=bx+Nz(x,z)*0.8;trailInfo(x,z);
   let sw=0,acc=0;
   /* cat tracks (k=1) weigh 3x where they cross fall-line trails, so a traverse keeps its bench instead of climbing the other trail's surface */

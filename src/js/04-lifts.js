@@ -5,6 +5,15 @@ const DSYM={g:'●',b:'■',k:'◆',dd:'◆◆'};
 LIFTS.forEach(L=>{L.serves=L.trails.slice(0,3).map(t=>shortName(t.name)+' '+DSYM[t.diff]).join(' · ');});
 const LIFT=id=>LIFTS.find(L=>L.id===id);
 const GAUGE=2.8,RIDE_SECS=24,CHAIR_GAP=60;
+/* lift-top plateaus: the unload area (centred 10 m past the top station) becomes a least-squares plane through the ground within
+   30 m, its tilt capped at 3.5% so it still leans the way the terrain falls; blended back into the real slope by 62 m.
+   Lift towers, terminals, tiles and physics all read H, so they all sit on it. */
+(function(){const TW=Math.PI*2;for(const L of LIFTS){const len=Math.hypot(L.tx-L.bx,L.tz-L.bz),ux=(L.tx-L.bx)/len,uz=(L.tz-L.bz)/len,cx=L.tx+ux*10,cz=L.tz+uz*10;
+  let n=0,sh=0,sx=0,sz=0,sxx=0,szz=0,sxz=0,sxh=0,szh=0;
+  for(const r of [0,10,20,30])for(let a=0;a<(r?16:1);a++){const dx=Math.sin(a/16*TW)*r,dz=Math.cos(a/16*TW)*r,h=H(cx+dx,cz+dz);n++;sh+=h;sx+=dx;sz+=dz;sxx+=dx*dx;szz+=dz*dz;sxz+=dx*dz;sxh+=dx*h;szh+=dz*h;}
+  const mx=sx/n,mz=sz/n,mh=sh/n,cxx=sxx/n-mx*mx,czz=szz/n-mz*mz,cxz=sxz/n-mx*mz,cxh=sxh/n-mx*mh,czh=szh/n-mz*mh,det=cxx*czz-cxz*cxz;
+  let gx=det?(cxh*czz-czh*cxz)/det:0,gz=det?(czh*cxx-cxh*cxz)/det:0;const g=Math.hypot(gx,gz),cap=0.035;if(g>cap){gx*=cap/g;gz*=cap/g;}
+  PLAT.push({x:cx,z:cz,h:mh-gx*mx-gz*mz,sx:gx,sz:gz,id:L.id});}})();
 LIFTS.forEach(L=>{
   const dx=L.tx-L.bx,dz=L.tz-L.bz;L.len=Math.hypot(dx,dz);L.dx=dx/L.len;L.dz=dz/L.len;L.px=-L.dz;L.pz=L.dx;L.ry=Math.atan2(L.dx,L.dz);
   L.real=L.len/L.speed;L.ts=L.real/RIDE_SECS;

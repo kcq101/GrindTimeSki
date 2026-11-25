@@ -1,11 +1,11 @@
 /* ---------- game state ---------- */
 const SES={laps:0,vert:0,chairs:0,runs:{}};
-const S={lift:null,ls:0,lt:0,x:0,z:0,th:0,v:0,t:0,top:0,crashes:0,state:'menu',cool:0,shake:0,finT:0,air:false,y:0,vy:0,boosts:0,airT:0,land:0,flip:0,spin:0,spinT:0,tricks:0,gAcc:0,path:[],endBase:null};
+const S={lift:null,ls:0,lt:0,x:0,z:0,th:0,v:0,t:0,top:0,crashes:0,state:'menu',cool:0,shake:0,finT:0,air:false,y:0,vy:0,boosts:0,airT:0,land:0,flip:0,spin:0,spinT:0,tricks:0,gAcc:0,skT:-1,skSide:0,path:[],endBase:null};
 const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
 const diffIcon=d=>d==='g'?'<div class="ci"></div>':d==='b'?'<div class="sq"></div>':d==='dd'?'<div class="dia"></div><div class="dia"></div>':'<div class="dia"></div>';
-function reset(){S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
+function reset(){S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
   S.x=RUN.x;S.z=RUN.z;S.gyp=undefined;S.gvp=undefined;setTxt('lblTop',RUN.top);setTxt('lblBot',RUN.dest?RUN.dest.name:'Base');S.th=RUN.th;S.v=2;S.t=0;S.top=0;S.crashes=0;S.cool=0;S.shake=0;S.finT=0;steer=0;steerIn=0;snapPrev();lerpIn(1);lerpOut();placeCam(true);}
 let curTrail='';
 function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
@@ -149,7 +149,11 @@ function treeHit(gy,dt){
       for(let i=0;i<45;i++)emit(S.x,H(S.x,S.z)+0.6,S.z,(rnd()-0.5)*5,rnd()*3.5,(rnd()-0.5)*5,0.9);
       return;}}}
 }
+/* skate stroke (quick flick up, or E): alternates skis; queues if you flick mid-stroke so fast flicks become a steady rhythm */
+const SKATE_T=0.55;let skateQ=0;
+function skate(){if(S.state!=='ride'||S.crashed||S.air)return;if(S.skT>=0&&S.skT<SKATE_T*0.6){skateQ=1;return;}S.skSide=1-S.skSide;S.skT=0;S.go=true;sfxSkate();}
 function physics(dt){
+  if(skateQ&&(S.skT<0||S.skT>=SKATE_T*0.6)){skateQ=0;skate();}
   let si=steerIn;if(keys.ArrowLeft||keys.a)si=-1;if(keys.ArrowRight||keys.d)si=1;
   let pi=postIn;if(keys.ArrowUp||keys.w)pi=invert?-1:1;if(keys.ArrowDown||keys.s)pi=invert?1:-1;
   steer+=(si-steer)*Math.min(1,dt*7);postS+=(pi-postS)*Math.min(1,dt*6);
@@ -199,6 +203,8 @@ function physics(dt){
   a-=0.7*up*(S.v>2?1:0);
   S.v+=a*dt;
   S.v*=1-Math.abs(steer)*0.22*dt;
+  /* skating: each stroke pushes for 0.28 s; strong on the flats, fades out by ~22 mph (you can't skate faster than you're gliding) */
+  if(S.skT>=0){if(S.skT<0.28)S.v+=5.5*(1-sstep(3,10,S.v))*dt;S.skT+=dt;if(S.skT>SKATE_T)S.skT=-1;}
   if(S.pre&&S.v<5.5)S.v+=2.2*dt;   /* skating across the top to the trail you want */
   else if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
   else if(S.v<2.5&&S.state==='ride'&&off)S.v+=3.2*dt;
