@@ -179,4 +179,4 @@ $('mapResume').onclick=resumeGame;
 window.addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='p'||e.key==='P'){if(S.state==='ride')pauseGame();else if(S.state==='paused')resumeGame();}});
 /* work out every lift's drop-off spot in the background after load, one lift per tick, so unloading never hitches */
 setTimeout(function spots(i=0){const L=LIFTS[i];if(!L)return;if(L.trails.length)topSpot(L);setTimeout(()=>spots(i+1),120);},4000);
-Object.assign(window.__kr,{topSpot,topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});
+Object.assign(window.__kr,{jump,topSpot,topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});

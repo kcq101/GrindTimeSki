@@ -83,6 +83,12 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Forgiving landings (Nov 24, 2026)
+- Kevin bailed on most big jumps even landing level. The impact limit (vertical speed into the slope) was 13 m/s (18 crouched, 11 standing tall), but one boost already lands at ~15 m/s on flat ground and a double boost at ~19. tools/test/landings.js (jumps from 3 spots on each of 55 trails): level landings were 85% clean without a boost and 1–12% with boosts.
+- Now 26 m/s level, 30 crouched, 20 standing tall; hard landings (>10 m/s) still cost speed and shake. Rotation tolerance 1.0 → 1.25 rad (bail) and 0.5 → 0.55 (sketchy, now −40% speed instead of −50%); with no input the skier levels out at 7 rad/s (was 5).
+- Flips need a fresh push after takeoff: tucking (push up) into a jump or over a crest no longer starts a front flip until you let go.
+- Result: level and tucked-through landings 91–100% clean for every jump type (the misses are double boosts off big drops); the autopilot's crashes went from 36 to 0.
+
 ## Grey slab over carved trails (Nov 24, 2026)
 - Kevin saw flat grey areas the skier sank into (Cascade Runout near K-1). The low-detail whole-mountain mesh is a 52 m grid 2.5 m under the raw DEM; trail carving (never-climbing profiles, cat-track benches) puts the snow up to ~3.4 m below the raw ground, and the coarse grid cuts straight across those dips. 54 named trails had stretches where it sat above the snow (Bear Cub 3.0 m, Touch Down 2.8 m, Cascade Runout 2.3 m).
 - Fix: the low mesh discards fragments inside 540 m of the tile-streaming centre (tiles cover ~610 m) within the surveyed grid, so near you only the detail tiles draw. The map turns the hole off. Checked at the worst spots on Cascade Runout and Bear Cub.

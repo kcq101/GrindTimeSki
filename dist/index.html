@@ -988,7 +988,7 @@ const GRAV=13;
 function spinTrick(d){if(S.state!=='ride'||S.crashed)return;if(S.air){S.spinT+=-d*TAU;}else pendSpin={d,t:performance.now()};}
 function jump(){
   if(S.state!=='ride'||S.crashed)return;
-  if(!S.air){S.autoAir=false;S.gyp=undefined;S.gvp=undefined;S.air=true;S.y=H(S.x,S.z)+0.05;S.vy=6+Math.min(2,S.v*0.06);S.boosts=0;S.airT=0;trkBreak=true;S.flip=0;S.spin=0;S.spinT=0;if(pendSpin&&performance.now()-pendSpin.t<450)S.spinT=-pendSpin.d*TAU;pendSpin=null;
+  if(!S.air){S.autoAir=false;S.flipArm=Math.abs(postS)<0.3;S.gyp=undefined;S.gvp=undefined;S.air=true;S.y=H(S.x,S.z)+0.05;S.vy=6+Math.min(2,S.v*0.06);S.boosts=0;S.airT=0;trkBreak=true;S.flip=0;S.spin=0;S.spinT=0;if(pendSpin&&performance.now()-pendSpin.t<450)S.spinT=-pendSpin.d*TAU;pendSpin=null;
     for(let i=0;i<14;i++)emit(S.x+(rnd()-0.5)*0.8,S.y,S.z+(rnd()-0.5)*0.8,(rnd()-0.5)*2,0.5+rnd()*1.2,(rnd()-0.5)*2,0.45);}
   else if(S.boosts<2){S.boosts++;S.vy=Math.max(S.vy,0)+5.5;S.v=Math.min(36,S.v+1.5);
     for(let i=0;i<18;i++)emit(S.x+(rnd()-0.5)*0.6,S.y+0.3,S.z+(rnd()-0.5)*0.6,(rnd()-0.5)*3,-1-rnd()*2,(rnd()-0.5)*3,0.5);
@@ -1164,21 +1164,24 @@ function physics(dt){
   if(S.air){
     S.airT+=dt;S.vy-=GRAV*dt;S.y+=S.vy*dt;S.v*=1-0.03*dt;
     S.th-=steer*0.6*dt;
-    if(postS<-0.55)S.flip-=FLIP_B*dt;else if(postS>0.6)S.flip+=FLIP_F*dt;
-    else{const d=Math.round(S.flip/TAU)*TAU-S.flip,st=5*dt;S.flip+=Math.abs(d)<st?d:Math.sign(d)*st;}
+    /* flips need a fresh push after takeoff: a tuck (or stand-tall) carried into the air doesn't flip you until you let go */
+    if(!S.flipArm&&Math.abs(postS)<0.3)S.flipArm=true;
+    if(S.flipArm&&postS<-0.55)S.flip-=FLIP_B*dt;else if(S.flipArm&&postS>0.6)S.flip+=FLIP_F*dt;
+    else{const d=Math.round(S.flip/TAU)*TAU-S.flip,st=7*dt;S.flip+=Math.abs(d)<st?d:Math.sign(d)*st;}   /* let go and you level out */
     {const d=S.spinT-S.spin,st=SPIN_R*dt;S.spin+=Math.abs(d)<st?d:Math.sign(d)*st;}
     S.x+=Math.sin(S.th)*S.v*dt;S.z+=Math.cos(S.th)*S.v*dt;
     S.x=clamp(S.x,XMIN+8,XMAX-8);S.z=clamp(S.z,ZMIN+8,ZMAX-8);
     const gy=H(S.x,S.z);
     if(S.y<=gy){S.air=false;S.land=0.3;updPips();S.gyp=undefined;S.gvp=undefined;
       {const gvl=(H(S.x+Math.sin(S.th)*S.v*dt,S.z+Math.cos(S.th)*S.v*dt)-gy)/dt,vr=S.vy-gvl,crL=Math.max(0,postS),upL=Math.max(0,-postS);
-       const lim=upL>0.3?-11:(crL>0.5?-18:-13);
+       /* how hard you can hit (m/s into the slope). Forgiving: a double-boost jump onto flat ground lands at ~19 m/s */
+       const lim=upL>0.3?-20:(crL>0.5?-30:-26);
        if(vr<lim){S.flip=0;S.spin=0;S.spinT=0;bail('SLAMMED!');S.y=gy;return {tk:false,off:false};}
-       if(vr<-8){S.v*=1-0.15*(1-0.6*crL);S.shake=Math.max(S.shake,0.3);}}
+       if(vr<-10){S.v*=1-0.15*(1-0.6*crL);S.shake=Math.max(S.shake,vr<-16?0.45:0.3);}}
       const fe=Math.abs(S.flip-Math.round(S.flip/TAU)*TAU),se=Math.abs(S.spinT-S.spin)+Math.abs(S.spin-Math.round(S.spin/TAU)*TAU),err=Math.max(fe,se);
       const nf=Math.round(S.flip/TAU),ns=Math.round(Math.abs(S.spinT)/TAU);
-      if(err>1.0){S.flip=0;S.spin=0;S.spinT=0;bail('BAILED!');S.y=gy;return {tk:false,off:false};}
-      else if(err>0.5){S.v*=0.5;S.shake=0.35;toast('Sketchy!');}
+      if(err>1.25){S.flip=0;S.spin=0;S.spinT=0;bail('BAILED!');S.y=gy;return {tk:false,off:false};}
+      else if(err>0.55){S.v*=0.6;S.shake=0.35;toast('Sketchy!');}
       else if(nf||ns){const fl=nf<0?(nf===-1?'Backflip':(nf===-2?'Double backflip':'Triple backflip')):(nf===1?'Front flip':(nf>1?'Double front flip':''));
         const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(36,S.v+2);toast(name);}
       else if(S.airT>(S.autoAir?1.4:0.9))toast(S.airT.toFixed(1)+'s AIR!');
@@ -1213,7 +1216,7 @@ function physics(dt){
   const gyN=H(S.x,S.z);
   if(S.gyp!==undefined&&dt>0.001){const gv=(gyN-S.gyp)/dt;
     if(S.gvp!==undefined){const ga=(gv-S.gvp)/dt,cr=Math.max(0,postS);
-      if(ga<-GRAV*2.4&&S.v>10&&S.gvp<-1&&H(S.x+Math.sin(S.th)*S.v*0.15,S.z+Math.cos(S.th)*S.v*0.15)<gyN+S.gvp*0.15-0.146-0.2){S.autoAir=true;S.air=true;S.y=gyN+0.02;S.vy=S.gvp;S.boosts=0;S.airT=0;S.flip=0;S.spin=0;S.spinT=0;trkBreak=true;S.gyp=undefined;S.gvp=undefined;updPips();S.top=Math.max(S.top,S.v);return {tk,off};}
+      if(ga<-GRAV*2.4&&S.v>10&&S.gvp<-1&&H(S.x+Math.sin(S.th)*S.v*0.15,S.z+Math.cos(S.th)*S.v*0.15)<gyN+S.gvp*0.15-0.146-0.2){S.autoAir=true;S.flipArm=Math.abs(postS)<0.3;S.air=true;S.y=gyN+0.02;S.vy=S.gvp;S.boosts=0;S.airT=0;S.flip=0;S.spin=0;S.spinT=0;trkBreak=true;S.gyp=undefined;S.gvp=undefined;updPips();S.top=Math.max(S.top,S.v);return {tk,off};}
       if(ga>55&&S.v>7){const jolt=(ga-55)/100;S.v*=1-Math.min(0.2,jolt*0.09*(1-0.75*cr));S.shake=Math.max(S.shake,Math.min(0.22,jolt*0.07));S.land=Math.max(S.land,0.14);
         if(ga>230&&cr<0.3&&S.v>15&&S.cool<=0){S.gyp=undefined;S.gvp=undefined;bail('EJECTED!');return {tk:false,off};}}}
     S.gvp=gv;}
@@ -1655,7 +1658,7 @@ $('mapResume').onclick=resumeGame;
 window.addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='p'||e.key==='P'){if(S.state==='ride')pauseGame();else if(S.state==='paused')resumeGame();}});
 /* work out every lift's drop-off spot in the background after load, one lift per tick, so unloading never hitches */
 setTimeout(function spots(i=0){const L=LIFTS[i];if(!L)return;if(L.trails.length)topSpot(L);setTimeout(()=>spots(i+1),120);},4000);
-Object.assign(window.__kr,{topSpot,topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});
+Object.assign(window.__kr,{jump,topSpot,topStart,JN,liftSigns,pauseGame,resumeGame});Object.defineProperty(window.__kr,'sgList',{get:()=>sgList});
 })();
 </script>
 </body>
