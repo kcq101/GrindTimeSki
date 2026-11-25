@@ -22,6 +22,8 @@ const { open } = require('./harness');
   await run('landed', 120, '()=>({})');
   await page.evaluate(() => { window.__freeze = 0; window.__kr.pauseGame(); }); await page.waitForTimeout(1200);
   console.log('paused        ', JSON.stringify(await page.evaluate(() => { const s = window.__kr.sfxState(); return { glide: s.glide, edge: s.edge }; })));
+  await page.evaluate(() => { window.__freeze = 0; const k = window.__kr; k.startLift(k.LIFTS.find(l => l.id === 'k1')); });
+  for (let i = 0; i < 4; i++) { await page.waitForTimeout(2500); console.log('lift wind     ', JSON.stringify(await page.evaluate(() => window.__kr.sfxState().wind))); }
   console.log('one-shots', await page.evaluate(() => { const t = window.__kr.sfxTest(); return 'scheduled at ' + t.toFixed(2) + 's'; }));
   await page.waitForTimeout(2500);
   if (errors.length) console.log(errors.join('\n')); else console.log('no page errors');

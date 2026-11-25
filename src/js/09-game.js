@@ -79,7 +79,7 @@ function updLift(dt){
   camera.fov+=(60-camera.fov)*Math.min(1,dt*3);camera.updateProjectionMatrix();
   const pr=clamp(S.ls/L.len,0,1);setBar(pr);
   setTxt('vert',Math.round(Math.max(0,(L.T[L.T.length-1].y-11-L.gnd(S.ls))*3.281)).toLocaleString()+' ft to top');
-  if(wind&&actx){wind.gain.setTargetAtTime(0.04,actx.currentTime,0.3);windF.frequency.setTargetAtTime(300,actx.currentTime,0.3);}
+  if(wind&&actx&&!SFX.on){wind.gain.setTargetAtTime(0.04,actx.currentTime,0.3);windF.frequency.setTargetAtTime(300,actx.currentTime,0.3);}
 }
 /* step off at the top: the trails' signs float down the hill (12-signs.js) */
 function unload(L){
