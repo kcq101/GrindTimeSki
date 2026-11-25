@@ -88,6 +88,8 @@ From a Bonvo reference clip.
 - Arms: upper arms hang close to the ribs (elbows by the hips, ~10° forward), forearms forward at ~100–115°, fists in front of and just outside the hips at belt height. In a carve the hands stay low instead of lifting toward the chest; the arm frame rolls with the torso (0.6 of the lean). `__probe()` now reports `uaFwd`, `elbow`, `handY`, `handZ`.
 - Poles: shafts angle back and close to the body (tips behind the boots, not splayed out); they tip over with the body in a turn and swing with a skid. `__poleCfg` gained `sDown`, `roll`, `yaw`.
 - Lean: max 0.6 → 0.7 rad, gain 0.85 → 0.95; the upper body folds forward a little more (0.2 → 0.3, +0.16 deeper in a turn) so it's compact rather than sitting back.
+- Tuck (follow-up): fists come forward and together in front of the chin (elbows down in front of the knees, `__tuck`), and each pole runs from the fist back along the forearm and under the armpit, tips just past the back, instead of sticking out sideways.
+- Steering (follow-up): full lock needs a longer drag (70 → 88 px) with a softer centre (input^1.3), and the skis answer a little slower (7 → 5.8/s), so hard left/right takes more intent.
 - Camera (`__camf`): follows the heading more slowly (yaw rate 3.2 → 1.8/s) and lets the skier drift up to ~1.6 m off the view line (sideways catch-up 30 → 6/s), so in a turn you see the skier's side and they move across the frame. Lower (3.0 → 2.55 m) and looking further down the hill (14 → 21 m ahead, 1 m up), so the horizon sits higher and more of the slope ahead shows.
 
 ## Boost button (Nov 25, 2026)

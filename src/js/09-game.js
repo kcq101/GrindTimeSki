@@ -156,7 +156,7 @@ function physics(dt){
   if(skateQ&&(S.skT<0||S.skT>=SKATE_T*0.6)){skateQ=0;skate();}
   let si=steerIn;if(keys.ArrowLeft||keys.a)si=-1;if(keys.ArrowRight||keys.d)si=1;
   let pi=postIn;if(keys.ArrowUp||keys.w)pi=invert?-1:1;if(keys.ArrowDown||keys.s)pi=invert?1:-1;
-  steer+=(si-steer)*Math.min(1,dt*(7-3.2*(S.pw||0)));   /* powder: the skis answer a little later */postS+=(pi-postS)*Math.min(1,dt*6);
+  steer+=(si-steer)*Math.min(1,dt*(5.8-2.6*(S.pw||0)));   /* powder: the skis answer a little later */postS+=(pi-postS)*Math.min(1,dt*6);
   const tk=postS>0.5;
   if(S.crashed){S.v=0;steer=0;return {tk:false,off:false};}
   /* top of a lift: stand still until you steer, tuck or jump */

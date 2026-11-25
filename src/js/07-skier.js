@@ -58,7 +58,7 @@ function loadModel(){return new Promise(res=>{
 });}
 const _v=new THREE.Vector3(),_t=new THREE.Vector3(),_u=new THREE.Vector3(0,1,0),_d=new THREE.Vector3();
 const _pd=new THREE.Vector3(),_pd2=new THREE.Vector3();
-const POLE={out:0.22,rise:-0.2,len:1.15,sOut:0.09,sDown:0.64,sBack:0.8,roll:0.8,yaw:0.6};window.__poleCfg=POLE;
+const POLE={out:0.22,rise:-0.2,len:1.15,sOut:0.09,sDown:0.64,sBack:0.8,roll:0.8,yaw:0.6,pitY:0.17,pitIn:-0.015};window.__poleCfg=POLE;
 const _fw=new THREE.Vector3(),_poZ=new THREE.Vector3(0,0,1),_poY=new THREE.Vector3(0,1,0);
 /* ---- upright arm/pole motion (from ski-instruction references):
    elbows low and slightly out, forearms forward, fists ~waist height a little wider than the elbows;
@@ -73,6 +73,7 @@ function aimBone(b,child,dir,w){if(!b||!child||w<=0)return;b.getWorldPosition(_a
   const ang=Math.acos(Math.max(-1,Math.min(1,_amC.dot(dir))));if(ang<1e-4)return;_amX.crossVectors(_amC,dir);if(_amX.lengthSq()<1e-10)return;_amX.normalize();rotBone(b,_amX,ang*w);}
 const sm01=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 function plantEnv(i){const t=plantT[i];if(t<0)return 0;const p=t/ARM.plantDur;return p<0.3?sm01(p/0.3):p<0.6?1:1-sm01((p-0.6)/0.4);}
+const TUCK={uaFwd:0.75,uaOut:0.06,foreUp:0.3,foreIn:0.32};window.__tuck=TUCK;
 const POSE={foreUp:0,armOut:0,spine0:0.3,spine:0.75,arm:0.9,fore:1.2,neck:-0.42,head:-0.52,neck0:-0.08,head0:-0.12};window.__pose=POSE;
 let gear=null,helmEdge=null;
 function addHeadGear(head,top){
@@ -235,6 +236,12 @@ function updModel(dt,tk){
         _amT.copy(_aU).multiplyScalar(-1).addScaledVector(_aF,ARM.elbowFwd+0.3*pe+0.12*Math.max(0,inside)).addScaledVector(_aL,sx*(ARM.elbowOut+0.08*Math.max(0,-inside))).normalize();aimBone(ua,fa,_amT,wU);
         /* forearm: forward and slightly down toward the grip; drops toward the snow on a plant */
         _amT.copy(_aF).multiplyScalar(ARM.foreFwd).addScaledVector(_aU,ARM.foreUp-0.55*pe-0.22*Math.abs(inside)).addScaledVector(_aL,sx*ARM.foreOut).normalize();aimBone(fa,hd,_amT,wU);});}
+    /* tuck arms: elbows down in front of the knees, forearms forward and slightly up with the fists together in front of the chin,
+       so the poles can run back from the fists under the armpits */
+    if(wU<0.999&&hands.length===2){const wt=1-wU;_aL.set(1,0,0).applyQuaternion(skier.quaternion);_aF.set(0,0,1).applyQuaternion(skier.quaternion);_aU.set(0,1,0).applyQuaternion(skier.quaternion);
+      [[BN.armL,BN.foreL,hands[0],1],[BN.armR,BN.foreR,hands[1],-1]].forEach(([ua,fa,hd,sx])=>{
+        _amT.copy(_aU).multiplyScalar(-1).addScaledVector(_aF,TUCK.uaFwd).addScaledVector(_aL,sx*TUCK.uaOut).normalize();aimBone(ua,fa,_amT,wt);
+        _amT.copy(_aF).addScaledVector(_aU,TUCK.foreUp).addScaledVector(_aL,-sx*TUCK.foreIn).normalize();aimBone(fa,hd,_amT,wt);});}
     for(let i=0;i<2;i++)legIK(LEG[i],skiG[i],ikW);
   }
   if(poles.length===2&&poles[0].visible){skier.updateMatrixWorld(true);
@@ -244,7 +251,11 @@ function updModel(dt,tk){
       const sx=i===0?1:-1,tk=tq*tq*(3-2*tq),pt=plantT[i];
       _d.set(sx*(POLE.sOut+(POLE.out-POLE.sOut)*tk),-POLE.sDown+(POLE.sDown+POLE.rise)*tk,-POLE.sBack-(1-POLE.sBack)*tk);
       /* shafts angle back, close to the body; in a turn they tip over with the body (the inside one trails, the outside one hangs) and swing with a skid */
-      if(!S.air){_d.normalize().applyAxisAngle(_poZ,lean*POLE.roll);if(skidY)_d.applyAxisAngle(_poY,skidY*POLE.yaw);}
+      if(!S.air){_d.normalize().applyAxisAngle(_poZ,lean*POLE.roll*(1-tk));if(skidY)_d.applyAxisAngle(_poY,skidY*POLE.yaw);}
+      /* tuck: racer style. The shaft runs from the fist back along the forearm and up under the armpit (between the elbow and the ribs),
+         tips rising behind the back, instead of the old fixed back-and-out direction that left the poles sticking out sideways */
+      if(tk>0.01){const sb=i===0?BN.armL:BN.armR;if(sb){sb.getWorldPosition(_pd);skier.worldToLocal(_pd);_pd.y-=POLE.pitY;_pd.x-=sx*POLE.pitIn;_pd.sub(_v);
+        if(_pd.lengthSq()>1e-4){_pd.normalize();_d.normalize().lerp(_pd,tk);}}}
       if(S.air&&!S.crashed)_d.x+=sx*0.12,_d.y+=0.25;   /* in the air: tips kick back and a little out for balance */
       _d.normalize();
       if(pt>=0&&tk<0.6){const p=pt/ARM.plantDur;/* reach: tip swings forward next to the ski tip; plant: tip holds while the skier passes; release back */

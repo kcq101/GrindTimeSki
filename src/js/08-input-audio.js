@@ -21,7 +21,7 @@ let tDown=0,lastSw=null,pendSpin=null;
 function registerSwipe(d){const now=performance.now();if(lastSw&&lastSw.d===d&&now-lastSw.t<520){spinTrick(d);lastSw=null;}else lastSw={d,t:now};}
 canvas.addEventListener('pointerdown',e=>{if(touchId!==null)return;touchId=e.pointerId;x0=e.clientX;y0=e.clientY;tDown=performance.now();thumb.style.display='block';thumb.style.left=x0+'px';thumb.style.top=y0+'px';});
 canvas.addEventListener('pointermove',e=>{if(e.pointerId!==touchId)return;const dx=e.clientX-x0,dy=y0-e.clientY;
-  steerIn=clamp(dx/70,-1,1);const pv=Math.abs(dy)<10?0:clamp((dy-Math.sign(dy)*10)/50,-1,1);postIn=invert?-pv:pv;
+  {const sx=clamp(dx/88,-1,1);steerIn=Math.sign(sx)*Math.pow(Math.abs(sx),1.3);}   /* longer drag for full lock (70 → 88 px) and a softer centre: small drags turn gently */const pv=Math.abs(dy)<10?0:clamp((dy-Math.sign(dy)*10)/50,-1,1);postIn=invert?-pv:pv;
   thumb.style.left=(x0+clamp(dx,-70,70))+'px';thumb.style.top=(y0-clamp(dy,-60,60))+'px';});
 function endTouch(e){if(e.pointerId!==touchId)return;{const dx=e.clientX-x0,dy=e.clientY-y0;if(performance.now()-tDown<300&&Math.abs(dx)>35&&Math.abs(dx)>1.4*Math.abs(dy))registerSwipe(Math.sign(dx));
     else if(performance.now()-tDown<280&&dy<-28&&-dy>1.4*Math.abs(dx))skate();}   /* quick flick up = one skate stroke */touchId=null;steerIn=0;postIn=0;thumb.style.display='none';}
