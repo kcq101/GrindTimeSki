@@ -1,5 +1,5 @@
 /* ---------- streamed terrain tiles (built procedurally around the skier) ---------- */
-const TILE=128,LOAD_R=700,NEAR_R=300,tiles=new Map(),tileQ=[];
+let CURV_K=2.5;const TILE=128,LOAD_R=700,NEAR_R=300,tiles=new Map(),tileQ=[];
 const terrMat=new THREE.MeshPhongMaterial({vertexColors:true,map:snowTex,specularMap:glintTex,specular:0xbfc8d4,shininess:80,side:THREE.DoubleSide});
 const bumpTex=canvasTex(128,128,(g,w,h)=>{g.fillStyle='#fbfdff';g.fillRect(0,0,w,h);for(let i=0;i<900;i++){g.fillStyle='rgba(140,160,190,'+(Math.random()*0.10)+')';g.fillRect(Math.random()*w,Math.random()*h,1+Math.random()*2,1+Math.random()*2);}});
 bumpTex.wrapS=bumpTex.wrapT=THREE.RepeatWrapping;
@@ -21,20 +21,22 @@ const trackTex=(function(){const W=512,Hh=512,cv=document.createElement('canvas'
       [[x-gap/2],[x+gap/2]].forEach(([xx])=>{[[7,.08],[4.2,.18],[2.2,.4]].forEach(([w,al])=>{g.fillStyle='rgba(255,255,255,'+(al*a).toFixed(3)+')';g.beginPath();g.ellipse(xx,y,w/2,1.6,0,0,Math.PI*2);g.fill();});});}});
   const t=new THREE.CanvasTexture(cv);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());return t;})();
 const SNOW_GLSL=`
-uniform sampler2D uNoise,uTrk;varying vec3 vWP;varying vec4 vT;
+uniform sampler2D uNoise,uTrk;varying vec3 vWP;varying vec4 vT;varying float vP;
 `;
 function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>{
   sh.uniforms.uNoise={value:noiseTex};sh.uniforms.uTrk={value:trackTex};
-  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec4 aT;varying vec3 vWP;varying vec4 vT;')
-    .replace('#include <project_vertex>','#include <project_vertex>\nvWP=(modelMatrix*vec4(transformed,1.)).xyz;vT=aT;');
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute vec4 aT;attribute float aP;varying vec3 vWP;varying vec4 vT;varying float vP;')
+    .replace('#include <project_vertex>','#include <project_vertex>\nvWP=(modelMatrix*vec4(transformed,1.)).xyz;vT=aT;vP=aP;');
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\n'+SNOW_GLSL+'\nfloat sIce=0.;float sHgt=0.;float sGl=0.;vec2 sCordG=vec2(0.);')
   .replace('#include <color_fragment>',`#include <color_fragment>
     {vec2 p=vWP.xz;vec2 ud=vT.zw/max(length(vT.zw),1e-3);vec2 q=vec2(p.x*ud.y-p.y*ud.x,dot(p,ud));float cd=distance(cameraPosition,vWP);float near=1.-smoothstep(25.,95.,cd);
-     float onP=1.-smoothstep(-1.5,1.5,vT.x);
+     float pdw=smoothstep(.15,.75,vP);float onP=(1.-smoothstep(-1.5,1.5,vT.x))*(1.-pdw);   /* powder reads like off-piste: no tracks, corduroy or hardpack */
      float edge=(1.-smoothstep(1.,5.,abs(vT.x+1.5)))*.9;
      vec4 nA=texture2D(uNoise,p*(1./180.));
      vec4 nB=texture2D(uNoise,p*(1./24.));
      sGl=texture2D(uNoise,p*(1./11.)).a;
+     /* soft wind-packed swells a few metres across, near the skier only (shading, not geometry): gives the snow surface visible form */
+     float swell=(texture2D(uNoise,p*(1./58.)+vec2(.37,.11)).g-.5)*(1.-smoothstep(45.,150.,cd));
      float lane=onP*smoothstep(1.02,.62,vT.y)*smoothstep(.3,.62,nA.r+.12);
      /* ski tracks: the groove's slope comes from two neighbouring texture samples (8 cm over), per pixel, not from 2×2-block
         screen derivatives, which chopped each thin track into a dashed line */
@@ -50,12 +52,13 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
      float cq=q.x/.32,cfw=fwidth(cq),cfade=cordMask*(1.-smoothstep(.07,.15,cfw))*near;
      float cord=cfade*(.5+.5*cos(6.2832*cq));
      sCordG=vec2(ud.y,-ud.x)*(.0982*cfade*sin(6.2832*cq)+tg.x)+ud*tg.y;
-     sHgt=near*((nB.g-.5)*(.045+.08*edge+.03*(1.-onP)+.035*traffic)+(nB.b-.5)*.008/* tracks and corduroy tilt the normal through sCordG */);
+     sHgt=swell*(.32+.25*(1.-onP)+.2*pdw)+near*((nB.g-.5)*(.045+.08*edge+.03*(1.-onP)+.035*traffic)+(nB.b-.5)*.008/* tracks and corduroy tilt the normal through sCordG */);
      vec3 c=diffuseColor.rgb;
      c*=1.-onP*.035*(1.-nA.r);
      c=mix(c,c*vec3(.88,.92,.97),sIce*.8);
      c*=1.-trk*.11-cord*.05;
      c=mix(c,min(c*1.03,vec3(1.)),max(edge,1.-onP)*.7);
+     c=mix(c,min(c*1.045,vec3(1.)),pdw*.8);
      diffuseColor.rgb=c;}`)
   .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
     {vec3 sx=dFdx(-vViewPosition),sy=dFdy(-vViewPosition);vec3 r1=cross(sy,normal),r2=cross(normal,sx);float det=dot(sx,r1);
@@ -64,14 +67,17 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
   .replace('#include <specularmap_fragment>','#include <specularmap_fragment>\nspecularStrength=specularStrength*(1.-sIce)+sIce*.9;')
   .replace('#include <envmap_fragment>',`
     float dl=length(reflectedLight.directDiffuse);
-    outgoingLight=mix(outgoingLight*vec3(.74,.84,1.),outgoingLight,smoothstep(.06,.55,dl));
+    /* contrast: more of the light comes from the sun and less from the flat sky fill, so a slope's angle to the sun
+       (rollers, knolls, dips, the far side of a headwall) reads clearly. Overall brightness on a typical pitch is unchanged. */
+    outgoingLight+=reflectedLight.directDiffuse*.72-reflectedLight.indirectDiffuse*.42;
+    outgoingLight=mix(outgoingLight*vec3(.68,.79,1.),outgoingLight,smoothstep(.1,.62,dl));
     vec3 Vw=normalize(cameraPosition-vWP);float cd2=distance(cameraPosition,vWP);
     float tw=fract(sGl*23.7+dot(Vw,vec3(4.1,2.3,3.7))*1.6);
     outgoingLight+=vec3(1.,.97,.9)*step(.985,sGl)*smoothstep(.82,1.,tw)*(1.-smoothstep(14.,60.,cd2))*smoothstep(.2,.7,dl)*1.3;
     float fr=pow(1.-clamp(abs(dot(normal,normalize(vViewPosition))),0.,1.),4.);
     outgoingLight=mix(outgoingLight,vec3(.97,.985,1.),fr*.28);
     #include <envmap_fragment>`);};
-  mat.customProgramCacheKey=()=>'snow7';}
+  mat.customProgramCacheKey=()=>'snow9';}
 snowify(terrMat);snowify(terrMatFine);
 function branchy(g,lobes){const P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i),r=Math.hypot(x,z);if(r<1e-4)continue;const a=Math.atan2(x,z),k=0.8+0.2*Math.cos(a*lobes)+0.06*Math.sin(a*3.1);P.setX(i,x*k);P.setZ(i,z*k);}g.computeVertexNormals();return g;}
 /* two reusable tree models (origin at the ground, both tiers in one geometry, upper tier a touch lighter).
@@ -103,10 +109,20 @@ const _Y=new THREE.Vector3(0,1,0),_tm4=new THREE.Matrix4(),_tq=new THREE.Quatern
 const cTrail=new THREE.Color(0xe6edf5),cWood=new THREE.Color(0xdde5ef),cForest=new THREE.Color(0x4a5d55),cTmp=new THREE.Color();
 function hash2(i,j,s){let h=(Math.imul(i,374761393)+Math.imul(j,668265263)+Math.imul(s||0,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296;}
 function inLiftCut(x,z){for(const L of LIFTS){const rx=x-L.bx,rz=z-L.bz,s=rx*L.dx+rz*L.dz;if(s>-30&&s<L.len+25&&Math.abs(rx*L.px+rz*L.pz)<10)return true;}return false;}
+/* powder depth 0..1 where snow would pile up and nobody packs it: off piste and in the trees (1), the outer edges of a trail,
+   and patches where a pitch flattens out at the bottom (snow sloughs down and collects). The middle of a busy trail stays packed.
+   e = distance past the trail edge (<0 = on the trail), w = trail width, ux,uz = downhill along the trail. */
+function powderAt(x,z,tr,e,w,ux,uz,lod){
+  if(!tr)return 1;
+  const off=sstep(0,8,e);if(off>=1)return 1;
+  const n=0.5+0.5*Math.sin(x*0.071+z*0.047+1.3)*Math.sin(z*0.093-x*0.031+0.4);   /* patchy, not uniform */
+  const edge=sstep(-0.4*w,-0.5,e)*(0.5+0.5*n)*(tr.k===1?0.55:0.9);
+  let flat=0;if(tr.k!==1&&!lod){const bs=(a,b)=>Math.hypot(Bm(a+4,b)-Bm(a-4,b),Bm(a,b+4)-Bm(a,b-4))/8,s0=bs(x,z),s1=bs(x-ux*30,z-uz*30);   /* bare-earth slope: cheap, and the DEM is what decides where a pitch runs out */flat=sstep(0.04,0.15,s1-s0)*sstep(0.2,0.6,n)*0.95;}
+  return Math.max(off,edge,flat*(1-0.5*sstep(-0.42*w,0,e)));}
 function buildTile(ti,tj,lod){
   const x0=ti*TILE,z0=tj*TILE;let fine=false;if(!lod)for(const b of MOGBOX)if(x0<b[2]&&x0+TILE>b[0]&&z0<b[3]&&z0+TILE>b[1]){fine=true;break;}
   const res=lod?8:(fine?2:4),n=TILE/res+1,N=n*n,E=4*(n-1);
-  const pos=new Float32Array((N+E)*3),col=new Float32Array((N+E)*3),uv=new Float32Array((N+E)*2),nor=new Float32Array((N+E)*3),tA=new Float32Array((N+E)*4);
+  const pos=new Float32Array((N+E)*3),col=new Float32Array((N+E)*3),uv=new Float32Array((N+E)*2),nor=new Float32Array((N+E)*3),tA=new Float32Array((N+E)*4),pw=new Float32Array(N+E);
   /* heights on a grid padded by one cell, so normals come from neighbours instead of four extra lookups per vertex */
   const np=n+2,hp=new Float32Array(np*np);
   for(let j=0;j<np;j++)for(let i=0;i<np;i++){const x=x0+(i-1)*res,z=z0+(j-1)*res;
@@ -117,17 +133,20 @@ function buildTile(ti,tj,lod){
     if(pad&&e>0){tA[k*4]=-2;tA[k*4+1]=0.9;}
     cTmp.copy(cTrail).lerp(cWood,sstep(-2,6,ec)).lerp(cForest,sstep(70,130,ec)*0.85);
     if(fine&&t.tr&&t.tr.mog&&e<0){const mk=mogK(t.tr,t.i,t.t)*sstep(0,-6,e);if(mk>0){const mv=clamp((mogul(x,z)+0.35)/1.3,0,1);cTmp.multiplyScalar(1-mk*(0.16-0.16*mv));}}
+    {const tr=t.tr,w=t.w,ux=t.ux,uz=t.uz;pw[k]=(pad||ec<e)?0:powderAt(x,z,tr,e,w,ux,uz,lod);}   /* after everything that reads TI: powderAt calls H */
     col[k*3]=cTmp.r;col[k*3+1]=cTmp.g;col[k*3+2]=cTmp.b;uv[k*2]=x/2.4;uv[k*2+1]=z/7;}
   for(let j=0;j<n;j++)for(let i=0;i<n;i++){const k=j*n+i,c=(j+1)*np+(i+1);
     const gx=(hp[c+1]-hp[c-1])/(2*res),gz=(hp[c+np]-hp[c-np])/(2*res),il=1/Math.sqrt(gx*gx+1+gz*gz);nor[k*3]=-gx*il;nor[k*3+1]=il;nor[k*3+2]=-gz*il;
+    /* hollows a shade darker, crests a touch brighter (near tiles only): makes rollers and dips readable even facing the sun */
+    if(!lod){const lap=(hp[c+1]+hp[c-1]+hp[c+np]+hp[c-np]-4*hp[c])/(res*res),f=1-clamp(lap*CURV_K,-0.035,0.09);col[k*3]*=f;col[k*3+1]*=f;col[k*3+2]*=Math.min(1,f*1.015+0.004);}
     {const x=pos[k*3],z=pos[k*3+2],bx=(Bm(x+6,z)-Bm(x-6,z))/12,bz=(Bm(x,z+6)-Bm(x,z-6))/12,gm=Math.hypot(bx,bz);if(gm>0.03){const ux=tA[k*4+2],uz=tA[k*4+3],sg=(ux*-bx+uz*-bz)<0?-1:1,f=sstep(0.03,0.1,gm);tA[k*4+2]=ux*sg*(1-f)-bx/gm*f;tA[k*4+3]=uz*sg*(1-f)-bz/gm*f;}}}
   /* skirts hide cracks between near and far detail levels */
   const ring=[];for(let i=0;i<n-1;i++)ring.push(i);for(let j=0;j<n-1;j++)ring.push(j*n+n-1);for(let i=n-1;i>0;i--)ring.push((n-1)*n+i);for(let j=n-1;j>0;j--)ring.push(j*n);
-  ring.forEach((src,r)=>{const k=N+r;pos[k*3]=pos[src*3];pos[k*3+1]=pos[src*3+1]-5;pos[k*3+2]=pos[src*3+2];col[k*3]=col[src*3];col[k*3+1]=col[src*3+1];col[k*3+2]=col[src*3+2];nor[k*3]=nor[src*3];nor[k*3+1]=nor[src*3+1];nor[k*3+2]=nor[src*3+2];uv[k*2]=uv[src*2];uv[k*2+1]=uv[src*2+1];for(let q=0;q<4;q++)tA[k*4+q]=tA[src*4+q];});
+  ring.forEach((src,r)=>{const k=N+r;pos[k*3]=pos[src*3];pos[k*3+1]=pos[src*3+1]-5;pos[k*3+2]=pos[src*3+2];col[k*3]=col[src*3];col[k*3+1]=col[src*3+1];col[k*3+2]=col[src*3+2];nor[k*3]=nor[src*3];nor[k*3+1]=nor[src*3+1];nor[k*3+2]=nor[src*3+2];uv[k*2]=uv[src*2];uv[k*2+1]=uv[src*2+1];for(let q=0;q<4;q++)tA[k*4+q]=tA[src*4+q];pw[k]=pw[src];});
   const idx=[];
   for(let j=0;j<n-1;j++)for(let i=0;i<n-1;i++){const a=j*n+i,b=a+1,c=a+n,d=c+1;idx.push(a,c,b,b,c,d);}
   for(let r=0;r<E;r++){const a=ring[r],b=ring[(r+1)%E],sa=N+r,sb=N+(r+1)%E;idx.push(a,sa,b,b,sa,sb);}
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.setAttribute('uv',new THREE.BufferAttribute(uv,2));g.setAttribute('normal',new THREE.BufferAttribute(nor,3));g.setAttribute('aT',new THREE.BufferAttribute(tA,4));g.setIndex(idx);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.setAttribute('uv',new THREE.BufferAttribute(uv,2));g.setAttribute('normal',new THREE.BufferAttribute(nor,3));g.setAttribute('aT',new THREE.BufferAttribute(tA,4));g.setAttribute('aP',new THREE.BufferAttribute(pw,1));g.setIndex(idx);
   const mesh=new THREE.Mesh(g,fine?terrMatFine:terrMat);mesh.receiveShadow=!lod;scene.add(mesh);
   /* trees: deterministic per cell, so a tile rebuilds identically every time it streams back in. Glades keep a sparse stand. */
   const step=lod?8:6,trees=[];

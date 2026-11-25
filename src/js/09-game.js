@@ -1,6 +1,6 @@
 /* ---------- game state ---------- */
 const SES={laps:0,vert:0,chairs:0,runs:{}};
-const S={lift:null,ls:0,lt:0,x:0,z:0,th:0,v:0,t:0,top:0,crashes:0,state:'menu',cool:0,shake:0,finT:0,air:false,y:0,vy:0,boosts:0,airT:0,land:0,flip:0,spin:0,spinT:0,tricks:0,gAcc:0,skT:-1,skSide:0,path:[],endBase:null};
+const S={lift:null,ls:0,lt:0,x:0,z:0,th:0,v:0,t:0,top:0,crashes:0,state:'menu',cool:0,shake:0,finT:0,air:false,y:0,vy:0,boosts:0,airT:0,land:0,flip:0,spin:0,spinT:0,tricks:0,gAcc:0,skT:-1,skSide:0,sk:0,pw:0,path:[],endBase:null};
 const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
@@ -127,7 +127,7 @@ function addTracks(){
   if(trkBreak&&trkLX!==null){tracks.forEach(t=>{if(t.n>0){const i=(t.n-1)*6;const mx=(t.pos[i]+t.pos[i+3])/2,my=(t.pos[i+1]+t.pos[i+4])/2,mz=(t.pos[i+2]+t.pos[i+5])/2;trkPush(t,mx,my,mz,mx,my,mz);}});
     const rx0=Math.cos(S.th),rz0=-Math.sin(S.th);[-0.17,0.17].forEach((o,k)=>{const cx=S.x+rx0*o,cz3=S.z+rz0*o,cy=H(cx,cz3)+0.03;trkPush(tracks[k],cx,cy,cz3,cx,cy,cz3);});}
   trkBreak=false;
-  trkLX=S.x;trkLZ=S.z;const rx=Math.cos(S.th),rz=-Math.sin(S.th);const hw=0.045+Math.abs(steer)*0.03;
+  trkLX=S.x;trkLZ=S.z;const rx=Math.cos(S.th),rz=-Math.sin(S.th);const hw=0.045+Math.abs(steer)*0.03+(S.sk||0)*0.22;
   [-0.17,0.17].forEach((o,k)=>{const t=tracks[k];
     const cx=S.x+rx*o,cz2=S.z+rz*o;
     const ax=cx-rx*hw,az=cz2-rz*hw,bx=cx+rx*hw,bz=cz2+rz*hw;
@@ -156,7 +156,7 @@ function physics(dt){
   if(skateQ&&(S.skT<0||S.skT>=SKATE_T*0.6)){skateQ=0;skate();}
   let si=steerIn;if(keys.ArrowLeft||keys.a)si=-1;if(keys.ArrowRight||keys.d)si=1;
   let pi=postIn;if(keys.ArrowUp||keys.w)pi=invert?-1:1;if(keys.ArrowDown||keys.s)pi=invert?1:-1;
-  steer+=(si-steer)*Math.min(1,dt*7);postS+=(pi-postS)*Math.min(1,dt*6);
+  steer+=(si-steer)*Math.min(1,dt*(7-3.2*(S.pw||0)));   /* powder: the skis answer a little later */postS+=(pi-postS)*Math.min(1,dt*6);
   const tk=postS>0.5;
   if(S.crashed){S.v=0;steer=0;return {tk:false,off:false};}
   /* top of a lift: stand still until you steer, tuck or jump */
@@ -196,8 +196,13 @@ function physics(dt){
   const g=9.8;
   let a=-g*along/Math.sqrt(1+along*along);
   const ti=trailInfo(S.x,S.z),off=(!ti.tr||ti.d>ti.w+1)&&!inPad(S.x,S.z)&&!S.pre;   /* the flats around a lift top are packed out, not powder */
-  const mu=off?0.28:0.03;
+  /* powder depth under the skis (smoothed so patches ease in): on the trail it adds drag and loosens the steering; off piste is deep */
+  {const pt=S.pre?0:(off?1:powderAt(S.x,S.z,ti.tr,ti.d-ti.w,ti.w,ti.ux,ti.uz));S.pw=(S.pw||0)+(pt-(S.pw||0))*Math.min(1,dt*4);}
+  const mu=off?0.28:0.03+0.075*S.pw;
   a-=g*mu*(S.v>0.1?1:0);
+  /* hard turn at speed: the skis come across the fall line and skid (a hockey stop). Builds with how hard you steer and how fast you go */
+  {const tgt=S.air?0:sstep(0.6,0.95,Math.abs(steer))*sstep(7,14,S.v);S.sk=(S.sk||0)+(tgt-(S.sk||0))*Math.min(1,dt*(tgt>(S.sk||0)?6:3.5));
+   a-=S.sk*(2+0.1*S.v);}
   const up=Math.max(0,-postS),cr=Math.max(0,postS);
   a-=(0.0042-0.0021*cr+0.0038*up)*S.v*S.v;
   a-=0.7*up*(S.v>2?1:0);
@@ -209,7 +214,7 @@ function physics(dt){
   else if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
   else if(S.v<2.5&&S.state==='ride'&&off)S.v+=3.2*dt;
   S.v=clamp(S.v,0,36);
-  const rate=steer*(2.3-Math.min(1.25,S.v/22));
+  const rate=steer*(2.3-Math.min(1.25,S.v/22))*(1+0.3*(S.sk||0))*(1-0.28*(S.pw||0));
   S.th-=rate*dt;
   if(S.v<1.2&&Math.hypot(gx,gz)>0.03){let d=Math.atan2(-gx,-gz)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));S.th+=d*Math.min(1,dt*0.8);}
   S.x+=Math.sin(S.th)*S.v*dt;S.z+=Math.cos(S.th)*S.v*dt;
@@ -228,6 +233,12 @@ function physics(dt){
 
   treeHit(H(S.x,S.z),dt);
 
+  if(S.sk>0.08&&S.v>3){const y=H(S.x,S.z),sd=steer>0?1:-1,rx=Math.cos(S.th),rz=-Math.sin(S.th),fx=Math.sin(S.th),fz=Math.cos(S.th),k=S.sk*Math.min(1,S.v/18)*(1+0.8*S.pw);
+    /* the skid throws a sheet of snow off the downhill (outside) edge: tails out, carried forward with your speed */
+    for(let j=0;j<2;j++)if(rnd()<k*1.3){const o=0.2+rnd()*0.5,b=-0.3-rnd()*0.9;emitPuff(S.x+rx*sd*o+fx*b,y+0.15,S.z+rz*sd*o+fz*b,rx*sd*(2+rnd()*3*k)+fx*S.v*0.45,1+rnd()*2.8*k,rz*sd*(2+rnd()*3*k)+fz*S.v*0.45,0.7+rnd()*0.6*k);}
+    for(let i=0;i<Math.round(4*k);i++){const o=0.25+rnd()*0.35,sp=2+rnd()*4*k;emit(S.x+rx*sd*o-fx*rnd()*0.9,y+0.08,S.z+rz*sd*o-fz*rnd()*0.9,rx*sd*sp+fx*S.v*0.4,0.6+rnd()*2*k,rz*sd*sp+fz*S.v*0.4,0.4+rnd()*0.3);}}
+  if(S.pw>0.3&&!off&&S.v>5&&rnd()<S.pw*0.5)emitPuff(S.x+(rnd()-0.5)*0.6,H(S.x,S.z)+0.1,S.z+(rnd()-0.5)*0.6,(rnd()-0.5)*1.2+Math.sin(S.th)*S.v*0.2,0.5+rnd()*0.8,(rnd()-0.5)*1.2+Math.cos(S.th)*S.v*0.2,0.6);
+  if(off&&S.v>6&&rnd()<0.35)emitPuff(S.x+(rnd()-0.5)*0.6,H(S.x,S.z)+0.1,S.z+(rnd()-0.5)*0.6,(rnd()-0.5)*1.4+Math.sin(S.th)*S.v*0.2,0.6+rnd()*1,(rnd()-0.5)*1.4+Math.cos(S.th)*S.v*0.2,0.7);
   if(Math.abs(steer)>0.25&&S.v>5&&!off){const y=H(S.x,S.z);const sd=steer>0?1:-1;const n=Math.min(5,1+Math.floor(Math.abs(steer)*S.v/6));for(let i=0;i<n;i++){const o=0.3+rnd()*0.25,sp=1+rnd()*1.6*Math.abs(steer);emit(S.x+Math.cos(S.th)*sd*o-Math.sin(S.th)*(rnd()*0.8),y+0.06,S.z-Math.sin(S.th)*sd*o-Math.cos(S.th)*(rnd()*0.8),Math.cos(S.th)*sd*sp+Math.sin(S.th)*S.v*0.15,0.3+rnd()*0.9,-Math.sin(S.th)*sd*sp+Math.cos(S.th)*S.v*0.15,0.35+rnd()*0.15);}}
   if(off&&S.v>4){for(let i=0;i<2;i++)emit(S.x+(rnd()-0.5)*0.6,H(S.x,S.z)+0.1,S.z+(rnd()-0.5)*0.6,(rnd()-0.5)*1.6,0.8+rnd()*1.2,(rnd()-0.5)*1.6,0.5);}
 

@@ -16,6 +16,17 @@
   .dia{width:11px;height:11px;background:#111;transform:rotate(45deg);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
   .sub{font-size:12px;opacity:.9;margin-top:3px;font-weight:500}
   .spd{text-align:right}
+  /* compass heading strip (top right, under the speed): scrolls with the camera, N in red, centre tick = where you're looking */
+  #cmp{position:relative;width:104px;height:20px;margin:7px 0 0 auto;overflow:hidden;border-radius:10px;background:rgba(20,32,52,.28);
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+  #cmpT{position:absolute;left:0;top:0;height:20px;white-space:nowrap;will-change:transform}
+  #cmpT i{position:absolute;top:0;width:0;height:20px;font-style:normal;font-size:11px;font-weight:800;line-height:20px;text-align:center}
+  #cmpT i b{position:absolute;left:-12px;top:0;width:24px;font-size:11px;font-weight:800;line-height:18px}
+  #cmpT i.n b{color:#ff5a4a}
+  #cmpT i.m{top:13px;height:4px;border-left:1px solid rgba(255,255,255,.75)}
+  #cmpT i.mi b{font-size:9px;font-weight:700;opacity:.85}
+  #cmpT i.n b{font-size:12px}
+  #cmp:after{content:'';position:absolute;left:50%;bottom:0;margin-left:-4px;border:4px solid transparent;border-bottom-color:#fff;border-top:0}
   .spd b{font-size:30px;font-weight:800;line-height:1}
   .spd span{font-size:12px;font-weight:600;margin-left:3px}
   #bot{bottom:0;padding:0 16px 18px}
@@ -135,7 +146,7 @@
     <div class="trail"><span id="ticon" class="ic"><div class="dia"></div></span><span id="ttext">SUPERSTAR</span></div>
     <div class="sub" id="time">0:00.0</div>
   </div>
-  <div class="spd"><b id="spd">0</b><span>MPH</span><div class="sub" id="vert">1,190 ft to go</div></div>
+  <div class="spd"><b id="spd">0</b><span>MPH</span><div class="sub" id="vert">1,190 ft to go</div><div id="cmp"><div id="cmpT"></div></div></div>
 </div>
 <div class="hud hidden" id="bot">
   <div class="barlbl"><span id="lblTop">Skye Peak</span><span id="lblBot">K-1 Lodge</span></div>

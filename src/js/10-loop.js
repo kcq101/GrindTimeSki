@@ -1,3 +1,10 @@
+/* ---------- compass heading strip: 1.2 px per degree, labels every 45°, ticks every 15°, laid out over -180..540 so it never runs out ---------- */
+const CMP_PX=1.2,cmpT=document.getElementById('cmpT'),_cd=new THREE.Vector3();let cmpLast=1e9;
+(function(){const L=['N','NE','E','SE','S','SW','W','NW'];let h='';for(let d=-180;d<=540;d+=15){const a=((d%360)+360)%360,x=((d+180)*CMP_PX).toFixed(1);
+  h+=a%45===0?'<i class="'+(a===0?'n':(a%90?'mi':''))+'" style="left:'+x+'px"><b>'+L[a/45]+'</b></i>':'<i class="m" style="left:'+x+'px"></i>';}cmpT.innerHTML=h;})();
+function updCompass(){camera.getWorldDirection(_cd);if(_cd.x*_cd.x+_cd.z*_cd.z<1e-6)return;
+  const b=((Math.atan2(_cd.x,-_cd.z)*180/Math.PI)+360)%360;if(Math.abs(b-cmpLast)<0.15)return;cmpLast=b;   /* x = east, z = south, so north is -z */
+  cmpT.style.transform='translateX('+(52-(b+180)*CMP_PX).toFixed(1)+'px)';}
 /* ---------- camera ---------- */
 const camPos=new THREE.Vector3(),camLook=new THREE.Vector3(),_cT=new THREE.Vector3(),_cL=new THREE.Vector3();let camTh=0;
 const CAM_D=7.0,CAM_H=3.0;   /* was 8.5 / 3.6: same pitch, skier ~22% larger on screen */
@@ -76,6 +83,7 @@ function frame(now){
     if(window.__side){const yy=skier.position.y;camera.position.set(S.x-4,yy+1,S.z+0.5);camera.lookAt(S.x,yy+0.8,S.z);}
     if(window.__camHook)window.__camHook(camera,skier,S);   /* test hook: tools/test/skier-poses.js frames the skier close up */
     {const f=64+Math.max(0,postS)*8+S.v*0.15;if(Math.abs(f-camera.fov)>0.01){camera.fov+=(f-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}}
+    updCompass();
     const mph=S.v*2.237;setTxt('spd',Math.round(mph));setTxt('time',S.pre?'Ski toward a sign':fmt(S.t));
     const hy=S.air?S.y:H(S.x,S.z);const ft=Math.max(0,(hy-RUN.h1)*3.281);setTxt('vert',(Math.round(ft/10)*10).toLocaleString()+' ft to go');
     const pr=clamp((RUN.h0-hy)/(RUN.h0-RUN.h1),0,1);updTrailHud();setBar(pr);

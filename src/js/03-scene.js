@@ -24,7 +24,8 @@ const scene=new THREE.Scene();
 const SKY=0xa9cbe9;
 scene.background=new THREE.Color(0xcfe0f2);
 scene.fog=new THREE.Fog(0xcfe0f2,300,3800);
-const SUN_DIR=new THREE.Vector3(0.55,0.52,0.72).normalize();
+/* late-morning winter sun, south-southeast (~155°), ~30° up: it lights the east-facing fall lines from the side */
+const SUN_DIR=new THREE.Vector3(0.37,0.52,0.8).normalize();
 /* sky dome: gradient, sun glow and drifting cumulus in one cheap fragment shader */
 const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,uniforms:{uSun:{value:SUN_DIR},uTime:{value:0},uNoise:{value:noiseTex},uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0}},
   vertexShader:'varying vec3 vDir;void main(){vDir=position;vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=p.xyww;}',

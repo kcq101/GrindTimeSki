@@ -4,7 +4,15 @@ const spGeo=new THREE.BufferGeometry();spGeo.setAttribute('position',new THREE.B
 const spray=new THREE.Points(spGeo,new THREE.PointsMaterial({color:0xffffff,size:0.2,transparent:true,opacity:0.95,depthWrite:false,map:canvasTex(32,32,(g,w,h)=>{const r=g.createRadialGradient(16,16,0,16,16,16);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(0.45,'rgba(255,255,255,.7)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h);})}));spray.frustumCulled=false;scene.add(spray);
 for(let i=0;i<SPN;i++)spPos[i*3+1]=-9999;
 function emit(x,y,z,vx,vy,vz,life){const i=spI++%SPN;spPos[i*3]=x;spPos[i*3+1]=y;spPos[i*3+2]=z;spVel[i*3]=vx;spVel[i*3+1]=vy;spVel[i*3+2]=vz;spLife[i]=life||0.7;}
-function updSpray(dt){for(let i=0;i<SPN;i++){if(spLife[i]<=0)continue;spLife[i]-=dt;if(spLife[i]<=0){spPos[i*3+1]=-9999;continue;}spVel[i*3+1]-=9*dt;spPos[i*3]+=spVel[i*3]*dt;spPos[i*3+1]+=spVel[i*3+1]*dt;spPos[i*3+2]+=spVel[i*3+2]*dt;}spGeo.attributes.position.needsUpdate=true;}
+/* bigger, softer puffs: the cloud off a hard skid and powder kicked up behind you (its own pool, one extra draw call) */
+const PFN=240,pfPos=new Float32Array(PFN*3),pfVel=new Float32Array(PFN*3),pfLife=new Float32Array(PFN);let pfI=0;
+const pfGeo=new THREE.BufferGeometry();pfGeo.setAttribute('position',new THREE.BufferAttribute(pfPos,3));
+const puff=new THREE.Points(pfGeo,new THREE.PointsMaterial({color:0xffffff,size:1.35,transparent:true,opacity:0.72,depthWrite:false,map:spray.material.map}));puff.frustumCulled=false;scene.add(puff);
+for(let i=0;i<PFN;i++)pfPos[i*3+1]=-9999;
+function emitPuff(x,y,z,vx,vy,vz,life){const i=pfI++%PFN;pfPos[i*3]=x;pfPos[i*3+1]=y;pfPos[i*3+2]=z;pfVel[i*3]=vx;pfVel[i*3+1]=vy;pfVel[i*3+2]=vz;pfLife[i]=life||0.8;}
+function updPuff(dt){const dr=Math.exp(-dt*2.2);for(let i=0;i<PFN;i++){if(pfLife[i]<=0)continue;pfLife[i]-=dt;if(pfLife[i]<=0){pfPos[i*3+1]=-9999;continue;}
+  pfVel[i*3]*=dr;pfVel[i*3+2]*=dr;pfVel[i*3+1]=pfVel[i*3+1]*dr-2.2*dt;pfPos[i*3]+=pfVel[i*3]*dt;pfPos[i*3+1]+=pfVel[i*3+1]*dt;pfPos[i*3+2]+=pfVel[i*3+2]*dt;}pfGeo.attributes.position.needsUpdate=true;}
+function updSpray(dt){updPuff(dt);for(let i=0;i<SPN;i++){if(spLife[i]<=0)continue;spLife[i]-=dt;if(spLife[i]<=0){spPos[i*3+1]=-9999;continue;}spVel[i*3+1]-=9*dt;spPos[i*3]+=spVel[i*3]*dt;spPos[i*3+1]+=spVel[i*3+1]*dt;spPos[i*3+2]+=spVel[i*3+2]*dt;}spGeo.attributes.position.needsUpdate=true;}
 
 /* ---------- input ---------- */
 let steerIn=0,steer=0,postIn=0,postS=0,touchId=null,x0=0,y0=0;const thumb=document.getElementById('thumb');
