@@ -83,12 +83,22 @@ const treePool=[[],[]];   /* per-tile geometry views (shared GPU buffers, own bo
 function treeView(lod){const pool=treePool[lod];if(pool.length)return pool.pop();const base=lod?TREE_FAR:TREE_NEAR,g=new THREE.BufferGeometry();
   for(const k in base.attributes)g.setAttribute(k,base.attributes[k]);g.setIndex(base.index);g.boundingSphere=new THREE.Sphere();g.userData.lod=lod;return g;}
 treeMat.onBeforeCompile=sh=>{
-  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vLP;').replace('#include <begin_vertex>','#include <begin_vertex>\nvLP=position;');
-  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLP;').replace('#include <color_fragment>',`#include <color_fragment>
+  /* per-tree snow load from where the tree stands: a random share plus more with altitude (rimed summit spruce) */
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vLP;varying float vSn;').replace('#include <begin_vertex>',`#include <begin_vertex>
+    vLP=position;
+    #ifdef USE_INSTANCING
+    vec3 ip=(instanceMatrix*vec4(0.,0.,0.,1.)).xyz;
+    #else
+    vec3 ip=vec3(0.);
+    #endif
+    vSn=clamp(.3+.45*fract(sin(dot(ip.xz,vec2(12.9898,78.233)))*43758.5453)+.55*smoothstep(820.,1150.,ip.y),0.,1.);`);
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vLP;varying float vSn;').replace('#include <color_fragment>',`#include <color_fragment>
     float ang=atan(vLP.x,vLP.z);float band=fract(vLP.y*.62+.18*sin(ang*7.)+.07*sin(ang*13.+vLP.y));
-    float sn=smoothstep(.58,.68,band)*(.55+.45*smoothstep(-.2,.9,sin(ang*3.+1.3)));
+    float w=.32*vSn;float sn=smoothstep(.58-w,.68-w,band)*(.55+.45*smoothstep(-.2-vSn,.9,sin(ang*3.+1.3)));
+    sn=max(sn,smoothstep(9.5-3.*vSn,11.,vLP.y)*.9);
     float ao=mix(.5,1.,clamp(vLP.y/6.5,0.,1.));
-    diffuseColor.rgb=mix(diffuseColor.rgb*ao,vec3(.92,.95,1.)*(.75+.25*ao),sn*.85);`);};
+    vec3 frost=mix(diffuseColor.rgb*ao,vec3(.86,.9,.95)*ao,.25+.3*vSn);
+    diffuseColor.rgb=mix(frost,vec3(.93,.96,1.)*(.78+.22*ao),sn*.92);`);};
 const _Y=new THREE.Vector3(0,1,0),_tm4=new THREE.Matrix4(),_tq=new THREE.Quaternion(),_tv1=new THREE.Vector3(),_tv2=new THREE.Vector3(),_tc=new THREE.Color();
 const cTrail=new THREE.Color(0xe6edf5),cWood=new THREE.Color(0xdde5ef),cForest=new THREE.Color(0x4a5d55),cTmp=new THREE.Color();
 function hash2(i,j,s){let h=(Math.imul(i,374761393)+Math.imul(j,668265263)+Math.imul(s||0,1442695041))|0;h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967296;}
@@ -130,7 +140,9 @@ function buildTile(ti,tj,lod){
     if(inLiftCut(x,z)||inClear(x,z))continue;
     const dens=(e<25?0.85:0.36)*(lod?1.3:1);
     if(hash2(gi,gj,3)>dens)continue;
-    trees.push([x,z,0.75+hash2(gi,gj,4)*0.7,hash2(gi,gj,5)]);}
+    /* size variety: mostly mid-size, some saplings, the odd big one; stunted toward the summits (krummholz) */
+    let s=0.7+hash2(gi,gj,4)*0.75;const r8=hash2(gi,gj,8);if(r8<0.12)s*=0.55;else if(r8>0.93)s*=1.35;
+    trees.push([x,z,s,hash2(gi,gj,5),hash2(gi,gj,7)]);}
   if(!lod&&trees.length){const cg=mesh.geometry.attributes.color;const tg=new Map();trees.forEach(t=>{const k=Math.floor(t[0]/8)+','+Math.floor(t[1]/8);if(!tg.has(k))tg.set(k,[]);tg.get(k).push(t);});
     for(let k=0;k<N;k++){const x=pos[k*3],z=pos[k*3+2];let occ=0;const ci=Math.floor(x/8),cj=Math.floor(z/8);
       for(let a=ci-1;a<=ci+1;a++)for(let b=cj-1;b<=cj+1;b++){const arr=tg.get(a+','+b);if(!arr)continue;for(const t of arr){const d=Math.hypot(x-t[0],z-t[1]);occ=Math.max(occ,1-sstep(1.2,4.2*t[2],d));}}
@@ -139,7 +151,7 @@ function buildTile(ti,tj,lod){
   let low=null,up=null;
   if(trees.length){const tg=treeView(lod?1:0);low=new THREE.InstancedMesh(tg,treeMat,trees.length);
     const m=_tm4,q=_tq,sc=_tv1,p=_tv2,c=_tc;let ylo=1e9,yhi=-1e9;
-    trees.forEach(([x,z,s,h],i)=>{const y=H(x,z);ylo=Math.min(ylo,y);yhi=Math.max(yhi,y+12*s);q.setFromAxisAngle(_Y,h*6.283);sc.set(s,s,s);p.set(x,y,z);m.compose(p,q,sc);low.setMatrixAt(i,m);
+    trees.forEach(([x,z,s,h,v],i)=>{const y=H(x,z);const st=1-0.3*sstep(950,1200,y),hs=s*st*(0.85+0.4*(v||0)),ws=s*st*(0.82+0.3*h);ylo=Math.min(ylo,y);yhi=Math.max(yhi,y+12*hs);q.setFromAxisAngle(_Y,h*6.283);sc.set(ws,hs,ws);p.set(x,y,z);m.compose(p,q,sc);low.setMatrixAt(i,m);
       c.setHSL(0.37+h*0.05,0.32+h*0.15,0.17+h*0.07);low.setColorAt(i,c);});
     tg.boundingSphere.center.set(x0+TILE/2,(ylo+yhi)/2,z0+TILE/2);tg.boundingSphere.radius=Math.hypot(TILE*0.72,(yhi-ylo)/2)+6;
     scene.add(low);}

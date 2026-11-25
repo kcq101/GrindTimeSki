@@ -58,6 +58,37 @@ function updWisps(dt,amt){const W=wisp,cx=camera.position.x,cz=camera.position.z
     for(let v=0;v<4;v++){const j=(i*4+v)*3;W.C.array[j]=o.x;W.C.array[j+1]=o.y;W.C.array[j+2]=o.z;W.Sz.array[j]=o.s;W.Sz.array[j+1]=o.s*0.42;W.Sz.array[j+2]=al;}}
   W.C.needsUpdate=true;W.Sz.needsUpdate=true;return any;}
 
+/* ---- valley cloud banks: every few minutes a sea of cloud rolls through the valleys below you, mostly when it's clear up top.
+   10 big soft camera-facing quads in one mesh (1 draw call), 400-1,900 m out, floating 110-280 m below the camera over lower ground, drifting slowly. ---- */
+const BANK_N=10;
+const bankTex=canvasTex(256,96,(g,w,h)=>{for(let i=0;i<70;i++){const x=w*(0.1+0.8*Math.random()),y=h*(0.42+0.22*Math.random()-0.1*Math.abs(x/w-0.5)),r=h*(0.12+0.22*Math.random());
+  const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(255,255,255,.16)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);}});
+const bankMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:false,
+  uniforms:{uTex:{value:bankTex},uCol:{value:new THREE.Color(0xf4f6f9)},uShade:{value:new THREE.Color(0xc9d2dd)}},
+  vertexShader:`attribute vec3 aC;attribute vec3 aS;varying vec2 vUv;varying float vA;
+  void main(){vec4 c=modelViewMatrix*vec4(aC,1.);c.xy+=position.xy*aS.xy;gl_Position=projectionMatrix*c;vUv=uv;
+    float d=-c.z;vA=aS.z*smoothstep(150.,380.,d)*(1.-smoothstep(1900.,2400.,d));}`,
+  fragmentShader:`uniform sampler2D uTex;uniform vec3 uCol,uShade;varying vec2 vUv;varying float vA;
+  void main(){float a=min(.8,texture2D(uTex,vUv).a*1.9)*vA;if(a<.01)discard;gl_FragColor=vec4(mix(uShade,uCol,smoothstep(.15,.75,vUv.y)),a);}`});
+const banks=(function(){const g=new THREE.BufferGeometry(),P=[],U=[],I=[];
+  for(let i=0;i<BANK_N;i++){const b=i*4;P.push(-.5,-.5,0,.5,-.5,0,.5,.5,0,-.5,.5,0);U.push(0,0,1,0,1,1,0,1);I.push(b,b+1,b+2,b,b+2,b+3);}
+  g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);
+  const C=new THREE.BufferAttribute(new Float32Array(BANK_N*12),3),Sz=new THREE.BufferAttribute(new Float32Array(BANK_N*12),3);C.setUsage(THREE.DynamicDrawUsage);Sz.setUsage(THREE.DynamicDrawUsage);
+  g.setAttribute('aC',C);g.setAttribute('aS',Sz);const m=new THREE.Mesh(g,bankMat);m.frustumCulled=false;m.renderOrder=3;m.visible=false;scene.add(m);
+  return {m,C,Sz,b:Array.from({length:BANK_N},()=>({x:0,z:0,y:0,w:0,a:0,ph:Math.random()*6,live:false}))};})();
+function bankSpawn(o,cx,cy,cz,dir,first){
+  for(let k=0;k<8;k++){const a=dir+(Math.random()-0.5)*(first?5:2.6),r=400+Math.random()*1500,x=cx+Math.sin(a)*r,z=cz+Math.cos(a)*r,gh=H(x,z);
+    /* a layer 110-280 m below you (like a sea of cloud below the summits), never into the ground */
+    const y=Math.max(gh+30,cy-110-Math.random()*170);if(y>cy-90||gh>y-20)continue;o.x=x;o.z=z;o.y=y;o.w=280+Math.random()*340;o.a=first?1:0;o.live=true;return;}
+  o.live=false;}
+function updBanks(dt,amt,t){const B=banks,cx=camera.position.x,cy=camera.position.y,cz=camera.position.z,dir=S.th;let any=false;
+  for(let i=0;i<BANK_N;i++){const o=B.b[i];
+    if(!o.live||Math.hypot(o.x-cx,o.z-cz)>2300||o.y>cy-60){bankSpawn(o,cx,cy,cz,dir,!o.live);if(!o.live){for(let v=0;v<4;v++)B.Sz.array[(i*4+v)*3+2]=0;continue;}}
+    o.x+=WIND.x*0.8*dt;o.z+=WIND.z*0.8*dt;o.a=WX.snap?1:Math.min(1,o.a+dt*0.08);
+    const br=1+0.07*Math.sin(t*0.09+o.ph),al=amt*o.a*0.9;if(al>0.01)any=true;
+    for(let v=0;v<4;v++){const j=(i*4+v)*3;B.C.array[j]=o.x;B.C.array[j+1]=o.y;B.C.array[j+2]=o.z;B.Sz.array[j]=o.w*br;B.Sz.array[j+1]=o.w*0.3*br;B.Sz.array[j+2]=al;}}
+  B.C.needsUpdate=true;B.Sz.needsUpdate=true;return any;}
+
 function weatherFrame(dt,now){
   const map=typeof MAP!=='undefined'&&MAP.on;
   const riding=S.state==='ride'||S.state==='finishing'||S.state==='paused';
@@ -81,5 +112,8 @@ function weatherFrame(dt,now){
   if(snowPts.visible){const u=snowMat.uniforms;u.uT.value=now/1000;u.uCam.value.copy(camera.position);u.uAmt.value=sn;u.uPx.value=renderer.getPixelRatio()*window.innerHeight/844;}
   /* wisps */
   const wa=map?0:WXS.wisp;wisp.m.visible=wa>0.02&&updWisps(dt,wa);
+  /* valley cloud: its own slow cycle (~5 min), strongest when it's clear where you are */
+  {const inv=WX.forceBank!=null?WX.forceBank:sstep(0.45,0.85,0.5+0.35*Math.sin(t*0.021+1.7)+0.15*Math.sin(t*0.0083+0.4));const bT=inv*(1-0.85*WXS.k);
+   WXS.bank=(WXS.bank||0)+(bT-(WXS.bank||0))*(WX.snap?1:1-Math.exp(-dt*0.15));const ba=map?0:WXS.bank;banks.m.visible=ba>0.02&&updBanks(dt,ba,t);}
 }
-window.__kr.weather=()=>({cloud:WX.force!=null?WX.force:null,k:+WXS.k.toFixed(3),snow:+WXS.snow.toFixed(3),wisp:+WXS.wisp.toFixed(3),near:Math.round(scene.fog.near),far:Math.round(scene.fog.far),camY:Math.round(camera.position.y),wispVis:wisp.m.visible,wispLive:wisp.w.filter(o=>o.live).length,wispD:wisp.w.filter(o=>o.live).map(o=>Math.round(Math.hypot(o.x-camera.position.x,o.z-camera.position.z))).sort((a,b)=>a-b).slice(0,4)});
+window.__kr.weather=()=>({bank:+(WXS.bank||0).toFixed(2),bankVis:banks.m.visible,cloud:WX.force!=null?WX.force:null,k:+WXS.k.toFixed(3),snow:+WXS.snow.toFixed(3),wisp:+WXS.wisp.toFixed(3),near:Math.round(scene.fog.near),far:Math.round(scene.fog.far),camY:Math.round(camera.position.y),wispVis:wisp.m.visible,wispLive:wisp.w.filter(o=>o.live).length,wispD:wisp.w.filter(o=>o.live).map(o=>Math.round(Math.hypot(o.x-camera.position.x,o.z-camera.position.z))).sort((a,b)=>a-b).slice(0,4)});
