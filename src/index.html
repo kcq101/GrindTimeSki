@@ -113,6 +113,11 @@
   .ctl{position:fixed;bottom:58px;z-index:5;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:none}
   #jumpBtn{left:16px;width:84px;height:84px;border-radius:50%;background:rgba(232,67,47,.88);color:#fff;font-weight:900;font-size:16px;letter-spacing:1px;box-shadow:0 4px 14px rgba(0,0,0,.3);border:3px solid rgba(255,255,255,.85)}
   #jumpBtn:active{transform:scale(.94)}
+  /* boost: sits above JUMP; the ring empties when used and refills over the cooldown (--cd: 1 = just used, 0 = ready) */
+  #boostBtn{left:26px;bottom:156px;width:64px;height:64px;border-radius:50%;color:#fff;font-weight:900;font-size:14px;letter-spacing:.5px;box-shadow:0 4px 14px rgba(0,0,0,.3);
+    background:radial-gradient(circle,rgba(38,140,226,.92) 60%,transparent 61%),conic-gradient(rgba(255,255,255,.9) calc((1 - var(--cd,0))*360deg),rgba(20,32,52,.45) 0)}
+  #boostBtn.cool{color:rgba(255,255,255,.55)}
+  #boostBtn:active{transform:scale(.94)}
   .pips{display:flex;gap:5px;justify-content:center;margin-top:4px}
   .pips i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.35)}
   .pips i.on{background:#fff}
@@ -130,7 +135,7 @@
   .sess{font-size:12px;color:#5b6b7c;text-align:center;margin:12px 0 2px;font-weight:600}
   #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,.4)}
   /* type: Barlow Condensed for headings, labels, buttons and the HUD (trail-sign feel), Barlow for running text. Inlined, OFL (assets/fonts) */
-  .trail,.spd,.barlbl,#toast,.card h1,.card .k,.btn,.stats b,#mapTop,#youPin b,#confirm h2,.pin b,#sheet h1,#sheet .k,#pauseBtn,#listBtn,.edge span,#jumpBtn,#skipBtn,.lift b,.lift .chair,.lift .go,.tc b,#loading,#mapPause b,.chip{font-family:'Barlow Condensed',Barlow,-apple-system,Roboto,sans-serif}
+  .trail,.spd,.barlbl,#toast,.card h1,.card .k,.btn,.stats b,#mapTop,#youPin b,#confirm h2,.pin b,#sheet h1,#sheet .k,#pauseBtn,#listBtn,.edge span,#jumpBtn,#boostBtn,#skipBtn,.lift b,.lift .chair,.lift .go,.tc b,#loading,#mapPause b,.chip{font-family:'Barlow Condensed',Barlow,-apple-system,Roboto,sans-serif}
   .card h1,#sheet h1,#confirm h2{text-transform:uppercase;letter-spacing:.01em;font-size:27px;line-height:1.05}
   .btn,#skipBtn,.lift b,.pin b,.trail{text-transform:uppercase;letter-spacing:.03em}
   .card .k,#sheet .k,#mapTop{letter-spacing:.12em}
@@ -153,6 +158,7 @@
   <div class="bar"><div class="fill" id="fill"></div><div class="dot" id="dot"></div></div>
 </div>
 <div id="toast"></div>
+<button class="ctl hidden" id="boostBtn" aria-label="Boost">BOOST</button>
 <button class="ctl hidden" id="jumpBtn">JUMP<div class="pips"><i></i><i></i></div></button>
 <button class="ctl hidden" id="skipBtn">Skip ▸▸</button>
 <button class="hidden" id="pauseBtn" aria-label="Pause"></button>

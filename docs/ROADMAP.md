@@ -83,6 +83,9 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Boost button (Nov 25, 2026)
+Blue BOOST button above JUMP (keyboard: B or Shift). A small shove of speed, about +9 mph over half a second, on the snow or in the air, with a puff of snow behind. 2.5 s recharge shown as a ring that refills around the button. Tunables: `window.__boost`.
+
 ## Snow contrast, powder, hockey-stop skids, compass (Nov 25, 2026)
 Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder variety, hard turns look like carves, no sense of direction.
 - Contrast: the snow shader takes more of its light from the sun and less from the flat sky fill (same average brightness), with a stronger blue tint on shaded faces. Near tiles shade hollows a little darker and crests a little brighter (from the height grid), and soft shading-only swells a few metres across fade in within ~150 m. Sun swung from SE (~143°) to SSE (~155°) at the same ~30° height, so east-running fall lines get side light. Still late morning, not afternoon.
