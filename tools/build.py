@@ -32,6 +32,11 @@ def build():
     json.loads(kdata)  # fail early on bad data
     assert js.count('/*@KDATA*/null') == 1, 'expected exactly one /*@KDATA*/null marker in src/js'
     js = js.replace('/*@KDATA*/null', kdata)
+    faces = ''.join(f"@font-face{{font-family:'{fam}';src:url(data:font/woff2;base64,{base64.b64encode(open(os.path.join(ROOT, 'assets/fonts', fn), 'rb').read()).decode()}) format('woff2');font-weight:{w};font-display:swap}}"
+                    for fam, fn, w in [('Barlow Condensed', 'barlow-condensed-latin-600-normal.woff2', 600), ('Barlow Condensed', 'barlow-condensed-latin-700-normal.woff2', 700),
+                                       ('Barlow', 'barlow-latin-400-normal.woff2', 400), ('Barlow', 'barlow-latin-600-normal.woff2', 600)])
+    assert page.count('<!--@FONTS-->') == 1, 'expected exactly one <!--@FONTS--> in src/index.html'
+    page = page.replace('<!--@FONTS-->', f'<style>{faces}</style>')
     for marker in ('<!--@ASSETS-->', '<!--@GAME-->'):
         assert page.count(marker) == 1, f'expected exactly one {marker} in src/index.html'
     return page.replace('<!--@ASSETS-->', '\n'.join(tags)).replace('<!--@GAME-->\n', js).replace('<!--@GAME-->', js)

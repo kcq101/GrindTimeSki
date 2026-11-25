@@ -30,7 +30,7 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   12-signs            floating trail signs (lift tops + junctions, one billboard mesh), screen-edge arrows, lift-top free-ski, pause menu
   13-weather          weather cycle (seeded per trail): altitude fog + sky/ridge wash, falling snow, summit cloud wisps
   14-sfx              sound: glide + edge loops shaped by speed and lean, landings, falls, tree hits, pole plants, lift towers
-assets/               skier.glb, helmet.glb, sfx/ (sounds + SOURCES.md credits), all embedded into the page at build time
+assets/               skier.glb, helmet.glb, fonts/ (Barlow, OFL), sfx/ (sounds + SOURCES.md credits), all embedded into the page at build time
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json
 tools/build.py        bundles everything into dist/index.html
 tools/bake/           data pipeline: project + clean trails, lifts, widths, picker lists -> data/kdata.json

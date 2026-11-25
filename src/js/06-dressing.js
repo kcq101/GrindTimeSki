@@ -6,7 +6,7 @@ function drawSign(g,tr,w,h){g.fillStyle='#14202e';g.fillRect(0,0,w,h);g.fillStyl
   if(tr.diff==='dd'){[62,118].forEach(cx=>{g.save();g.translate(cx,128);g.rotate(Math.PI/4);g.fillStyle='#000';g.fillRect(-26,-26,52,52);g.strokeStyle='#fff';g.lineWidth=5;g.strokeRect(-26,-26,52,52);g.restore();});}
   g.save();g.translate(90,128);if(tr.diff==='k'||tr.diff==='dd')g.rotate(Math.PI/4);g.fillStyle=DIFF[tr.diff].col;
   if(tr.diff==='dd'){}else if(tr.diff==='g'){g.beginPath();g.arc(0,0,42,0,7);g.fill();g.strokeStyle='#fff';g.lineWidth=6;g.stroke();}else{g.fillRect(-38,-38,76,76);g.strokeStyle='#fff';g.lineWidth=6;g.strokeRect(-38,-38,76,76);}
-  g.restore();g.fillStyle='#fff';const nm=shortName(tr.name).toUpperCase();const tx=tr.diff==='dd'?162:150;g.font='bold '+(nm.length>13?36:(nm.length>11?44:(nm.length>9?56:70)))+'px sans-serif';g.textBaseline='middle';g.fillText(nm,tx,112,w-tx-24);g.font='bold 30px sans-serif';g.fillStyle='#f2b705';g.fillText(DIFF[tr.diff].label,tx+2,178);}
+  g.restore();g.fillStyle='#fff';const nm=shortName(tr.name).toUpperCase();const tx=tr.diff==='dd'?162:150;g.font='700 '+(nm.length>13?44:(nm.length>11?52:(nm.length>9?62:76)))+'px "Barlow Condensed",sans-serif';g.textBaseline='middle';g.fillText(nm,tx,112,w-tx-24);g.font='600 32px "Barlow Condensed",sans-serif';g.fillStyle='#f2b705';g.fillText(DIFF[tr.diff].label,tx+2,178);}
 const postMat=new THREE.MeshLambertMaterial({color:0x5d6670});
 function normalAt(tr,i){const a=tr.s[Math.max(0,i-1)],b=tr.s[Math.min(tr.s.length-1,i+1)];const dx=b[0]-a[0],dz=b[1]-a[1],L=Math.hypot(dx,dz)||1;return[dz/L,-dx/L];}
 function headingAt(tr,i){const a=tr.s[Math.max(0,i-1)],b=tr.s[Math.min(tr.s.length-1,i+2)];return Math.atan2(b[0]-a[0],b[1]-a[1]);}
@@ -31,8 +31,11 @@ function headingAt(tr,i){const a=tr.s[Math.max(0,i-1)],b=tr.s[Math.min(tr.s.leng
   /* trail signs at the top of every trail you can pick off a lift: one texture atlas, one mesh */
   const signTr=[];LIFTS.forEach(L=>L.trails.forEach(tr=>{if(!signTr.includes(tr))signTr.push(tr);}));
   const CW=256,CH=128,COLS=8,rows=Math.ceil(signTr.length/COLS),AH=Math.pow(2,Math.ceil(Math.log2(Math.max(1,rows)*CH)));
-  const atlas=canvasTex(CW*COLS,AH,(g)=>{signTr.forEach((tr,k)=>{g.save();g.translate((k%COLS)*CW,Math.floor(k/COLS)*CH);g.scale(0.5,0.5);drawSign(g,tr,512,256);g.restore();});});
+  const drawAll=(g)=>{signTr.forEach((tr,k)=>{g.save();g.translate((k%COLS)*CW,Math.floor(k/COLS)*CH);g.scale(0.5,0.5);drawSign(g,tr,512,256);g.restore();});};
+  const atlas=canvasTex(CW*COLS,AH,drawAll);
   atlas.flipY=true;
+  /* the inlined fonts load asynchronously: redraw the signs once Barlow Condensed is ready */
+  if(document.fonts&&document.fonts.load)document.fonts.load('700 40px "Barlow Condensed"').then(()=>{const c=atlas.image,g=c.getContext('2d');g.clearRect(0,0,c.width,c.height);drawAll(g);atlas.needsUpdate=true;}).catch(()=>{});
   const sp=[],su=[],si=[],posts=[];
   signTr.forEach((tr,k)=>{const i=Math.min(3,tr.s.length-1),[cx,cz]=tr.s[i],[nx,nz]=normalAt(tr,i),off=Math.min(tr.w*0.7,12)+2;
     const x=cx-nx*off,z=cz-nz*off,y=H(x,z),f=headingAt(tr,i)+Math.PI,c=Math.cos(f),s=Math.sin(f);
