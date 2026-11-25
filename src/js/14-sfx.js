@@ -63,13 +63,14 @@ function sfxFrame(dt){if(!SFX.on)return;
   const t=actx.currentTime,sv=clamp(S.v/30,0,1),e=clamp(Math.abs(lean)/LEAN.max,0,1),pw=ride&&lastSim&&lastSim.off?1:0,G=SFX.glide,E=SFX.edge;
   /* glide: a soft, airy hiss under the carving. Groomed / packed powder (Killington), not a roar: thinned below 500-1100 Hz,
      pitched up, and only gently louder with speed so it never crescendos over the edges (Kevin, Nov 24) */
-  const gg=onSnow?(0.05+0.16*Math.sqrt(sv))*(1-0.35*e)*(pw?1.1:1):0;
-  G.g.gain.setTargetAtTime(gg,t,0.06);G.src.playbackRate.setTargetAtTime((1.0+0.35*sv+0.06*e)*(pw?0.92:1),t,0.08);
+  const gg=onSnow?(0.05+0.16*Math.sqrt(sv))*(1-0.15*e)*(pw?1.1:1):0;
+  G.g.gain.setTargetAtTime(gg,t,0.15);G.src.playbackRate.setTargetAtTime((1.0+0.35*sv+0.06*e)*(pw?0.92:1),t,0.08);
   G.h.frequency.setTargetAtTime(pw?380+400*sv:500+600*sv,t,0.08);G.f.frequency.setTargetAtTime(pw?2600+2500*sv:4500+4500*sv,t,0.08);
   /* edge: the crunch of carving left and right. The lean is the edge angle; the harder it's on edge, the louder and higher.
-     Mostly lean-driven, so it stands out at any speed */
-  const eg=onSnow?Math.pow(e,1.15)*(0.22+0.33*sv)*(pw?0.7:1)*0.75:0;
-  E.g.gain.setTargetAtTime(eg,t,0.05);E.src.playbackRate.setTargetAtTime(0.95+0.25*sv+0.4*e,t,0.06);E.f.frequency.setTargetAtTime(600+1800*e,t,0.06);
+     Lean-driven but with a floor, and eased, so linked turns don't pulse on and off at each edge change (Kevin: too much oscillation
+     at the top of runs, ~0.7 Hz = his turn rhythm) */
+  const eg=onSnow?(0.4+0.6*Math.pow(e,1.1))*(0.2+0.3*sv)*(pw?0.7:1)*0.6:0;
+  E.g.gain.setTargetAtTime(eg,t,0.18);E.src.playbackRate.setTargetAtTime(0.95+0.25*sv+0.3*e,t,0.15);E.f.frequency.setTargetAtTime(700+1300*e,t,0.15);
   /* chairlift: wind that gusts, stronger the higher you are above the ground and the higher on the mountain, more in cloud */
   if(S.state==='lift'&&wind&&windF){const tt=t,gh=Math.max(0,camera.position.y-H(camera.position.x,camera.position.z));
     const alt=sstep(600,1150,camera.position.y),gust=0.55+0.25*Math.sin(tt*0.37+1.1)+0.15*Math.sin(tt*1.13)+0.1*Math.sin(tt*2.9+0.4);

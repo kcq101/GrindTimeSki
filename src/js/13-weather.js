@@ -1,6 +1,6 @@
 /* ---------- weather: fog that thickens with altitude and drifts over time, falling snow, cloud wisps on the upper mountain ----------
-   One slow "cloudiness" cycle drives everything. During a run it runs on run time (S.t) with a phase seeded by the trail name, so a given
-   trail always gets the same weather (fair best times); elsewhere it runs on the wall clock. Altitude scales it: the summits fog in, the
+   One slow "cloudiness" cycle drives everything, on one continuous clock (lifts, lift tops and runs alike), so weather never
+   jumps between them. Altitude scales it: the summits fog in, the
    base mostly stays clear. Cost: a few uniforms per frame, plus two draw calls (snow points, wisp quads) that are skipped when invisible.
    Guardrail: visibility never drops below ~200 m, so signs and the next pitch stay readable at speed. */
 const WX={alt0:780,alt1:1180,farMin:200,nearMin:6,cycle:0.7,force:null};window.__wx=WX;
@@ -61,12 +61,14 @@ function updWisps(dt,amt){const W=wisp,cx=camera.position.x,cz=camera.position.z
 function weatherFrame(dt,now){
   const map=typeof MAP!=='undefined'&&MAP.on;
   const riding=S.state==='ride'||S.state==='finishing'||S.state==='paused';
-  const t=riding?S.t:(now/1000-WXS.t0),seed=riding&&RUN?hashStr(RUN.name||''):0.37;
+  /* one continuous weather clock for lifts, lift tops and runs, so nothing jumps when you pick a trail */
+  const t=now/1000-WXS.t0,seed=0.37;
   const cl=WX.force!=null?WX.force:cloudAt(t*WX.cycle,seed);
   const camY=camera.position.y,alt=sstep(WX.alt0,WX.alt1,camY);
   /* fog: a light haze down low even in cloud, socked in up top */
-  const kT=clamp(cl*(0.18+0.82*alt),0,1),sT=clamp(cl*(0.25+0.75*alt)*1.15-0.08,0,1),wT=cl*alt;
-  const f=WX.snap?1:1-Math.exp(-dt*0.8);   /* WX.snap: tests jump straight to the target */WXS.k+=(kT-WXS.k)*f;WXS.snow+=(sT-WXS.snow)*f;WXS.wisp+=(wT-WXS.wisp)*f;
+  /* at a lift top while choosing a trail: moderate fog at most, so you can see the signs and where the trails go */
+  const kT=Math.min(S.pre&&riding?0.55:1,clamp(cl*(0.18+0.82*alt),0,1)),sT=clamp(cl*(0.25+0.75*alt)*1.15-0.08,0,1),wT=cl*alt;
+  const f=WX.snap?1:1-Math.exp(-dt*0.3);   /* ~3 s ease: fog closes in gradually as you ski off the top */   /* WX.snap: tests jump straight to the target */WXS.k+=(kT-WXS.k)*f;WXS.snow+=(sT-WXS.snow)*f;WXS.wisp+=(wT-WXS.wisp)*f;
   const k=map?0:WXS.k;
   if(!map){const e=k*k*(3-2*k);scene.fog.far=3800+(WX.farMin-3800)*Math.pow(e,0.6);scene.fog.near=300+(WX.nearMin-300)*Math.pow(e,0.5);
     _fogC.copy(FOG_CLEAR).lerp(FOG_THICK,e);scene.fog.color.copy(_fogC);scene.background.copy(_fogC);
