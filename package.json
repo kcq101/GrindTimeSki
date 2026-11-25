@@ -9,7 +9,8 @@
     "test:autopilot": "node tools/test/autopilot.js",
     "test:lifttops": "node tools/test/lift-tops.js",
     "test:landings": "node tools/test/landings.js",
-    "test:terrain": "node tools/test/terrain-steps.js"
+    "test:terrain": "node tools/test/terrain-steps.js",
+    "test:poses": "node tools/test/skier-poses.js"
   },
   "devDependencies": {
     "playwright": "^1.49.0",

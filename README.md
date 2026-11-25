@@ -22,7 +22,7 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   04-lifts            lifts, towers, cables, chairs/gondola cabins, bases, where each trail leads
   05-terrain          snow shader, trees, streamed terrain tiles, whole-mountain overview mesh
   06-dressing         boundary poles, snowguns, trail-sign atlas, banners, K-1 Lodge, the Deck
-  07-skier            skier model, helmet, poses, contact shadows
+  07-skier            skier model, helmet, contact shadows; procedural pose: carve lean, ski edging, leg IK, absorption, arms, poles
   08-input-audio      spray particles, touch/keyboard input, wind audio
   09-game             run flow: pickers, lift rides, physics, crashes, tricks
   10-loop             camera, fixed-step loop, HUD, finish card, test hooks (window.__kr)
@@ -54,6 +54,7 @@ npm run test:autopilot          # ski every pickable trail; optional names: node
 npm run test:terrain            # sharpest height changes along trail centrelines
 npm run test:lifttops           # from each lift's drop-off spot, can you reach every trail off that top?
 npm run test:landings           # jumps (with/without boosts, tucked, pulling back) from spots on every trail: % clean landings
+npm run test:poses              # close-up skier shots (straight, carves, transitions, tuck, jump, landing, bumps) + joint checks -> test-output/poses/
 ```
 
 Tests use a software renderer, so frame rates are relative, not phone numbers. Use the Performance overlay toggle on the start card on a real phone.

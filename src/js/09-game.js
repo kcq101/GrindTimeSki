@@ -1,6 +1,6 @@
 /* ---------- game state ---------- */
 const SES={laps:0,vert:0,chairs:0,runs:{}};
-const S={lift:null,ls:0,lt:0,x:0,z:0,th:0,v:0,t:0,top:0,crashes:0,state:'menu',cool:0,shake:0,finT:0,air:false,y:0,vy:0,boosts:0,airT:0,land:0,flip:0,spin:0,spinT:0,tricks:0,path:[],endBase:null};
+const S={lift:null,ls:0,lt:0,x:0,z:0,th:0,v:0,t:0,top:0,crashes:0,state:'menu',cool:0,shake:0,finT:0,air:false,y:0,vy:0,boosts:0,airT:0,land:0,flip:0,spin:0,spinT:0,tricks:0,gAcc:0,path:[],endBase:null};
 const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
@@ -211,8 +211,9 @@ function physics(dt){
 
   /* terrain reactions: get bucked off crests, absorb (or get ejected by) the faces of bumps */
   const gyN=H(S.x,S.z);
+  S.gAcc*=0.5;   /* ground vertical acceleration under the skier, read by the leg absorption in updModel */
   if(S.gyp!==undefined&&dt>0.001){const gv=(gyN-S.gyp)/dt;
-    if(S.gvp!==undefined){const ga=(gv-S.gvp)/dt,cr=Math.max(0,postS);
+    if(S.gvp!==undefined){const ga=(gv-S.gvp)/dt,cr=Math.max(0,postS);S.gAcc+=ga*0.5;
       if(ga<-GRAV*2.4&&S.v>10&&S.gvp<-1&&H(S.x+Math.sin(S.th)*S.v*0.15,S.z+Math.cos(S.th)*S.v*0.15)<gyN+S.gvp*0.15-0.146-0.2){S.autoAir=true;S.flipArm=Math.abs(postS)<0.3;S.air=true;S.y=gyN+0.02;S.vy=S.gvp;S.boosts=0;S.airT=0;S.flip=0;S.spin=0;S.spinT=0;trkBreak=true;S.gyp=undefined;S.gvp=undefined;updPips();S.top=Math.max(S.top,S.v);return {tk,off};}
       if(ga>55&&S.v>7){const jolt=(ga-55)/100;S.v*=1-Math.min(0.2,jolt*0.09*(1-0.75*cr));S.shake=Math.max(S.shake,Math.min(0.22,jolt*0.07));S.land=Math.max(S.land,0.14);
         if(ga>230&&cr<0.3&&S.v>15&&S.cool<=0){S.gyp=undefined;S.gvp=undefined;bail('EJECTED!');return {tk:false,off};}}}
