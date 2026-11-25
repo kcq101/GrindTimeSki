@@ -131,7 +131,7 @@ function signFrame(dt){
 /* where the lift drops you: the spot (6 m grid within 50 m of the lift top, on a trail or in the cleared area around it, outside
    the top terminal, with the chase camera clear of it too) from which the least climbing reaches the first 10 m of every trail
    off this top; ties go to the higher, then nearer, spot. Faces the first trail you can see without the terminal in the way. Computed once per lift. */
-function topSpot(L){if(L._spot)return L._spot;const sg=liftSigns(L),inTerm=(x,z)=>{const a=(x-L.tx)*L.dx+(z-L.tz)*L.dz,b=(x-L.tx)*L.px+(z-L.tz)*L.pz;return a>-4&&a<20&&Math.abs(b)<10;};
+function topSpot(L){if(L._spot)return L._spot;const sg=liftSigns(L),inTerm=(x,z)=>{const a=(x-L.tx)*L.dx+(z-L.tz)*L.dz,b=(x-L.tx)*L.px+(z-L.tz)*L.pz;return (a>-6&&a<20&&Math.abs(b)<10)||(a>-13&&a<-3&&Math.abs(b)<12);};   /* terminal, and the operator hut just before it */
   const goals=sg.map(e=>trailPt(e.tr,Math.min(10,e.tr.L*0.3)));let best=null;
   for(let gx=-48;gx<=48;gx+=6)for(let gz=-48;gz<=48;gz+=6){const r=Math.hypot(gx,gz);if(r>50)continue;const x=L.tx+gx,z=L.tz+gz;
     if(inTerm(x,z))continue;if(r>36){const t=trailInfo(x,z);if(!t.tr||t.d>t.w)continue;}

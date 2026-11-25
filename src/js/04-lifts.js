@@ -19,7 +19,8 @@ LIFTS.forEach(L=>{
   L.real=L.len/L.speed;L.ts=L.real/RIDE_SECS;
   const gnd=s=>H(L.bx+L.dx*s,L.bz+L.dz*s);
   /* towers: start with one at each end, then split any span that is too long or lets the cable sag into a knoll */
-  const T=[{s:6,y:gnd(6)+11},{s:L.len-6,y:gnd(L.len-6)+11}];
+  /* the cable ends at the terminals' bullwheels (~5 m up, chairs at about head height), stepping up over a lower tower 16 m out */
+  const T=L.len>60?[{s:0,y:gnd(0)+5.2,end:1},{s:16,y:gnd(16)+8},{s:L.len-16,y:gnd(L.len-16)+8},{s:L.len,y:gnd(L.len)+5.2,end:1}]:[{s:0,y:gnd(0)+5.2,end:1},{s:L.len,y:gnd(L.len)+5.2,end:1}];
   const clears=(p,q)=>{for(let s=p.s+4;s<q.s;s+=4){const t=(s-p.s)/(q.s-p.s);if(p.y+(q.y-p.y)*t-0.6*Math.sin(t*Math.PI)-gnd(s)<6.5)return false;}return true;};
   let i=0;while(i<T.length-1){const p=T[i],q=T[i+1];if(q.s-p.s>120||(q.s-p.s>24&&!clears(p,q))){const s=(p.s+q.s)/2;T.splice(i+1,0,{s,y:gnd(s)+12});}else i++;}
   L.T=T;L.gnd=gnd;L.hb=gnd(0);L.ht=gnd(L.len);
@@ -62,18 +63,53 @@ function liftSignTex(L){return canvasTex(512,160,(g,w,h)=>{g.fillStyle='#14202e'
 (function(){
   /* all lifts: towers, arms and terminals → 1 mesh; cables → 1 line set; one sign each */
   const vc=new THREE.MeshLambertMaterial({vertexColors:true}),cm=new THREE.LineBasicMaterial({color:0x2b3138});
-  const gs=[],cs=[],cab=[];
+  const gs=[],cs=[],cab=[],glass=[];
   LIFTS.forEach(L=>{
-    L.T.forEach(t=>{const [x,z]=liftXZ(L,t.s,0),g=L.gnd(t.s);
+    L.T.forEach(t=>{if(t.end)return;const [x,z]=liftXZ(L,t.s,0),g=L.gnd(t.s);
       gs.push(placed(new THREE.CylinderGeometry(0.45,0.6,t.y-g,6),x,(t.y+g)/2,z,0));cs.push(0x6d7783);
       gs.push(placed(new THREE.BoxGeometry(GAUGE*2+1.4,0.5,0.6),x,t.y,z,L.ry));cs.push(0x6d7783);});
-    [-8,L.len+8].forEach(s=>{const [x,z]=liftXZ(L,s,0);gs.push(placed(new THREE.BoxGeometry(12,7,16),x,H(x,z)+3.5,z,L.ry));cs.push(L.col);
-      gs.push(placed(new THREE.BoxGeometry(13,1,17),x,H(x,z)+7.4,z,L.ry));cs.push(0x3a4048);});
+    /* terminals: an open steel structure, not a building. A long round-ended housing over the bullwheel (the cable runs into its
+       underside), held up by two columns on the centre line so chairs pass either side; a lift-colour band on the housing. Beside the
+       ramp, a small operator hut with a band of windows, a console and an operator sitting at it (glass is one shared transparent mesh). */
+    [0,1].forEach(top=>{const sg=top?1:-1,sc=top?L.len-2:2,ab=(a,b)=>[L.bx+L.dx*a-L.px*b,L.bz+L.dz*a-L.pz*b];
+      const [cx,cz]=ab(sc,0),gy=H(cx,cz),cy=L.T[top?L.T.length-1:0].y,hy=cy+0.35,HW=GAUGE+1.1;
+      const P=(geo,a,y,b,col,ry)=>{const [x,z]=ab(a,b);gs.push(placed(geo,x,y,z,L.ry+(ry||0)));cs.push(col);};
+      P(new THREE.BoxGeometry(HW*2,2.0,10),sc-sg*1.5,hy+1.0,0,0xe3e6ea);                                   /* housing body */
+      P(new THREE.CylinderGeometry(HW,HW,2.0,20,1,false,0,Math.PI),sc+sg*3.5,hy+1.0,0,0xe3e6ea,top?-Math.PI/2:Math.PI/2);   /* round nose over the bullwheel */
+      P(new THREE.BoxGeometry(HW*2+0.06,0.45,10.02),sc-sg*1.5,hy+1.55,0,L.col);                           /* colour band */
+      P(new THREE.CylinderGeometry(HW+0.03,HW+0.03,0.45,20,1,false,0,Math.PI),sc+sg*3.5,hy+1.55,0,L.col,top?-Math.PI/2:Math.PI/2);
+      P(new THREE.BoxGeometry(HW*2+0.3,0.18,10.3),sc-sg*1.5,hy+2.08,0,0x4a525c);                          /* roof cap */
+      P(new THREE.CylinderGeometry(GAUGE,GAUGE,0.35,24),sc+sg*3.5,cy+0.05,0,0x2b3138);                  /* bullwheel */
+      P(new THREE.CylinderGeometry(0.35,0.35,0.9,8),sc+sg*3.5,cy+0.5,0,0x59626c);                       /* bullwheel hub */
+      [-2.5,2.0].forEach(o=>P(new THREE.BoxGeometry(1.1,hy-gy,1.1),sc-sg*o,(hy+gy)/2,0,0x59626c));    /* columns */
+      P(new THREE.BoxGeometry(1.8,0.5,6.2),sc-sg*0.25,gy+0.25,0,0x8a929c);                             /* footing */
+      P(new THREE.BoxGeometry(HW*2-0.4,0.3,0.3),sc-sg*0.25,hy-0.15,0,0x59626c);                        /* cross beam */
+      /* operator hut beside the ramp, windows facing the lift line */
+      const ha=sc-sg*7,hb=-(HW+4.2),[hx,hz]=ab(ha,hb),fy=H(hx,hz),W=3.2,D=3.0,T=0.16,cream=0xe9e4da,trim=L.col;
+      P(new THREE.BoxGeometry(W+0.4,0.35,D+0.4),ha,fy+0.17,hb,0x8a929c);                               /* plinth */
+      P(new THREE.BoxGeometry(W,1.05,D),ha,fy+0.35+0.52,hb,cream);                                      /* lower walls */
+      [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([i,j])=>P(new THREE.BoxGeometry(0.18,1.25,0.18),ha+j*(D/2-0.09),fy+1.4+0.62,hb+i*(W/2-0.09),trim));   /* window posts */
+      P(new THREE.BoxGeometry(W,0.35,D),ha,fy+2.65+0.17,hb,cream);                                      /* lintel */
+      P(new THREE.BoxGeometry(W+0.9,0.22,D+0.9),ha,fy+3.1,hb,0x3a4048);                                 /* roof */
+      P(new THREE.BoxGeometry(W-0.3,0.08,D-0.3),ha,fy+1.4,hb,0x6b5a48);                                 /* sill / desk top */
+      P(new THREE.BoxGeometry(0.5,0.75,1.4),ha,fy+1.02,hb+(W/2-0.55),0x2b3138);                       /* console under the window */
+      P(new THREE.BoxGeometry(0.8,1.6,0.06),ha-sg*(D/2+0.02),fy+1.15,hb-0.6,0x5a4636);                  /* door (back) */
+      /* the operator: seated, facing the line */
+      const ob=hb+0.55;P(new THREE.BoxGeometry(0.5,0.62,0.36),ha,fy+1.5,ob,0xe8432f);                  /* jacket */
+      P(new THREE.SphereGeometry(0.14,10,8),ha,fy+1.98,ob+0.03,0xd9a582);                                /* head */
+      P(new THREE.SphereGeometry(0.15,10,6,0,Math.PI*2,0,Math.PI*0.5),ha,fy+2.02,ob+0.02,0x14202e);     /* beanie */
+      P(new THREE.BoxGeometry(0.14,0.45,0.14),ha-0.2,fy+1.55,ob+0.25,0xe8432f,0);                       /* arm on the console */
+      P(new THREE.BoxGeometry(0.14,0.45,0.14),ha+0.2,fy+1.55,ob+0.25,0xe8432f,0);
+      /* glass band */
+      const gl=(w,d,a,b)=>{const [x,z]=ab(a,b);glass.push(placed(new THREE.BoxGeometry(w,1.25,d),x,fy+1.4+0.62,z,L.ry));};
+      gl(W-0.3,0.04,ha+sg*(D/2-0.05),hb);gl(W-0.3,0.04,ha-sg*(D/2-0.05),hb);gl(0.04,D-0.3,ha,hb+(W/2-0.05));gl(0.04,D-0.3,ha,hb-(W/2-0.05));
+    });
     {const [x,z]=liftXZ(L,-22,-1);const sx=x-L.px*6,sz=z-L.pz*6;[-4,4].forEach(o=>{gs.push(placed(new THREE.CylinderGeometry(0.1,0.1,4.2,5),sx+L.px*o,H(x,z)+2.1,sz+L.pz*o,0));cs.push(0x5d6670);});
       const sg=new THREE.Mesh(new THREE.PlaneGeometry(9,2.8),new THREE.MeshBasicMaterial({map:liftSignTex(L)}));sg.position.set(sx,H(x,z)+4.2,sz);sg.rotation.y=L.ry+Math.PI;scene.add(sg);}
     [-1,1].forEach(sd=>{let prev=null;const n=Math.ceil(L.len/8);for(let k=0;k<=n;k++){const s=Math.min(L.len,k*8),[x,z]=liftXZ(L,s,sd),p=[x,cableY(L,s),z];if(prev)cab.push(...prev,...p);prev=p;}});
   });
   scene.add(new THREE.Mesh(mergeGeos(gs,cs),vc));
+  scene.add(new THREE.Mesh(mergeGeos(glass),new THREE.MeshLambertMaterial({color:0xa9cde8,transparent:true,opacity:0.3,depthWrite:false})));
   const cg=new THREE.BufferGeometry();cg.setAttribute('position',new THREE.Float32BufferAttribute(cab,3));scene.add(new THREE.LineSegments(cg,cm));
 })();
 const chairs=[];
