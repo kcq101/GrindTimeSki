@@ -1,12 +1,23 @@
 /* ---------- camera ---------- */
 const camPos=new THREE.Vector3(),camLook=new THREE.Vector3(),_cT=new THREE.Vector3(),_cL=new THREE.Vector3();let camTh=0;
 const CAM_D=7.0,CAM_H=3.0;   /* was 8.5 / 3.6: same pitch, skier ~22% larger on screen */
+/* steadier in quick left-right turns: "wiggle" = mean |yaw rate| minus |mean yaw rate| over ~0.7 s. It is ~0 in a sustained wide
+   turn (the camera follows as before) and large when the heading swings back and forth (short turns, moguls), where the camera
+   follows the heading more slowly and only drifts sideways with the skier instead of tracking every swing. */
+const CAMW={off:false,w:0,ya:0,ym:0,th:0,ax:0,az:0};window.__camw=CAMW;
 function placeCam(snap,dt){
-  if(snap)camTh=S.th;else{let dth=S.th-camTh;camTh+=dth*(1-Math.exp(-dt*3.2));}
-  const dx=Math.sin(camTh),dz=Math.cos(camTh);
+  if(snap){camTh=S.th;CAMW.th=S.th;CAMW.ya=CAMW.ym=CAMW.w=0;CAMW.ax=S.x;CAMW.az=S.z;}
+  else{let d=S.th-CAMW.th;d=Math.atan2(Math.sin(d),Math.cos(d));CAMW.th=S.th;const yr=dt>0?d/dt:0,k1=1-Math.exp(-dt*1.5);
+    CAMW.ya+=(Math.abs(yr)-CAMW.ya)*k1;CAMW.ym+=(yr-CAMW.ym)*k1;
+    const wt=CAMW.off||S.air?0:clamp((CAMW.ya-Math.abs(CAMW.ym)-0.12)/0.5,0,1);CAMW.w+=(wt-CAMW.w)*(1-Math.exp(-dt*(wt>CAMW.w?4:1.2)));
+    let dth=S.th-camTh;dth=Math.atan2(Math.sin(dth),Math.cos(dth));camTh+=dth*(1-Math.exp(-dt*(3.2-2.1*CAMW.w)));
+    /* anchor: exact along the view, smoothed across it */
+    const fx=Math.sin(camTh),fz=Math.cos(camTh),ex=S.x-CAMW.ax,ez=S.z-CAMW.az,al=ex*fx+ez*fz,la=ex*fz-ez*fx,kl=1-Math.exp(-dt*(30-27*CAMW.w));
+    CAMW.ax+=fx*al+fz*la*kl;CAMW.az+=fz*al-fx*la*kl;}
+  const dx=Math.sin(camTh),dz=Math.cos(camTh),AX=CAMW.ax,AZ=CAMW.az;
   const gy0=H(S.x,S.z),y=S.air?S.y:gy0;
-  const tx=S.x-dx*CAM_D,tz=S.z-dz*CAM_D;let ty=Math.max(y+CAM_H,H(tx,tz)+2.2);
-  const lx=S.x+dx*14,lz=S.z+dz*14,ly=H(lx,lz)+0.6+(S.air?(S.y-gy0)*0.5:0);
+  const tx=AX-dx*CAM_D,tz=AZ-dz*CAM_D;let ty=Math.max(y+CAM_H,H(tx,tz)+2.2);
+  const lx=AX+dx*14,lz=AZ+dz*14,ly=H(lx,lz)+0.6+(S.air?(S.y-gy0)*0.5:0);
   if(snap){camPos.set(tx,ty,tz);camLook.set(lx,ly,lz);}else{const k=1-Math.exp(-dt*6);camPos.lerp(_cT.set(tx,ty,tz),k);camLook.lerp(_cL.set(lx,ly,lz),1-Math.exp(-dt*9));}
   {const gc=H(camPos.x,camPos.z)+1.8;if(camPos.y<gc)camPos.y=gc;}
   camera.position.copy(camPos);
@@ -105,7 +116,7 @@ function finish(){
   $('sess').textContent='Today: '+SES.laps+' run'+(SES.laps===1?'':'s')+' · '+Math.round(SES.vert).toLocaleString()+' vert ft · '+SES.chairs+' chair'+(SES.chairs===1?'':'s');
   $('finish').classList.remove('hidden');
 }
-window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.state='ride';if(sc){S.x=sc.x;S.z=sc.z;S.v=sc.v;S.gyp=undefined;S.gvp=undefined;}let t=0,acc=0;const fd=1/fps;while(t<secs){steerIn=steerFn(t);postIn=t>2?1:0;acc+=Math.min(0.1,fd);while(acc>=STEP){physics(STEP);S.t+=STEP;acc-=STEP;}t+=fd;}return{z:+S.z.toFixed(1),x:+S.x.toFixed(1),v:+S.v.toFixed(2),crashes:S.crashes};},get RES(){return RES},get model(){return model},get gear(){return gear},skier,get envTex(){return envTex},POSE,S,TRAILS,LIFTS,BASES,simStep,physicsOnly:(n)=>{for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){snapPrev();simStep(STEP);}return S.state;},H,Bm,trailInfo,runFromTrail,get KT(){return KT},KDd,KX,KZ,KI,KTT,KS,dropIn,showPicker,get RUN(){return RUN},MENU,updateTiles,tiles,renderer,camera,startLift,SES,finish:()=>{S.state='done';finish();},jump,
+window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.state='ride';if(sc){S.x=sc.x;S.z=sc.z;S.v=sc.v;S.gyp=undefined;S.gvp=undefined;}let t=0,acc=0;const fd=1/fps;while(t<secs){steerIn=steerFn(t);postIn=t>2?1:0;acc+=Math.min(0.1,fd);while(acc>=STEP){physics(STEP);S.t+=STEP;acc-=STEP;}t+=fd;}return{z:+S.z.toFixed(1),x:+S.x.toFixed(1),v:+S.v.toFixed(2),crashes:S.crashes};},get RES(){return RES},get model(){return model},get gear(){return gear},skier,get envTex(){return envTex},POSE,S,TRAILS,LIFTS,BASES,simStep,physicsOnly:(n)=>{for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){snapPrev();simStep(STEP);}return S.state;},H,Bm,trailInfo,runFromTrail,get KT(){return KT},KDd,KX,KZ,KI,KTT,KS,dropIn,showPicker,get RUN(){return RUN},MENU,updateTiles,tiles,renderer,camera,startLift,SES,finish:()=>{S.state='done';finish();},jump,placeCam,
   /* test hook: advance physics + skier visuals in lock-step at 60 Hz without rendering (headless renders are too slow for real-time pose checks) */
   stepVis(n,inp){for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){const o=inp?inp(i/60,S):{};if(o.stop)break;steerIn=o.s||0;postIn=o.p||0;if(o.jump)jump();snapPrev();simStep(STEP);
     const y=S.air?S.y:H(S.x,S.z)+0.02,g=grad(S.x,S.z);placeShadows(g[0],g[1],Math.max(0,y-H(S.x,S.z)));alignToSlope(S.air?g[0]*0.5:g[0],S.air?g[1]*0.5:g[1],STEP);poseSkier(y);updModel(STEP,false);

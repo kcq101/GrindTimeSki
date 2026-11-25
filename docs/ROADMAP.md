@@ -83,6 +83,11 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Steadier camera in quick turns (Nov 24, 2026)
+- Kevin: in quick left-right turns (steeper pitches, moguls) the chase camera felt jumpy. It followed the heading with a fixed ~0.3 s lag and tracked every sideways hip swing.
+- Now adaptive: a "wiggle" measure (mean |yaw rate| minus |mean yaw rate| over ~0.7 s) is ~0 in a sustained turn and high when the heading swings back and forth. With wiggle the heading follow slows (rate 3.2 → 1.1 /s) and the camera anchor only drifts sideways with the skier (rate 30 → 3 /s); along the view it stays exact. Off in the air.
+- `tools/test/camera.js`: quick turns: yaw swing −34%, sideways sway −38%; mogul-style turns −32% / −18%; a wide turn is unchanged (same 5° heading lag).
+
 ## Weather follow-up (Nov 24, 2026)
 - Kevin: bright and clear stepping off the lift, then fog slamming in once he picked a trail. Cause: the lift and lift tops ran the weather on the wall clock, runs on run time seeded by trail name, so choosing a trail could jump from clear to socked in. Now one continuous clock everywhere (gives up per-trail identical weather for best times), fog eases in over ~3 s instead of ~1 s, and while you're at a lift top choosing a trail it's capped at moderate (visibility ≥ ~1.2 km in the worst cloud vs ~200 m on the trail) so you can see the signs and where the trails go.
 
