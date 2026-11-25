@@ -30,7 +30,7 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
   sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\n'+SNOW_GLSL+'\nfloat sIce=0.;float sHgt=0.;float sGl=0.;vec2 sCordG=vec2(0.);')
   .replace('#include <color_fragment>',`#include <color_fragment>
     {vec2 p=vWP.xz;vec2 ud=vT.zw/max(length(vT.zw),1e-3);vec2 q=vec2(p.x*ud.y-p.y*ud.x,dot(p,ud));float cd=distance(cameraPosition,vWP);float near=1.-smoothstep(25.,95.,cd);
-     float pdw=smoothstep(.15,.75,vP);float onP=(1.-smoothstep(-1.5,1.5,vT.x))*(1.-pdw);   /* powder reads like off-piste: no tracks, corduroy or hardpack */
+     float pdw=smoothstep(.35,.85,vP);float onP=(1.-smoothstep(-1.5,1.5,vT.x))*(1.-pdw);   /* powder reads like off-piste: no tracks, corduroy or hardpack */
      float edge=(1.-smoothstep(1.,5.,abs(vT.x+1.5)))*.9;
      vec4 nA=texture2D(uNoise,p*(1./180.));
      vec4 nB=texture2D(uNoise,p*(1./24.));
@@ -71,13 +71,22 @@ function snowify(mat){mat.extensions={derivatives:true};mat.onBeforeCompile=sh=>
        (rollers, knolls, dips, the far side of a headwall) reads clearly. Overall brightness on a typical pitch is unchanged. */
     outgoingLight+=reflectedLight.directDiffuse*.72-reflectedLight.indirectDiffuse*.42;
     outgoingLight=mix(outgoingLight*vec3(.68,.79,1.),outgoingLight,smoothstep(.1,.62,dl));
+    /* a faint camera-relative cross-light (from the left and slightly ahead), measured against flat ground: whichever way you
+       face the sun, rollers, banks and the far side of a crest still shade differently. Fades out with distance. */
+    {vec3 L2=normalize(vec3(-.55,.6,-.58)),upV=normalize((viewMatrix*vec4(0.,1.,0.,0.)).xyz);
+     float xl=dot(normal,L2)-dot(upV,L2);outgoingLight*=1.+clamp(xl,-.5,.5)*.55*(1.-smoothstep(60.,260.,distance(cameraPosition,vWP)));}
+    /* soft highlight shoulder: slopes facing the sun would otherwise go flat white (a phone shows that as no contour at all).
+       Above .72 brightness is squeezed toward .93 instead of clipping (and cooled, so it doesn't go cream), so a sunlit pitch keeps its shading. */
+    {float m=max(outgoingLight.r,max(outgoingLight.g,outgoingLight.b));
+     if(m>.72){float mc=.72+.21*(1.-exp(-(m-.72)/.21));outgoingLight*=mc/m;
+       float l=dot(outgoingLight,vec3(.3,.5,.2));outgoingLight=mix(outgoingLight,l*vec3(.97,.99,1.04),smoothstep(.72,.95,m)*.6);}}
     vec3 Vw=normalize(cameraPosition-vWP);float cd2=distance(cameraPosition,vWP);
     float tw=fract(sGl*23.7+dot(Vw,vec3(4.1,2.3,3.7))*1.6);
     outgoingLight+=vec3(1.,.97,.9)*step(.985,sGl)*smoothstep(.82,1.,tw)*(1.-smoothstep(14.,60.,cd2))*smoothstep(.2,.7,dl)*1.3;
     float fr=pow(1.-clamp(abs(dot(normal,normalize(vViewPosition))),0.,1.),4.);
     outgoingLight=mix(outgoingLight,vec3(.97,.985,1.),fr*.28);
     #include <envmap_fragment>`);};
-  mat.customProgramCacheKey=()=>'snow9';}
+  mat.customProgramCacheKey=()=>'snow13';}
 snowify(terrMat);snowify(terrMatFine);
 function branchy(g,lobes){const P=g.attributes.position;for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i),r=Math.hypot(x,z);if(r<1e-4)continue;const a=Math.atan2(x,z),k=0.8+0.2*Math.cos(a*lobes)+0.06*Math.sin(a*3.1);P.setX(i,x*k);P.setZ(i,z*k);}g.computeVertexNormals();return g;}
 /* two reusable tree models (origin at the ground, both tiers in one geometry, upper tier a touch lighter).
@@ -116,7 +125,7 @@ function powderAt(x,z,tr,e,w,ux,uz,lod){
   if(!tr)return 1;
   const off=sstep(0,8,e);if(off>=1)return 1;
   const n=0.5+0.5*Math.sin(x*0.071+z*0.047+1.3)*Math.sin(z*0.093-x*0.031+0.4);   /* patchy, not uniform */
-  const edge=sstep(-0.4*w,-0.5,e)*(0.5+0.5*n)*(tr.k===1?0.55:0.9);
+  const edge=sstep(-Math.min(0.4*w,5),-0.5,e)*(0.5+0.5*n)*(tr.k===1?0.55:0.9);
   let flat=0;if(tr.k!==1&&!lod){const bs=(a,b)=>Math.hypot(Bm(a+4,b)-Bm(a-4,b),Bm(a,b+4)-Bm(a,b-4))/8,s0=bs(x,z),s1=bs(x-ux*30,z-uz*30);   /* bare-earth slope: cheap, and the DEM is what decides where a pitch runs out */flat=sstep(0.04,0.15,s1-s0)*sstep(0.2,0.6,n)*0.95;}
   return Math.max(off,edge,flat*(1-0.5*sstep(-0.42*w,0,e)));}
 function buildTile(ti,tj,lod){
