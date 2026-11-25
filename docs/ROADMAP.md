@@ -83,6 +83,11 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Grey slab over carved trails (Nov 24, 2026)
+- Kevin saw flat grey areas the skier sank into (Cascade Runout near K-1). The low-detail whole-mountain mesh is a 52 m grid 2.5 m under the raw DEM; trail carving (never-climbing profiles, cat-track benches) puts the snow up to ~3.4 m below the raw ground, and the coarse grid cuts straight across those dips. 54 named trails had stretches where it sat above the snow (Bear Cub 3.0 m, Touch Down 2.8 m, Cascade Runout 2.3 m).
+- Fix: the low mesh discards fragments inside 540 m of the tile-streaming centre (tiles cover ~610 m) within the surveyed grid, so near you only the detail tiles draw. The map turns the hole off. Checked at the worst spots on Cascade Runout and Bear Cub.
+- Left alone: the 4 m detail grid itself rides up to ~0.4–0.8 m above the true surface at a few sharp bench edges (Field Goal, Touch Down, 1–2% of their length).
+
 ## Lift drop-off spots (Nov 24, 2026)
 - Lifts dropped you at the end of the unload ramp (then a few metres toward the main trail), which on several lifts was 5–15 m below trail starts you were meant to choose from (Skye Peak east: Skyeburst and Stash Way 14 m up). `topSpot(L)` now picks the drop-off: a 6 m grid within 50 m of the lift top, on a trail or in the cleared area, outside the top terminal (12 × 16 m past the line) with the chase camera clear of it, minimising the climb needed to reach the first 10 m of every trail off that top, then highest, then nearest. It faces the first trail with no terminal in view. ~33 ms per lift, computed in the background after load.
 - Before you've picked a trail, the flats around a lift top count as packed snow (no deep-snow drag) and you skate up to ~12 mph.

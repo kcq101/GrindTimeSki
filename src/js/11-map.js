@@ -110,7 +110,7 @@ function youPin(on){if(on!==youOn){youOn=on;youEl.classList.toggle('hidden',!on)
   youEl.style.transform='translate('+((_pv.x+1)/2*w).toFixed(1)+'px,'+((1-_pv.y)/2*h).toFixed(1)+'px)';youEl.style.visibility=_pv.z>1?'hidden':'';}
 function mapFrame(dt){
   const on=mapShown();
-  if(on!==MAP.on){MAP.on=on;mapLayer.visible=on;scene.fog.near=on?3500:300;scene.fog.far=on?14000:3800;camera.far=on?16000:6000;
+  if(on!==MAP.on){MAP.on=on;mapLayer.visible=on;lowHoleOff=on;lowU.uHole.value.z=on?0:LOW_HOLE;scene.fog.near=on?3500:300;scene.fog.far=on?14000:3800;camera.far=on?16000:6000;
     if(!on){camera.clearViewOffset();camera.fov=64;}camera.updateProjectionMatrix();}
   /* the map is the whole-mountain mesh plus ribbons; streamed tiles (detail + trees) would show as square patches, so hide them */
   if(on)for(const t of tiles.values()){t.mesh.visible=false;if(t.low)t.low.visible=false;}

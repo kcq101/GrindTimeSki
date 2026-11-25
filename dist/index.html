@@ -660,8 +660,12 @@ function buildTile(ti,tj,lod){
     scene.add(low);}
   return {mesh,low,up,trees,lod};
 }
-/* the whole mountain at low detail, under the streamed tiles: real ridgelines, white trail cuts and forest out to the horizon */
-(function(){const X0=-3400,X1=5000,Z0=-3900,Z1=3000,st=52,nx=Math.round((X1-X0)/st)+1,nz=Math.round((Z1-Z0)/st)+1;
+/* the whole mountain at low detail, under the streamed tiles: real ridgelines, white trail cuts and forest out to the horizon.
+   It is a 52 m grid 2.5 m under the raw terrain, so in carved dips and cat-track benches (up to ~3.4 m below the raw ground)
+   it would cut across the real snow and the skier would look sunk into a grey slab. So it is not drawn where detail tiles are
+   loaded: inside LOW_HOLE m of the tile-streaming centre (tiles cover ~610 m), within the surveyed grid. The map turns the hole off. */
+let lowHoleOff=false;const LOW_HOLE=540,lowU={uHole:{value:new THREE.Vector3(0,0,0)},uBox:{value:new THREE.Vector4(0,0,0,0)}};
+const lowMtn=(function(){const X0=-3400,X1=5000,Z0=-3900,Z1=3000,st=52,nx=Math.round((X1-X0)/st)+1,nz=Math.round((Z1-Z0)/st)+1;
   const P=new Float32Array(nx*nz*3),C=new Float32Array(nx*nz*3),I=[];
   const cSnow=new THREE.Color(0xe9eff6),cFor=new THREE.Color(0x5b6a64),cFrost=new THREE.Color(0x9aa8b1),c=new THREE.Color();
   for(let j=0;j<nz;j++)for(let i=0;i<nx;i++){const x=X0+i*st,z=Z0+j*st,k=j*nx+i;
@@ -672,10 +676,17 @@ function buildTile(ti,tj,lod){
     const dap=0.5+0.5*Math.sin(x*0.031+z*0.017)*Math.sin(z*0.027-x*0.012);c.copy(cFor).lerp(cFrost,clamp(sstep(780,1250,y)*0.7+dap*0.3,0,1)).lerp(cSnow,snow);C[k*3]=c.r;C[k*3+1]=c.g;C[k*3+2]=c.b;}
   for(let j=0;j<nz-1;j++)for(let i=0;i<nx-1;i++){const a=j*nx+i,b=a+1,cc=a+nx,d=cc+1;I.push(a,cc,b,b,cc,d);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(P,3));g.setAttribute('color',new THREE.BufferAttribute(C,3));g.setIndex(I);g.computeVertexNormals();
-  const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({vertexColors:true}));m.renderOrder=1;scene.add(m);   /* drawn after the tiles so early-z rejects it where they cover it */
-})();
+  const mat=new THREE.MeshLambertMaterial({vertexColors:true});
+  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,lowU);
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 vXZ;').replace('#include <project_vertex>','#include <project_vertex>\nvXZ=(modelMatrix*vec4(transformed,1.)).xz;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 vXZ;uniform vec3 uHole;uniform vec4 uBox;')
+      .replace('void main() {','void main() {\n  if(uHole.z>0.&&distance(vXZ,uHole.xy)<uHole.z&&vXZ.x>uBox.x&&vXZ.x<uBox.z&&vXZ.y>uBox.y&&vXZ.y<uBox.w)discard;');};
+  mat.customProgramCacheKey=()=>'lowmtn1';
+  const m=new THREE.Mesh(g,mat);m.renderOrder=1;scene.add(m);   /* drawn after the tiles so early-z rejects it where they cover it */
+  lowU.uBox.value.set(XMIN,ZMIN,XMAX,ZMAX);return m;})();
 function dropTile(t){scene.remove(t.mesh);t.mesh.geometry.dispose();if(t.low){scene.remove(t.low);t.low.dispose&&t.low.dispose();treePool[t.low.geometry.userData.lod].push(t.low.geometry);}}
 function updateTiles(px,pz,budget){
+  lowU.uHole.value.set(px,pz,lowHoleOff?0:LOW_HOLE);
   const ci=Math.floor(px/TILE),cj=Math.floor(pz/TILE),r=Math.ceil(LOAD_R/TILE)+1,want=new Map();
   for(let i=ci-r;i<=ci+r;i++)for(let j=cj-r;j<=cj+r;j++){
     if((i+1)*TILE<XMIN||i*TILE>XMAX||(j+1)*TILE<ZMIN||j*TILE>ZMAX)continue;
@@ -1431,7 +1442,7 @@ function youPin(on){if(on!==youOn){youOn=on;youEl.classList.toggle('hidden',!on)
   youEl.style.transform='translate('+((_pv.x+1)/2*w).toFixed(1)+'px,'+((1-_pv.y)/2*h).toFixed(1)+'px)';youEl.style.visibility=_pv.z>1?'hidden':'';}
 function mapFrame(dt){
   const on=mapShown();
-  if(on!==MAP.on){MAP.on=on;mapLayer.visible=on;scene.fog.near=on?3500:300;scene.fog.far=on?14000:3800;camera.far=on?16000:6000;
+  if(on!==MAP.on){MAP.on=on;mapLayer.visible=on;lowHoleOff=on;lowU.uHole.value.z=on?0:LOW_HOLE;scene.fog.near=on?3500:300;scene.fog.far=on?14000:3800;camera.far=on?16000:6000;
     if(!on){camera.clearViewOffset();camera.fov=64;}camera.updateProjectionMatrix();}
   /* the map is the whole-mountain mesh plus ribbons; streamed tiles (detail + trees) would show as square patches, so hide them */
   if(on)for(const t of tiles.values()){t.mesh.visible=false;if(t.low)t.low.visible=false;}
