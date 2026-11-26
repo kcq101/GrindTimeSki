@@ -74,10 +74,17 @@ function trailS(tr,i,t){const j=Math.min(i+1,tr.cs.length-1);return tr.cs[i]+(tr
 function mogK(tr,i,t){if(!tr.mog)return 0;const s=trailS(tr,i,t),m0=tr.mog[0],m1=tr.L-tr.mog[1];return sstep(m0-25,m0+15,s)*(1-sstep(m1-15,m1+25,s));}
 /* the groomer: pull the surface toward a smooth, never-climbing centreline and flatten the cross-slope.
    Each nearby trail pulls with weight m (1 on the trail, fading to 0 over 14 m past its edge); overlaps average. */
-function carveG(tr,cx,cz,i,t,x,z,bx,d){
+/* kickers (placed in 06-dressing.js): a parabolic ramp up to a lip, then a rounded knuckle back down to the trail.
+   u = metres along the trail from the lip, c = metres across from the kicker's centre line. Sidewalls fade over 2.2 m. */
+function kickH(tr,i,t,lat){let h=0;const s=trailS(tr,i,t);
+  for(const J of tr.jp){const u=s-J.s;if(u<-J.lr||u>J.lb)continue;const c=Math.abs(lat-J.off);if(c>J.hw+2.2)continue;
+    const p=u<0?(u+J.lr)/J.lr:0,pr=u<0?J.h*p*p:J.h*(0.5+0.5*Math.cos(Math.PI*u/J.lb));h+=pr*(1-sstep(J.hw,J.hw+2.2,c));}
+  return h;}
+function carveG(tr,cx,cz,i,t,x,z,bx,d,lat){
   const j=Math.min(i+1,tr.dl.length-1),bc=Bm(cx,cz),dl=tr.dl[i]+(tr.dl[j]-tr.dl[i])*t;
   let g=bc+dl+(bx-bc)*(1-tr.k)+0.35*Math.sin(z*0.09+x*0.02)*Math.sin(z*0.05+0.7);
   if(tr.mog){const mk=mogK(tr,i,t);if(mk>0)g+=mogul(x,z)*sstep(tr.w-1,tr.w-7,d)*mk;}
+  if(tr.jp&&d<tr.w)g+=kickH(tr,i,t,lat);
   return g;
 }
 /* lift-top plateaus (filled in 04-lifts.js): {x,z,h,sx,sz} = a gentle plane over each unload area, blended out between PLAT_R0 and PLAT_R1 */
@@ -91,7 +98,7 @@ function H0(x,z){
   let sw=0,acc=0;
   /* cat tracks (k=1) weigh 3x where they cross fall-line trails, so a traverse keeps its bench instead of climbing the other trail's surface */
   for(let k=0;k<NK;k++){const tr=KT[k];if(!tr)break;let m=1-sstep(tr.w,tr.w+14,KDd[k]);if(m<=0)break;if(tr.k===1)m*=3;
-    acc+=m*(carveG(tr,KX[k],KZ[k],KI[k],KTT[k],x,z,bx,KDd[k])-raw);sw+=m;}
+    acc+=m*(carveG(tr,KX[k],KZ[k],KI[k],KTT[k],x,z,bx,KDd[k],(x-KX[k])*KV[k]-(z-KZ[k])*KU[k])-raw);sw+=m;}
   return sw>0?raw+acc/Math.max(1,sw):raw;
 }
 let RUN={x:0,z:0,th:Math.PI,top:'Skye Peak',name:'Superstar',h0:0,h1:0,dest:null};

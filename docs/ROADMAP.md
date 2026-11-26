@@ -83,6 +83,13 @@ Known gaps
 - All signs are one billboard mesh (one draw call, ≤12 signs, labels redrawn into a shared 1024² canvas only when the set changes). Labels keep a constant screen size (~6 × 1.5 m at 26 m).
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
+## Kickers on the long, fast pitches (Nov 25, 2026)
+- 33 terrain-park kickers, placed deterministically (hashed per trail) in `06-dressing.js`. A spot needs: a wide, named, non-cat-track, non-glade, non-mogul trail ≥450 m long; ~17%+ grade over the 110 m above (arrive fast); a landing that keeps falling (17–60% over 35 m); a near-straight line; no other trail, lift line or lift top nearby. Max 2 per trail, 320 m apart, 240 m from any other kicker.
+- Shape is part of `H` (`kickH` in 02-mountain.js): parabolic ramp 1.1–1.9 m tall to a ~16° lip, rounded knuckle, 2.2 m sidewalls, offset randomly across the trail so you can ride around.
+- Lip launches even though the ramp has you rising (`jumpLip` in the crest check). Kicker air over 0.6 s gets the AIR! toast.
+- Look: a 0.3–1.6 m overlay mesh (tiles are 2 m and round the lip off), blue dye line across the lip, orange marker poles each side. Kicker areas get fine tiles. Cost: +1 draw call, ~+40–55k triangles.
+- Straight-line sim over every kicker at 27/45/63 mph: airborne 190/198, ~0.9–1.3 s, 14–30 m; no crashes caused by the kickers (same crash spots with kickers flattened). Autopilot 51/55, terrain-steps unchanged.
+
 ## Arms, poles, lean and a lazier camera (Nov 25, 2026)
 From a Bonvo reference clip.
 - Arms: upper arms hang close to the ribs (elbows by the hips, ~10° forward), forearms forward at ~100–115°, fists in front of and just outside the hips at belt height. In a carve the hands stay low instead of lifting toward the chest; the arm frame rolls with the torso (0.6 of the lean). `__probe()` now reports `uaFwd`, `elbow`, `handY`, `handZ`.
