@@ -10,6 +10,7 @@ An arcade ski game on the real Killington, Vermont: USGS terrain, every OpenStre
 - **Pause = the trail map.** The pause button under the timer (or Esc/P) freezes the run and opens the 3D trail map on your position, with a blinking "You" marker. Zoom and look around to plan the next run; tap a peak or base to pick a lift or trail (you're asked to confirm ending the run), or ✕ / Keep skiing to carry on exactly where you were.
 - **Free-ride network.** Trails link up as they do on the mountain. Ski into any base (K-1, Snowshed, Ramshead, Bear Mountain, Skyeship) to finish, then pick your next chair or gondola. Great Eastern runs the full 3.5 miles from Skye Peak to the Skyeship base.
 - **Race your ghost.** Your fastest run from each trail top replays as a see-through skier with a marker over its head, and the clock shows how far ahead or behind you are.
+- **Challenge a friend.** Share any finished run as a link; whoever opens it races your run as a gold ghost from the same spot on the same clock.
 - **Arcade handling.** Carve, tuck, jump with double boosts, flips and 360s. Moguls on Outer Limits, Devil's Fiddle and Ovation; the Deck crowd at Bear.
 
 ## Layout
@@ -31,7 +32,8 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   12-signs            floating trail signs (lift tops + junctions, one billboard mesh), screen-edge arrows, lift-top free-ski, pause menu
   13-weather          weather cycle (seeded per trail): altitude fog + sky/ridge wash, falling snow, summit cloud wisps
   14-sfx              sound: glide + edge loops shaped by speed and lean, landings, falls, tree hits, pole plants, lift towers
-  15-ghost            ghost of your best run from each trail top: 10 Hz recording, see-through replay + marker, HUD gap, finish-card line
+  15-ghost            ghost of your best run from each trail top: 10 Hz recording, see-through replay + marker, HUD gap, finish-card line;
+                      challenge links (5 Hz nibble-packed run in the URL hash) and the challenge card
 assets/               skier.glb, helmet.glb, fonts/ (Barlow, OFL), sfx/ (sounds + SOURCES.md credits), all embedded into the page at build time
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json
 tools/build.py        bundles everything into dist/index.html
@@ -64,6 +66,8 @@ npm run test:weather            # summit + mid-mountain at clear / flurries / so
 npm run test:poses              # close-up skier shots (straight, carves, transitions, tuck, jump, landing, bumps) + joint checks -> test-output/poses/
 npm run test:tiles              # terrain streaming cost per frame on long runs, and whether tiles keep up (no holes ahead)
 npm run test:ghost              # ski a run, race its ghost slower and level: gap readout, finish card, screenshots -> test-output/ghost-*.png
+npm run test:challenge          # run -> link (size, decode error), open the link fresh, race it: card, gold ghost, gap, result -> test-output/challenge-*.png
+npm run test:tris               # where the triangles go on a run: trees, terrain tiles, whole-mountain mesh, lifts, everything else
 ```
 
 Tests use a software renderer, so frame rates are relative, not phone numbers. Use the Performance overlay toggle on the start card on a real phone.

@@ -72,6 +72,8 @@
   .stats b{display:block;font-size:20px;font-weight:800}
   .stats small{font-size:11px;color:#5b6b7c;font-weight:600}
   .pb{font-size:13px;text-align:center;color:#5b6b7c;margin-bottom:12px}
+  .btn.share{background:#1f6fd1;margin:-2px 0 14px}
+  #shareBox{width:100%;font:12px/1.35 ui-monospace,monospace;border:1px solid #c9d4e0;border-radius:8px;padding:8px;margin:-6px 0 14px;color:#14202e;resize:none;word-break:break-all}
   .hidden{display:none!important}
   #map{position:fixed;inset:0;touch-action:none;z-index:3}
   #mapTop{position:absolute;top:12px;left:14px;padding:6px 11px;border-radius:14px;background:rgba(20,32,46,.6);color:#fff;font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;pointer-events:none}
@@ -241,11 +243,29 @@
       <div><b id="fCr">0</b><small>Yard sales</small></div>
     </div>
     <div class="pb" id="fBest"></div>
+    <button class="btn share" id="share">Challenge a friend</button>
+    <textarea id="shareBox" class="hidden" readonly rows="3"></textarea>
     <div class="k" id="nextK">Next chair</div>
     <div id="liftList"></div>
     <div class="sess" id="sess"></div>
     <button class="btn alt" id="again">Skip the chair · ride it again</button>
     <button class="btn alt" id="toMenu">Back to the trail map</button>
+  </div>
+</div>
+
+<div class="ov hidden" id="chal">
+  <div class="card">
+    <div class="k">Challenge</div>
+    <h1 id="cName">Superstar</h1>
+    <div class="route" id="cRoute"></div>
+    <div class="stats" id="cStats">
+      <div><b id="cTime">0:00</b><small>Time to beat</small></div>
+      <div><b id="cTop">0</b><small>Their top mph</small></div>
+      <div><b id="cLen">0</b><small>Trail ft</small></div>
+    </div>
+    <div class="pb" id="cMsg"></div>
+    <button class="btn" id="cGo">Race it</button>
+    <button class="btn alt" id="cNo">Not now</button>
   </div>
 </div>
 

@@ -95,7 +95,7 @@ $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!pe
   b.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.top+'</b><small>'+L.trails.slice(0,4).map(t=>shortName(t.name)+' '+DSYM[t.diff]).join(' · ')+'</small><small>Top of '+L.name+' · '+L.trails.length+' trails</small></div><div class="go">›</div>';
   b.onclick=()=>{$('start').classList.add('hidden');showPicker(L,true);};box.appendChild(b);});})();
 let best=null;
-$('again').onclick=()=>{$('finish').classList.add('hidden');fade(()=>{runFromTrail(RUN.tr,RUN.top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);toast('Drop in!');});};
+$('again').onclick=()=>{if(RUN.chal){startChallenge(RUN.chal);return;}$('finish').classList.add('hidden');fade(()=>{runFromTrail(RUN.tr,RUN.top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);toast('Drop in!');});};
 /* has the skier reached a base (or skied off the edge of the map)? */
 function baseHit(){if(S.t<2)return null;const h=H(S.x,S.z);if(RUN.h0-h<25)return null;
   for(const b of BASES){let hit=Math.hypot(S.x-b.x,S.z-b.z)<b.trig;if(!hit)for(const L of b.L)if(Math.hypot(S.x-L.bx,S.z-L.bz)<45){hit=true;break;}if(hit&&(!b.mid||S.v<5))return b;}return null;}

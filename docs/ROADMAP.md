@@ -129,6 +129,15 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 - `tileGen` (05-terrain.js) builds a tile as a generator that yields after every row of each heavy loop; `updateTiles` now spends a time budget per frame (`__tileMs`: 2.5 ms, 5 ms when more than 12 tiles are waiting) instead of a tile count, resuming the same tile next frame. A tile joins the scene only when it's complete. Calls with budget ≥ 999 (behind the fade when a run or lift ride starts) still build everything at once, and a missing tile within 190 m of the stream centre is finished immediately.
 - Result on the same runs: Great Eastern worst frame 64 → 9.5 ms, frames over 8 ms 127 → 1; Superstar, Outer Limits, Ovation worst 3–6 ms. No missing or low-detail ground under or ahead of the skier on any of them. Draw calls and triangles unchanged.
 
+## Challenge links (Nov 26, 2026)
+- Finish card: "Challenge a friend" (blue, under the result) shares the run you just skied as a link to the public site, `https://kcq101.github.io/GrindTimeSki/#c1.…` (the root page passes the hash on to `dist/`). Phone share sheet where the browser has one; inside the claude.ai frame, or if sharing fails, it copies "Beat my 0:48.1 down Superstar at Killington: <link>"; if copying is blocked too, the link appears in a box to copy by hand.
+- Encoding (15-ghost.js): the 10 Hz recording cut to 5 Hz (3.3 Hz past 2.5 min, 2.5 Hz past 5 min), packed as 4-bit groups: position at 10 cm as the miss against a constant-velocity guess, heading change in 64ths of a turn (both zig-zag, variable length), then tuck (2 bits), air, trick, lean, and air height / flip / spin only while airborne. Header: trail, lift top, base, time, top speed, start point; a checksum byte catches links cut short. Base64url.
+- Size: Superstar (48 s) 922 characters (660 bytes); a 7-minute Great Eastern 3,981. The decoded line, upsampled back to 10 Hz with Catmull-Rom, stays within 0.27 m of the real run (mean 4 cm), heading within 3°.
+- Opening a link: after loading, a Challenge card (trail, lift top → base, time to beat, their top mph, trail length) with Race it / Not now; the hash is cleared so a reload doesn't ask again. A cut-off link, or one for terrain this version lacks, says so instead. The trail is found by name, nearest to where the clock started, so links survive a re-bake.
+- Race: you start where their clock started, facing the same way, at their rolling speed, and their run replays as a gold ghost (gold pin too) on your clock with the usual gap pill ("Beat 0:48.1" for the first seconds). Finish card: "You beat the challenge by 1.2 s!" / "The challenge was 6.1 s faster." / "Dead heat with the challenge." Your own ghost and best time for that trail still save. "Ride it again" re-runs the challenge.
+- `npm run test:challenge`: ski, encode, decode, open the link in a fresh browser, race it slower (gap +0.6 → +2.2 → +3.9 s, "The challenge was 6.1 s faster."), then the same line again (within 0.1 s).
+- Fixed on the way: a 0.0 s win over your ghost now reads as a dead heat.
+
 ## Phone numbers → triangle trim (Nov 26, 2026)
 - Kevin's phone (Android Chrome, 1080×2316, ~29 s of Superstar with the Performance overlay): 40–100 fps (median ~70; a 120 Hz screen), 160–173 draws, 543–645k triangles, auto-resolution down to 0.70× five times. The top half of the run (600k+) averaged ~62 fps, the bottom (<560k) ~85.
 - New `tools/test/tris.js`: skis a run and buckets every drawn triangle (frustum-culled the way three.js does; matches renderer.info exactly). Superstar avg 554k: trees 261k, 2 m terrain 65k, lift chairs/cabins/riders 64k, bamboo poles 46k, whole-mountain mesh 43k, buildings/towers 34k, skier 20k.
@@ -243,8 +252,7 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 Fixed-step physics (1/60 s) with render interpolation; trees cut from 182 to 18/11 tris and merged per tile; shadow map replaced by contact + decal shadows; chairs instanced; snow shader moved to noise-texture fetches; render-resolution scaling on phones; performance overlay toggle on the start card.
 
 ## Next up
-1. Challenge links: share a run as a link that loads it as the ghost (the ghost encoding is ready; needs a shorter form for URLs)
-2. Cheap visual upgrades: filmic colour grade in the existing shaders (no extra pass), snow streaks + slight camera roll at speed, light presets (bluebird, golden hour, flat light)
-3. Fun: medals per trail (bronze/silver/gold times), a flow meter that chains carves, tree threading, air and clean landings into Boost, landing grades + a short freeze and buzz on big landings
-4. Re-measure on the phone after the triangle trim; if it still dips, far-tile tree density or a coarser whole-mountain mesh
-5. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too
+1. Cheap visual upgrades: filmic colour grade in the existing shaders (no extra pass), snow streaks + slight camera roll at speed, light presets (bluebird, golden hour, flat light)
+2. Fun: medals per trail (bronze/silver/gold times), a flow meter that chains carves, tree threading, air and clean landings into Boost, landing grades + a short freeze and buzz on big landings
+3. Re-measure on the phone after the triangle trim; if it still dips, far-tile tree density or a coarser whole-mountain mesh
+4. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too

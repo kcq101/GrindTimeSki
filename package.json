@@ -16,7 +16,8 @@
     "test:camera": "node tools/test/camera.js",
     "test:tiles": "node tools/test/tile-stream.js",
     "test:ghost": "node tools/test/ghost.js",
-    "test:tris": "node tools/test/tris.js"
+    "test:tris": "node tools/test/tris.js",
+    "test:challenge": "node tools/test/challenge.js"
   },
   "devDependencies": {
     "playwright": "^1.49.0",

@@ -134,6 +134,7 @@ function finish(){
   $('fBest').textContent=(ol?(S.crashes===0?'The Deck goes wild! ':'The Deck jeers. '):'')+msg+(S.tricks?' · Tricks landed: '+S.tricks:'');
   $('nextK').textContent=base?'Next chair from '+base.name:'Skate to a chair';showLifts(base,'liftList');
   $('sess').textContent='Today: '+SES.laps+' run'+(SES.laps===1?'':'s')+' · '+Math.round(SES.vert).toLocaleString()+' vert ft · '+SES.chairs+' chair'+(SES.chairs===1?'':'s');
+  $('share').classList.toggle('hidden',!base||GREC.run!==S.runId||GREC.n<10);$('share').textContent='Challenge a friend';$('shareBox').classList.add('hidden');
   $('finish').classList.remove('hidden');
 }
 window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.state='ride';if(sc){S.x=sc.x;S.z=sc.z;S.v=sc.v;S.gyp=undefined;S.gvp=undefined;}let t=0,acc=0;const fd=1/fps;while(t<secs){steerIn=steerFn(t);postIn=t>2?1:0;acc+=Math.min(0.1,fd);while(acc>=STEP){physics(STEP);S.t+=STEP;acc-=STEP;}t+=fd;}return{z:+S.z.toFixed(1),x:+S.x.toFixed(1),v:+S.v.toFixed(2),crashes:S.crashes};},get RES(){return RES},get model(){return model},get gear(){return gear},skier,get envTex(){return envTex},POSE,S,TRAILS,LIFTS,BASES,simStep,physicsOnly:(n)=>{for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){snapPrev();simStep(STEP);}return S.state;},H,Bm,trailInfo,runFromTrail,JUMPS,jumpLip,get KT(){return KT},KDd,KX,KZ,KI,KTT,KS,dropIn,showPicker,get RUN(){return RUN},MENU,updateTiles,streamTiles,buildTileSync:buildTile,dropTile,isMogTile,XMIN,XMAX,ZMIN,ZMAX,tiles,renderer,camera,scene,lowMtn,treeMat,startLift,SES,finish:()=>{S.state='done';finish();},jump,placeCam,skate,
@@ -144,4 +145,4 @@ window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.
 runFromTrail(TRAILS.filter(t=>t.name==='Superstar').sort((a,b)=>b.L-a.L)[0],'Skye Peak');reset();S.state='menu';
 requestAnimationFrame(frame);
 updateTiles(MENU.tx,MENU.tz,999);
-loadModel().then(()=>{reset();document.getElementById('loading').remove();openMap();});
+loadModel().then(()=>{reset();document.getElementById('loading').remove();openMap();chalOffer();});
