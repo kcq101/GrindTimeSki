@@ -19,15 +19,20 @@ let mixer=null,model=null,animMode='ride',crashT=0,crouch=0.3;const acts={},hand
 /* contact shadow (under the feet, follows the slope) + a soft cast decal stretched away from the sun. No shadow map. */
 const shTex=canvasTex(64,64,(g,w,h)=>{const r=g.createRadialGradient(32,32,0,32,32,32);r.addColorStop(0,'rgba(255,255,255,1)');r.addColorStop(.45,'rgba(255,255,255,.75)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h);});
 const shMat=k=>new THREE.MeshBasicMaterial({color:0x12233a,alphaMap:shTex,transparent:true,opacity:k,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-3});
-const blob=new THREE.Mesh(new THREE.PlaneGeometry(0.95,2.0),shMat(0.34));scene.add(blob);
-const castSh=new THREE.Mesh(new THREE.PlaneGeometry(0.8,2.4).translate(0,1.05,0),shMat(0.13));scene.add(castSh);
+/* Both are small grids draped onto the snow every frame (vertices written in world space at H+5 cm). Flat cards used to float
+   off the ground as a dark sliver when you flew over a crest, because the slope curves away under a card laid at one point. */
+const shMesh=(w,l,nu,nv,k)=>{const g=new THREE.PlaneGeometry(w,l,nu-1,nv-1);const m=new THREE.Mesh(g,shMat(k));m.material.side=THREE.DoubleSide;m.frustumCulled=false;m.userData={w,l,nu,nv};scene.add(m);return m;};
+const blob=shMesh(0.95,2.0,3,5,0.34);
+const castSh=shMesh(0.8,2.4,3,7,0.13);
 const _bn=new THREE.Vector3(),_bf=new THREE.Vector3(),_br=new THREE.Vector3(),_bm=new THREE.Matrix4(),_sunAway=new THREE.Vector3(-SUN_DIR.x,0,-SUN_DIR.z).normalize();
+/* lay a shadow grid on the ground: centre (cx,cz), length along the horizontal unit (fx,fz), offset `off` along it, scale k */
+function drapeSh(m,cx,cz,fx,fz,off,k){const u=m.userData,p=m.geometry.attributes.position,a=p.array;let q=0;
+  for(let j=0;j<u.nv;j++){const b=off+(0.5-j/(u.nv-1))*u.l*k;for(let i=0;i<u.nu;i++){const r=(i/(u.nu-1)-0.5)*u.w*k,x=cx+fx*b-fz*r,z=cz+fz*b+fx*r;a[q++]=x;a[q++]=H(x,z)+0.05;a[q++]=z;}}
+  p.needsUpdate=true;}
 function placeShadows(gx,gz,hgt){const k=1/(1+hgt*0.3);
-  _bn.set(-gx,1,-gz).normalize();
-  _bf.set(Math.sin(S.th),0,Math.cos(S.th));_bf.addScaledVector(_bn,-_bf.dot(_bn)).normalize();_br.crossVectors(_bf,_bn);
-  _bm.makeBasis(_br,_bf,_bn);blob.quaternion.setFromRotationMatrix(_bm);blob.position.set(S.x,H(S.x,S.z)+0.04,S.z);blob.scale.set(k,k,1);blob.material.opacity=0.34*k;
-  _bf.copy(_sunAway).addScaledVector(_bn,-_sunAway.dot(_bn)).normalize();_br.crossVectors(_bf,_bn);
-  _bm.makeBasis(_br,_bf,_bn);castSh.quaternion.setFromRotationMatrix(_bm);castSh.position.copy(blob.position).addScaledVector(_bf,hgt*0.9);castSh.material.opacity=0.13*k*k;
+  drapeSh(blob,S.x,S.z,Math.sin(S.th),Math.cos(S.th),0,k);blob.material.opacity=0.34*k;
+  /* the cast shadow slides away from the sun as you rise (about 0.9 m per metre of height), then stretches 2.4 m further */
+  const d=hgt*0.9;drapeSh(castSh,S.x+_sunAway.x*d,S.z+_sunAway.z*d,_sunAway.x,_sunAway.z,1.05,1);castSh.material.opacity=0.13*k*k;
   castSh.visible=blob.visible;}
 const CLIP={ride:'air_squat',fall:'Fall3',arise:'Arise',wave:'Wave_for_Help_2'};
 function setMode(m,fade){if(m==='fall'&&animMode!=='fall')sfxFall();animMode=m;crashT=0;if(!mixer)return;const target=CLIP[m];const fd=fade===undefined?(m==='fall'?0.25:0.6):fade;
