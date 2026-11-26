@@ -28,5 +28,5 @@ const AUTOPILOT = `window.__auto=(n)=>{const k=window.__kr,S=k.S;for(let s=0;s<n
     if(ti.tr.L-ti.tr.cs[ti.i]<30)for(let q=1;q<k.KT.length&&k.KT[q];q++){const u=k.KT[q],i=k.KI[q];if(u.L-u.cs[i]<30||k.KDd[q]>u.w+12)continue;
       const a=u.s[i],b=u.s[Math.min(i+1,u.s.length-1)],l=Math.hypot(b[0]-a[0],b[1]-a[1])||1;cx=k.KX[q];cz=k.KZ[q];ux=(b[0]-a[0])/l;uz=(b[1]-a[1])/l;break;}
     const tx=cx+ux*14,tz=cz+uz*14;let d=Math.atan2(tx-S.x,tz-S.z)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));st=Math.max(-1,Math.min(1,-d*2.5));}
-  k.steerIn=st;k.postIn=S.v>16?-0.8:0;const r=k.physicsOnly(3);if(S.crashed){S.crashed=false;S.cool=0.5;S.v=3;}if(r!=='ride'&&r!=='finishing')return r;}return S.state;};`;
+  k.steerIn=st;k.postIn=window.__autoTuck?1:(S.v>16?-0.8:0);if(window.__autoBoost&&S.state==='ride'&&!S.air&&!(S.bcd>0)&&S.v>3)k.fun.boost();const r=k.physicsOnly(3);if(S.crashed){S.crashed=false;S.cool=0.5;S.v=3;}if(r!=='ride'&&r!=='finishing')return r;}return S.state;};`;
 module.exports = { open, AUTOPILOT, ROOT };

@@ -31,7 +31,7 @@ const jumpBtn=document.getElementById('jumpBtn');
 jumpBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();jump();});
 /* boost: a short shove of speed (~9 mph over half a second), then a 2.5 s recharge. Works on the snow or in the air. */
 const BOOST={push:0.45,acc:9,cd:2.5},boostBtn=document.getElementById('boostBtn');window.__boost=BOOST;
-function boost(){if(S.state!=='ride'||S.crashed||(S.bcd||0)>0)return;S.go=true;S.bst=BOOST.push;S.bcd=BOOST.cd;sfxSkate();
+function boost(){if(S.state!=='ride'||S.crashed)return;if(FLOW.ready){flowBoost();return;}if((S.bcd||0)>0)return;S.go=true;S.bst=BOOST.push;S.bcd=BOOST.cd;sfxSkate();
   for(let i=0;i<10;i++)emitPuff(S.x-Math.sin(S.th)*(0.6+rnd()*0.6),(S.air?S.y:H(S.x,S.z))+0.15,S.z-Math.cos(S.th)*(0.6+rnd()*0.6),(rnd()-0.5)*2-Math.sin(S.th)*2,0.4+rnd()*1.2,(rnd()-0.5)*2-Math.cos(S.th)*2,0.6);}
 boostBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();boost();});
 let boostShown=-1;function updBoostBtn(){const c=Math.round(clamp((S.bcd||0)/BOOST.cd,0,1)*40)/40;if(c===boostShown)return;boostShown=c;boostBtn.style.setProperty('--cd',c);boostBtn.classList.toggle('cool',c>0);}

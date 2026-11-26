@@ -80,7 +80,7 @@ function frame(now){
   if(S.state==='ride'||S.state==='finishing'){
     if(window.__freeze){if(window.__camHook)window.__camHook(camera,skier,S);else placeCam(true);ghostFrame(S.t,dt);return endFrame(now,dt);}   /* test hook: hold the pose for screenshots */
     /* physics runs in fixed 1/60 s steps (what it was tuned at); visuals interpolate between the last two steps */
-    simAcc+=fdt;let n=0,r=lastSim;
+    const hs=hitStop>0?0.06:1;hitStop-=dt;simAcc+=fdt*hs;let n=0,r=lastSim;
     while(simAcc>=STEP&&n<MAX_STEPS){snapPrev();r=simStep(STEP);simAcc-=STEP;n++;if(S.state!=='ride'&&S.state!=='finishing')break;}
     if(n===MAX_STEPS)simAcc=0;lastSim=r;
     if(S.state==='done')return endFrame(now,dt);
@@ -91,12 +91,12 @@ function frame(now){
     alignToSlope(S.air?gx*0.5:gx,S.air?gz*0.5:gz,dt);poseSkier(y);
     addTracks();
     if(!model){rig.rotation.z=steer*0.45;rig.rotation.x=r.tk?0.55:0.15;rig.position.y=r.tk?-0.25:0;}   /* with the model, updModel sets lean, edging and leg IK */
-    updModel(dt,r.tk);
+    updModel(dt*hs,r.tk);
     placeCam(false,dt);
     if(window.__side){const yy=skier.position.y;camera.position.set(S.x-4,yy+1,S.z+0.5);camera.lookAt(S.x,yy+0.8,S.z);}
     if(window.__camHook)window.__camHook(camera,skier,S);   /* test hook: tools/test/skier-poses.js frames the skier close up */
     {const f=64+Math.max(0,postS)*8+S.v*0.15;if(Math.abs(f-camera.fov)>0.01){camera.fov+=(f-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}}
-    updCompass();updBoostBtn();
+    updCompass();updBoostBtn();updFlowHud();
     const mph=S.v*2.237;setTxt('spd',Math.round(mph));setTxt('time',S.pre?'Ski toward a sign':fmt(S.t));
     const hy=S.air?S.y:H(S.x,S.z);const ft=Math.max(0,(hy-RUN.h1)*3.281);setTxt('vert',(Math.round(ft/10)*10).toLocaleString()+' ft to go');
     const pr=clamp((RUN.h0-hy)/(RUN.h0-RUN.h1),0,1);updTrailHud();setBar(pr);
@@ -133,6 +133,7 @@ function finish(){
   let msg='';if(base){if(best===null||S.t<best){if(best!==null)msg='New personal best! Old: '+fmt(best);else msg='First run in the books.';best=S.t;try{localStorage.setItem(key,String(best));}catch(e){}}else msg='Personal best: '+fmt(best);}
   else msg=ft(drop).toLocaleString()+' ft of vert.';
   {const g=ghostFinish(base);if(g)msg+=' '+g;}
+  medalFinish(base);
   const ol=route.includes('Outer Limits')&&base&&base.id==='bear';
   $('fBest').textContent=(ol?(S.crashes===0?'The Deck goes wild! ':'The Deck jeers. '):'')+msg+(S.tricks?' · Tricks landed: '+S.tricks:'');
   $('nextK').textContent=base?'Next chair from '+base.name:'Skate to a chair';showLifts(base,'liftList');

@@ -1,11 +1,13 @@
 /* ---------- game state ---------- */
 const SES={laps:0,vert:0,chairs:0,runs:{}};
 const S={lift:null,ls:0,lt:0,x:0,z:0,th:0,v:0,t:0,top:0,crashes:0,state:'menu',cool:0,shake:0,finT:0,air:false,y:0,vy:0,boosts:0,airT:0,land:0,flip:0,spin:0,spinT:0,tricks:0,gAcc:0,skT:-1,skSide:0,sk:0,pw:0,path:[],endBase:null};
+/* flow meter (17-fun.js): declared here because reset() clears it before the later slices have run */
+const FLOW={v:0,chain:0,lastT:-9,edge:0,carveT:0,thAcc:0,skT:0,ready:false,n:{}};let hitStop=0;
 const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
 const diffIcon=d=>d==='g'?'<div class="ci"></div>':d==='b'?'<div class="sq"></div>':d==='dd'?'<div class="dia"></div><div class="dia"></div>':'<div class="dia"></div>';
-function reset(){S.runId=(S.runId||0)+1;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
+function reset(){S.runId=(S.runId||0)+1;Object.assign(FLOW,{v:0,chain:0,lastT:-9,edge:0,carveT:0,thAcc:0,skT:0,ready:false,n:{}});hitStop=0;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
   S.x=RUN.x;S.z=RUN.z;S.gyp=undefined;S.gvp=undefined;setTxt('lblTop',RUN.top);setTxt('lblBot',RUN.dest?RUN.dest.name:'Base');S.th=RUN.th;S.v=2;S.t=0;S.top=0;S.crashes=0;S.cool=0;S.shake=0;S.finT=0;steer=0;steerIn=0;snapPrev();lerpIn(1);lerpOut();placeCam(true);}
 let curTrail='';
 function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
@@ -13,7 +15,7 @@ function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}
   if(!tr.name)return;if(tr.name===curTrail){if(S.curTr&&S.curTr.name!==tr.name)S.curTr=tr;else if(!S.curTr)S.curTr=tr;return;}curTrail=tr.name;S.curTr=tr;S.curS=null;S.path.push(tr.name);
   $('ttext').textContent=curTrail.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);if(S.state==='ride'&&S.path.length>1)toast(shortName(curTrail));}
 function fmt(t){const m=Math.floor(t/60),s=t-m*60;return m+':'+(s<10?'0':'')+s.toFixed(1);}
-function showHud(on){['top','bot','jumpBtn','boostBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
+function showHud(on){['top','bot','jumpBtn','boostBtn','pauseBtn'].forEach(i=>$(i).classList.toggle('hidden',!on));if(!on){$('flowX').classList.add('hidden');_flC=-1;}$('skipBtn').classList.add('hidden');$('listBtn').classList.add('hidden');$('lookHint').classList.add('hidden');}
 function fade(fn){const f=$('fade');f.style.opacity=1;setTimeout(()=>{fn();requestAnimationFrame(()=>{f.style.opacity=0;});},360);}
 function thump(){if(!actx)return;if(SFX.on){sfxClank();return;}[0,0.09].forEach(d=>{const t=actx.currentTime+d,o=actx.createOscillator(),g=actx.createGain();o.type='triangle';o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(45,t+0.16);g.gain.setValueAtTime(0.22,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.22);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+0.25);});}
 const mmss=t=>{t=Math.round(t);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');};
@@ -31,7 +33,7 @@ function showPicker(L,fromMenu){pickFrom=fromMenu?'menu':'lift';
   const box=$('pickList');box.innerHTML='';
   L.trails.forEach((tr,i)=>{const b=document.createElement('button');b.className='lift'+(i===0?' rec':'');
     const drop=Math.max(0,tr.h0-tr.h1),to=tr.dest?' · to '+tr.dest.name:'';
-    b.innerHTML='<div class="ic tico">'+diffIcon(tr.diff)+'</div><div><b>'+shortName(tr.name)+'</b><small>'+DIFF[tr.diff].label.toLowerCase()+' · '+ft(tr.L).toLocaleString()+' ft long · '+ft(drop).toLocaleString()+' ft drop'+to+'</small></div><div class="go">›</div>';
+    b.innerHTML='<div class="ic tico">'+diffIcon(tr.diff)+'</div><div><b>'+shortName(tr.name)+'</b>'+medalDot(tr.name)+'<small>'+DIFF[tr.diff].label.toLowerCase()+' · '+ft(tr.L).toLocaleString()+' ft long · '+ft(drop).toLocaleString()+' ft drop'+to+'</small></div><div class="go">›</div>';
     b.onclick=()=>dropIn(tr,L.top);box.appendChild(b);});
   const tb=BASES.find(b=>b.name===L.top);if(tb)tb.L.forEach(M=>{const b=document.createElement('button');b.className='lift';
     b.innerHTML='<div class="chair" style="background:#'+M.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+M.name+'</b><small>To '+M.top+' · '+M.serves+'</small><small>Right here · '+mmss(M.real)+' ride</small></div><div class="go">›</div>';
@@ -134,7 +136,7 @@ function addTracks(){
     trkPush(t,ax,H(ax,az)+0.03,az,bx,H(bx,bz)+0.03,bz);
     t.g.attributes.position.needsUpdate=true;t.g.setDrawRange(0,Math.max(0,(t.n-1)*6));});
 }
-function bail(msg){S.crashes++;S.cool=1.2;S.shake=0.5;S.air=false;updPips();if(mixer){S.crashed=true;S.v=0;setMode('fall');}else S.v=0;toast(msg);
+function bail(msg){flowBreak(0.3);S.crashes++;S.cool=1.2;S.shake=0.5;S.air=false;updPips();if(mixer){S.crashed=true;S.v=0;setMode('fall');}else S.v=0;toast(msg);
   for(let i=0;i<40;i++)emit(S.x,H(S.x,S.z)+0.5,S.z,(rnd()-0.5)*5,rnd()*3,(rnd()-0.5)*5,0.9);}
 /* trees are forgiving (Nov 26): the woods between trails should be fun to duck into, not a minefield.
    - the hitbox is the trunk, not the branches (was 1.1*s+0.3 ≈ 1.5 m, now ≈ 0.6 m)
@@ -159,10 +161,10 @@ function treeHit(gy,dt){
         const side=(ddx*rx+ddz*rz)>=0?1:-1;S.th+=side*(0.35+0.6*head);
         sfxTree(sp*(0.4+0.6*head));
         for(let i=0;i<(head>0.7?40:18);i++)emitPuff(t[0]+(rnd()-0.5)*2,gy+1.5+rnd()*3,t[1]+(rnd()-0.5)*2,(rnd()-0.5)*2,-0.5-rnd(),(rnd()-0.5)*2,1+rnd()*0.6);
-        if(head<0.7||sp<8){S.v*=0.82-0.25*head;S.cool=0.5;S.shake=Math.max(S.shake,0.15);toast(sp>12?'Branch slap!':'Close one!');}
+        if(head<0.7||sp<8){S.v*=0.82-0.25*head;S.cool=0.5;S.shake=Math.max(S.shake,0.15);toast(sp>12?'Branch slap!':'Close one!');flowBreak(0.85);}
         else if(sp>22&&head>0.9&&mixer){S.crashes++;S.cool=1.2;S.shake=0.5;S.crashed=true;S.v=0;S.air=false;updPips();setMode('fall');toast('YARD SALE!');
           for(let i=0;i<45;i++)emit(S.x,H(S.x,S.z)+0.6,S.z,(rnd()-0.5)*5,rnd()*3.5,(rnd()-0.5)*5,0.9);}
-        else{S.v*=0.45;S.cool=0.8;S.shake=0.35;toast('Oof — tree!');}
+        else{S.v*=0.45;S.cool=0.8;S.shake=0.35;toast('Oof — tree!');flowBreak(0.4);}
         threadN=0;return;}
       if(S.air)continue;
       /* auto-weave: trunks ahead and close to your line push your heading away from them */
@@ -172,7 +174,7 @@ function treeHit(gy,dt){
   if(!S.air&&S.v>2&&weave){const gain=clamp(S.v/12,0.4,1.6);S.th-=clamp(weave,-1.2,1.2)*gain*1.6*dt;}
   /* threading: brushed past within ~1.8 m of a trunk at speed */
   if(near&&!S.air&&S.v>9&&threadCd<=0){const d=Math.sqrt(nearD),r=TREE_R*near[2]+TREE_R0;if(d<r+1.3){
-    threadCd=0.45;threadN++;threadT=2.5;S.v=Math.min(41,S.v+0.35);
+    threadCd=0.45;threadN++;threadT=2.5;S.v=Math.min(41,S.v+0.35);flowAdd(0.06,0.4,'thread');
     for(let i=0;i<10;i++)emitPuff(near[0]+(rnd()-0.5)*1.5,H(near[0],near[1])+1.8+rnd()*2.5,near[1]+(rnd()-0.5)*1.5,(rnd()-0.5)*1.5,-0.3-rnd()*0.6,(rnd()-0.5)*1.5,1.1);
     if(threadN===3)toast('Threading the trees!');else if(threadN===6)toast('Tree ninja!');else if(threadN===10)toast('GLADE MASTER!');}}
 }
@@ -205,7 +207,7 @@ function physics(dt){
       {const gvl=(H(S.x+Math.sin(S.th)*S.v*dt,S.z+Math.cos(S.th)*S.v*dt)-gy)/dt,vr=S.vy-gvl,crL=Math.max(0,postS),upL=Math.max(0,-postS);
        /* how hard you can hit (m/s into the slope). Forgiving: a double-boost jump onto flat ground lands at ~19 m/s */
        const lim=upL>0.3?-20:(crL>0.5?-30:-26);
-       if(vr<lim){S.flip=0;S.spin=0;S.spinT=0;bail('SLAMMED!');S.y=gy;return {tk:false,off:false};}
+       S.lvr=vr;if(vr<lim){S.flip=0;S.spin=0;S.spinT=0;bail('SLAMMED!');S.y=gy;return {tk:false,off:false};}
        if(vr<-10){S.v*=1-0.15*(1-0.6*crL);S.shake=Math.max(S.shake,vr<-16?0.45:0.3);}}
       const fe=Math.abs(S.flip-Math.round(S.flip/TAU)*TAU),se=Math.abs(S.spinT-S.spin)+Math.abs(S.spin-Math.round(S.spin/TAU)*TAU),err=Math.max(fe,se);
       const nf=Math.round(S.flip/TAU),ns=Math.round(Math.abs(S.spinT)/TAU);
@@ -214,6 +216,7 @@ function physics(dt){
       else if(nf||ns){const fl=nf<0?(nf===-1?'Backflip':(nf===-2?'Double backflip':'Triple backflip')):(nf===1?'Front flip':(nf>1?'Double front flip':''));
         const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(41,S.v+2);toast(name);}
       else if(S.airT>(S.autoAir?(S.kick?0.6:1.4):0.9))toast(S.airT.toFixed(1)+'s AIR!');
+      landGrade(err,nf,ns);
       S.flip=0;S.spin=0;S.spinT=0;
       for(let i=0;i<20;i++)emit(S.x+(rnd()-0.5)*1,gy+0.05,S.z+(rnd()-0.5)*1,(rnd()-0.5)*3,0.4+rnd()*1.2,(rnd()-0.5)*3,0.4);}
     else{treeHit(gy,dt);S.top=Math.max(S.top,S.v);return {tk,off:false};}
@@ -243,7 +246,7 @@ function physics(dt){
   else if(S.v<4&&S.state==='ride'&&off)S.v+=3.2*dt;
   S.v=clamp(S.v,0,41);
   const rate=steer*(2.3-Math.min(1.25,S.v/22))*(1+0.3*(S.sk||0))*(1-0.28*(S.pw||0));
-  S.th-=rate*dt;
+  S.th-=rate*dt;flowCarve(rate,off,dt);
   if(S.v<1.2&&Math.hypot(gx,gz)>0.03){let d=Math.atan2(-gx,-gz)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));S.th+=d*Math.min(1,dt*0.8);}
   S.x+=Math.sin(S.th)*S.v*dt;S.z+=Math.cos(S.th)*S.v*dt;
   S.x=clamp(S.x,XMIN+8,XMAX-8);S.z=clamp(S.z,ZMIN+8,ZMAX-8);

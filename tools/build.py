@@ -32,6 +32,11 @@ def build():
     json.loads(kdata)  # fail early on bad data
     assert js.count('/*@KDATA*/null') == 1, 'expected exactly one /*@KDATA*/null marker in src/js'
     js = js.replace('/*@KDATA*/null', kdata)
+    mp = os.path.join(ROOT, 'data/medals.json')   # medal times (tools/medals.js); {} until baked
+    medals = open(mp, encoding='utf-8').read().strip() if os.path.exists(mp) else '{}'
+    json.loads(medals)
+    assert js.count('/*@MEDALS*/null') == 1, 'expected exactly one /*@MEDALS*/null marker in src/js'
+    js = js.replace('/*@MEDALS*/null', medals)
     faces = ''.join(f"@font-face{{font-family:'{fam}';src:url(data:font/woff2;base64,{base64.b64encode(open(os.path.join(ROOT, 'assets/fonts', fn), 'rb').read()).decode()}) format('woff2');font-weight:{w};font-display:swap}}"
                     for fam, fn, w in [('Barlow Condensed', 'barlow-condensed-latin-600-normal.woff2', 600), ('Barlow Condensed', 'barlow-condensed-latin-700-normal.woff2', 700),
                                        ('Barlow', 'barlow-latin-400-normal.woff2', 400), ('Barlow', 'barlow-latin-600-normal.woff2', 600)])
