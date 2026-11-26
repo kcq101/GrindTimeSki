@@ -84,7 +84,7 @@ Known gaps
 - Pause: "End run" became a pause button under the timer (two CSS bars; the ❚❚ glyph rendered as a square on Android) (also Esc/P). Menu: Continue, Different trail (picker for the run's lift top, Back returns to the menu), Different peak (trail map), End run here (hidden at a lift top).
 
 ## Share image (Nov 25, 2026)
-- `assets/og.jpg` (1200×630): an in-game render of the Devil's Den kicker from a low hero camera (2× supersampled), with the title in Barlow Condensed. The build copies it to `dist/og.jpg`.
+- `assets/og.jpg` (1200×630): an in-game render of the Devil's Den kicker from a low hero camera (2× supersampled), with the GrindTime Skiing badge (renamed from Beast of the East, Nov 25). The build copies it to `dist/og.jpg`.
 - Root `index.html` (the link people share) and the game page carry Open Graph + Twitter `summary_large_image` tags pointing at `https://kcq101.github.io/GrindTimeSki/dist/og.jpg`. The claude.ai artifact uses `assets/thumb.jpg`: Kevin's GrindTime Skiing badge (`assets/logo.png`) centred on navy, which survives a square crop. The same badge is the tab icon and home-screen icon (`icon-32/192.png`, `apple-touch-icon.png`) via `<link rel="artifact-thumbnail" href="thumb.jpg">`; publish `thumb.jpg` alongside `index.html`.
 - If the trail/kicker counts in the tagline change, regenerate the image.
 
