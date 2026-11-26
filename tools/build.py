@@ -50,5 +50,6 @@ if __name__ == '__main__':
     print(f'wrote {out} ({len(html.encode()) / 1e6:.2f} MB)')
     # share image for link previews (og:image) and the claude.ai artifact thumbnail
     import shutil
-    for f in ('og.jpg', 'thumb.jpg'):   # og = link-preview card; thumb = minimal app/artifact thumbnail that reads at tile size
+    # og = link-preview card; thumb = app/artifact thumbnail (GrindTime Skiing badge); icons = tab + home-screen
+    for f in ('og.jpg', 'thumb.jpg', 'icon-32.png', 'icon-192.png', 'apple-touch-icon.png'):
         shutil.copyfile(os.path.join(ROOT, 'assets', f), os.path.join(os.path.dirname(out), f))
