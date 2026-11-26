@@ -85,7 +85,7 @@ Known gaps
 
 ## Share image (Nov 25, 2026)
 - `assets/og.jpg` (1200×630): an in-game render of the Devil's Den kicker from a low hero camera (2× supersampled), with the title in Barlow Condensed. The build copies it to `dist/og.jpg`.
-- Root `index.html` (the link people share) and the game page carry Open Graph + Twitter `summary_large_image` tags pointing at `https://kcq101.github.io/GrindTimeSki/dist/og.jpg`. The game page also has `<link rel="artifact-thumbnail" href="og.jpg">` for the claude.ai artifact; publish `og.jpg` alongside `index.html`.
+- Root `index.html` (the link people share) and the game page carry Open Graph + Twitter `summary_large_image` tags pointing at `https://kcq101.github.io/GrindTimeSki/dist/og.jpg`. The claude.ai artifact uses a separate, minimal `assets/thumb.jpg` (skier centred, small title, survives a square crop) via `<link rel="artifact-thumbnail" href="thumb.jpg">`; publish `thumb.jpg` alongside `index.html`.
 - If the trail/kicker counts in the tagline change, regenerate the image.
 
 ## Kickers on the long, fast pitches (Nov 25, 2026)

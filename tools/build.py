@@ -50,4 +50,5 @@ if __name__ == '__main__':
     print(f'wrote {out} ({len(html.encode()) / 1e6:.2f} MB)')
     # share image for link previews (og:image) and the claude.ai artifact thumbnail
     import shutil
-    shutil.copyfile(os.path.join(ROOT, 'assets/og.jpg'), os.path.join(os.path.dirname(out), 'og.jpg'))
+    for f in ('og.jpg', 'thumb.jpg'):   # og = link-preview card; thumb = minimal app/artifact thumbnail that reads at tile size
+        shutil.copyfile(os.path.join(ROOT, 'assets', f), os.path.join(os.path.dirname(out), f))
