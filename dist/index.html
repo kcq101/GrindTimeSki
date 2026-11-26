@@ -1609,7 +1609,9 @@ function placeCam(snap,dt){
 let last=performance.now(),fcount=0;
 const STEP=1/60,MAX_STEPS=6;let simAcc=0,lastSim={tk:false,off:false};
 const PREV={x:0,z:0,y:0,th:0,v:0},CUR={x:0,z:0,y:0,th:0,v:0};
-function snapPrev(){PREV.x=S.x;PREV.z=S.z;PREV.y=S.y||0;PREV.th=S.th;PREV.v=S.v;}
+/* on the ground S.y isn't kept up to date (it still holds the height of your last landing), so start from the snow there;
+   otherwise the first frame after a takeoff blends from that old height and the skier flashes up the mountain */
+function snapPrev(){PREV.x=S.x;PREV.z=S.z;PREV.y=S.air?S.y:H(S.x,S.z);PREV.th=S.th;PREV.v=S.v;}
 function lerpIn(a){CUR.x=S.x;CUR.z=S.z;CUR.y=S.y||0;CUR.th=S.th;CUR.v=S.v;
   if(Math.abs(CUR.x-PREV.x)+Math.abs(CUR.z-PREV.z)>3)return;   /* teleport (reset/crash nudge): don't smear */
   S.x=PREV.x+(CUR.x-PREV.x)*a;S.z=PREV.z+(CUR.z-PREV.z)*a;if(S.air)S.y=PREV.y+(CUR.y-PREV.y)*a;S.th=PREV.th+(CUR.th-PREV.th)*a;S.v=PREV.v+(CUR.v-PREV.v)*a;}
