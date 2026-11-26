@@ -7,10 +7,10 @@ function updCompass(){camera.getWorldDirection(_cd);if(_cd.x*_cd.x+_cd.z*_cd.z<1
   cmpT.style.transform='translateX('+(52-(b+180)*CMP_PX).toFixed(1)+'px)';}
 /* ---------- camera ---------- */
 const camPos=new THREE.Vector3(),camLook=new THREE.Vector3(),_cT=new THREE.Vector3(),_cL=new THREE.Vector3();let camTh=0;
-const CAM_D=7.0,CAM_H=3.0;   /* was 8.5 / 3.6: same pitch, skier ~22% larger on screen */
+const CAM_D=5.8,CAM_H=3.0;   /* was 8.5 → 7.0 → 5.8 (Nov 25 night: closer behind the skier) */
 /* Nov 25 (Bonvo reference): a lazier chase camera. It swings round after the heading instead of locking behind the skier, so in a turn
    you see the skier's side and they drift off-centre; it sits a little lower and looks further down the hill (more slope ahead, horizon higher). */
-const CAMF={yaw:1.8,lat:6,h:2.55,look:21,lookH:1.0};window.__camf=CAMF;
+const CAMF={yaw:1.8,lat:6,h:2.1,look:21,lookH:1.0};   /* h was 2.55: lower, flatter view */window.__camf=CAMF;
 /* steadier in quick left-right turns: "wiggle" = mean |yaw rate| minus |mean yaw rate| over ~0.7 s. It is ~0 in a sustained wide
    turn (the camera follows as before) and large when the heading swings back and forth (short turns, moguls), where the camera
    follows the heading more slowly and only drifts sideways with the skier instead of tracking every swing. */
@@ -27,7 +27,7 @@ function placeCam(snap,dt){
     {const ex2=S.x-CAMW.ax,ez2=S.z-CAMW.az,lr=ex2*fz-ez2*fx,lc=clamp(lr,-1.6,1.6);if(lr!==lc){CAMW.ax+=fz*(lr-lc);CAMW.az-=fx*(lr-lc);}}}   /* never lets the skier drift more than ~1.6 m off the view line */
   const dx=Math.sin(camTh),dz=Math.cos(camTh),AX=CAMW.ax,AZ=CAMW.az;
   const gy0=H(S.x,S.z),y=S.air?S.y:gy0;
-  const tx=AX-dx*CAM_D,tz=AZ-dz*CAM_D;let ty=Math.max(y+CAMF.h,H(tx,tz)+2.0);
+  const tx=AX-dx*CAM_D,tz=AZ-dz*CAM_D;let ty=Math.max(y+CAMF.h,H(tx,tz)+1.8);
   const lx=AX+dx*CAMF.look,lz=AZ+dz*CAMF.look,ly=H(lx,lz)+CAMF.lookH+(S.air?(S.y-gy0)*0.5:0);
   if(snap){camPos.set(tx,ty,tz);camLook.set(lx,ly,lz);}else{const k=1-Math.exp(-dt*6);camPos.lerp(_cT.set(tx,ty,tz),k);camLook.lerp(_cL.set(lx,ly,lz),1-Math.exp(-dt*9));}
   {const gc=H(camPos.x,camPos.z)+1.6;if(camPos.y<gc)camPos.y=gc;}

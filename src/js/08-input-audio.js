@@ -42,7 +42,7 @@ function jump(){
   if(S.state!=='ride'||S.crashed)return;
   if(!S.air){S.autoAir=false;S.flipArm=Math.abs(postS)<0.3;S.gyp=undefined;S.gvp=undefined;S.air=true;S.y=H(S.x,S.z)+0.05;S.vy=6+Math.min(2,S.v*0.06);S.boosts=0;S.airT=0;trkBreak=true;S.flip=0;S.spin=0;S.spinT=0;if(pendSpin&&performance.now()-pendSpin.t<450)S.spinT=-pendSpin.d*TAU;pendSpin=null;
     for(let i=0;i<14;i++)emit(S.x+(rnd()-0.5)*0.8,S.y,S.z+(rnd()-0.5)*0.8,(rnd()-0.5)*2,0.5+rnd()*1.2,(rnd()-0.5)*2,0.45);}
-  else if(S.boosts<2){S.boosts++;S.vy=Math.max(S.vy,0)+5.5;S.v=Math.min(39,S.v+1.5);
+  else if(S.boosts<2){S.boosts++;S.vy=Math.max(S.vy,0)+5.5;S.v=Math.min(41,S.v+1.5);
     for(let i=0;i<18;i++)emit(S.x+(rnd()-0.5)*0.6,S.y+0.3,S.z+(rnd()-0.5)*0.6,(rnd()-0.5)*3,-1-rnd()*2,(rnd()-0.5)*3,0.5);
     toast(S.boosts===1?'DOUBLE!':'TRIPLE!');}
   updPips();

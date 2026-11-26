@@ -162,7 +162,7 @@ function physics(dt){
   /* top of a lift: stand still until you steer, tuck or jump */
   if(!S.go){if(Math.abs(si)>0.05||Math.abs(pi)>0.05||S.air)S.go=true;else{S.v=0;return {tk:false,off:false};}}
   if(S.land>0)S.land-=dt;
-  if(S.bcd>0)S.bcd-=dt;if(S.bst>0){S.bst-=dt;S.v=Math.min(39,S.v+BOOST.acc*dt);}
+  if(S.bcd>0)S.bcd-=dt;if(S.bst>0){S.bst-=dt;S.v=Math.min(41,S.v+BOOST.acc*dt);}
   if(S.air){
     S.airT+=dt;S.vy-=GRAV*dt;S.y+=S.vy*dt;S.v*=1-0.03*dt;
     S.th-=steer*0.6*dt;
@@ -185,7 +185,7 @@ function physics(dt){
       if(err>1.25){S.flip=0;S.spin=0;S.spinT=0;bail('BAILED!');S.y=gy;return {tk:false,off:false};}
       else if(err>0.55){S.v*=0.6;S.shake=0.35;toast('Sketchy!');}
       else if(nf||ns){const fl=nf<0?(nf===-1?'Backflip':(nf===-2?'Double backflip':'Triple backflip')):(nf===1?'Front flip':(nf>1?'Double front flip':''));
-        const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(39,S.v+2);toast(name);}
+        const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(41,S.v+2);toast(name);}
       else if(S.airT>(S.autoAir?(S.kick?0.6:1.4):0.9))toast(S.airT.toFixed(1)+'s AIR!');
       S.flip=0;S.spin=0;S.spinT=0;
       for(let i=0;i<20;i++)emit(S.x+(rnd()-0.5)*1,gy+0.05,S.z+(rnd()-0.5)*1,(rnd()-0.5)*3,0.4+rnd()*1.2,(rnd()-0.5)*3,0.4);}
@@ -195,17 +195,17 @@ function physics(dt){
   const dx=Math.sin(S.th),dz=Math.cos(S.th);
   const along=gx*dx+gz*dz;
   const g=9.8;
-  let a=-g*1.1*along/Math.sqrt(1+along*along);   /* 1.1: a touch more pull down the fall line (speed pass, Nov 25) */
+  let a=-g*1.15*along/Math.sqrt(1+along*along);   /* 1.0 → 1.1 → 1.15: more pull down the fall line (speed passes, Nov 25) */
   const ti=trailInfo(S.x,S.z),off=(!ti.tr||ti.d>ti.w+1)&&!inPad(S.x,S.z)&&!S.pre;   /* the flats around a lift top are packed out, not powder */
   /* powder depth under the skis (smoothed so patches ease in): on the trail it adds drag and loosens the steering; off piste is deep */
   {const pt=S.pre?0:(off?1:powderAt(S.x,S.z,ti.tr,ti.d-ti.w,ti.w,ti.ux,ti.uz));S.pw=(S.pw||0)+(pt-(S.pw||0))*Math.min(1,dt*4);}
-  const mu=off?0.28:0.025+0.075*S.pw;
+  const mu=off?0.28:0.022+0.075*S.pw;
   a-=g*mu*(S.v>0.1?1:0);
   /* hard turn at speed: the skis come across the fall line and skid (a hockey stop). Builds with how hard you steer and how fast you go */
   {const tgt=S.air?0:sstep(0.6,0.95,Math.abs(steer))*sstep(7,14,S.v);S.sk=(S.sk||0)+(tgt-(S.sk||0))*Math.min(1,dt*(tgt>(S.sk||0)?6:3.5));
    a-=S.sk*(2+0.1*S.v);}
   const up=Math.max(0,-postS),cr=Math.max(0,postS);
-  a-=(0.0036-0.0018*cr+0.0038*up)*S.v*S.v;   /* was 0.0042/0.0021: ~15% higher cruising and tuck speeds */
+  a-=(0.0032-0.0016*cr+0.0038*up)*S.v*S.v;   /* 0.0042/0.0021 → 0.0036/0.0018 → 0.0032/0.0016: ~25% faster than the original overall */
   a-=0.7*up*(S.v>2?1:0);
   S.v+=a*dt;
   S.v*=1-Math.abs(steer)*0.19*dt;
@@ -214,7 +214,7 @@ function physics(dt){
   if(S.pre&&S.v<5.5)S.v+=2.2*dt;   /* skating across the top to the trail you want */
   else if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
   else if(S.v<2.5&&S.state==='ride'&&off)S.v+=3.2*dt;
-  S.v=clamp(S.v,0,39);
+  S.v=clamp(S.v,0,41);
   const rate=steer*(2.3-Math.min(1.25,S.v/22))*(1+0.3*(S.sk||0))*(1-0.28*(S.pw||0));
   S.th-=rate*dt;
   if(S.v<1.2&&Math.hypot(gx,gz)>0.03){let d=Math.atan2(-gx,-gz)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));S.th+=d*Math.min(1,dt*0.8);}
