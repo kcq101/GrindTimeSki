@@ -133,13 +133,24 @@ let NCH=0,NCB=0;LIFTS.forEach(L=>{L.nChairs=Math.max(8,Math.round(L.len*2/CHAIR_
 const chairIM=new THREE.InstancedMesh(CHAIR_GEO,new THREE.MeshLambertMaterial({vertexColors:true}),NCH);chairIM.frustumCulled=false;scene.add(chairIM);
 const cabIM=new THREE.InstancedMesh(CAB_GEO,new THREE.MeshLambertMaterial({vertexColors:true}),Math.max(1,NCB));cabIM.frustumCulled=false;scene.add(cabIM);
 const riderIM=new THREE.InstancedMesh(new THREE.BoxGeometry(0.5,0.9,0.45),new THREE.MeshLambertMaterial({color:0xffffff}),NCH*3);riderIM.frustumCulled=false;scene.add(riderIM);
-{const jackets=[0xe8432f,0x2f7de8,0xf2b705,0x2fae63,0x8a3fe0,0xffffff,0x111111],c=new THREE.Color(),z0=new THREE.Matrix4().makeScale(0,0,0);let ic=0,ib=0;
-  LIFTS.forEach(L=>{for(let i=0;i<L.nChairs;i++){const rs=[];let im,idx;c.set(L.col);
-    if(L.gond){im=cabIM;idx=ib++;cabIM.setColorAt(idx,c);}
-    else{im=chairIM;idx=ic++;chairIM.setColorAt(idx,c);
-      const n=(i%2===0&&rnd()<0.8)?1+Math.floor(rnd()*3):0;
-      for(let r=0;r<3;r++){const ri=idx*3+r;if(r<n){c.set(jackets[Math.floor(rnd()*jackets.length)]);riderIM.setColorAt(ri,c);rs.push([ri,-1.1+r*1.1]);}else riderIM.setMatrixAt(ri,z0);}}
-    chairs.push({s:i/L.nChairs*L.len*2,L,i,idx,rs,im});}});}
+{const jackets=[0xe8432f,0x2f7de8,0xf2b705,0x2fae63,0x8a3fe0,0xffffff,0x111111],w=new THREE.Color(1,1,1);
+  [chairIM,cabIM,riderIM].forEach(m=>m.setColorAt(0,w));   /* create the colour buffers now so the shaders are built with them */
+  LIFTS.forEach(L=>{for(let i=0;i<L.nChairs;i++){const rs=[],im=L.gond?cabIM:chairIM;
+    if(!L.gond){const n=(i%2===0&&rnd()<0.8)?1+Math.floor(rnd()*3):0;
+      for(let r=0;r<n;r++)rs.push([new THREE.Color(jackets[Math.floor(rnd()*jackets.length)]),-1.1+r*1.1,-1]);}
+    chairs.push({s:i/L.nChairs*L.len*2,L,i,idx:-1,rs,im});}});}
+/* Only chairs on lifts within LIFT_R.chair of the camera are drawn, and riders within LIFT_R.rider: past that a chair is a pixel or
+   two and a rider less than one, and all 15 lifts' worth was ~64k triangles and ~120 KB of matrix uploads every frame.
+   Instance slots are handed out again whenever the set of near lifts changes (checked every 0.5 s). */
+const LIFT_R={chair:1500,rider:650};window.__liftR=LIFT_R;let _lnT=0,_lnKey='';
+function liftDist(L,x,z){const rx=x-L.bx,rz=z-L.bz,s=clamp(rx*L.dx+rz*L.dz,0,L.len);return Math.hypot(rx-L.dx*s,rz-L.dz*s);}
+function slotChairs(force){const x=camera.position.x,z=camera.position.z;let key='';
+  LIFTS.forEach(L=>{const d=liftDist(L,x,z),mine=S.lift===L&&S.state!=='ride';L._nc=mine||d<LIFT_R.chair;L._nr=mine||d<LIFT_R.rider;key+=(L._nc?1:0)+(L._nr?2:0);});
+  if(key===_lnKey&&!force)return;_lnKey=key;let ic=0,ib=0,ir=0;const c=new THREE.Color();
+  for(const ch of chairs){const L=ch.L;if(!L._nc){ch.idx=-1;for(const r of ch.rs)r[2]=-1;continue;}
+    ch.idx=ch.im===cabIM?ib++:ic++;c.set(L.col);ch.im.setColorAt(ch.idx,c);
+    for(const r of ch.rs){if(L._nr){r[2]=ir++;riderIM.setColorAt(r[2],r[0]);}else r[2]=-1;}}
+  chairIM.count=ic;cabIM.count=ib;riderIM.count=ir;[chairIM,cabIM,riderIM].forEach(m=>m.instanceColor.needsUpdate=true);}
 const myChair=makeChair(0x1f4f7a,false);myChair.visible=false;
 const myCab=makeCabin(0xb3261e);myCab.visible=false;
 let myRide=myChair;
@@ -148,10 +159,10 @@ function chairAt(L,s){const loop=L.len*2;s=((s%loop)+loop)%loop;let side=1,ry=L.
   _cpos.x=L.bx+L.dx*s+L.px*GAUGE*side;_cpos.z=L.bz+L.dz*s+L.pz*GAUGE*side;_cpos.y=cableY(L,s);_cpos.ry=ry;return _cpos;}
 function placeChair(g,L,s){const c=chairAt(L,s);g.position.set(c.x,c.y,c.z);g.rotation.y=c.ry;}
 const _chM=new THREE.Matrix4(),_chR=new THREE.Matrix4();
-function updateChairs(dt){
-  for(const c of chairs){const L=c.L,k=(S.state==='lift'&&S.lift===L)?L.ts:1;c.s=(c.s+dt*L.speed*k)%(L.len*2);
+let _lnX=0,_lnZ=0;function updateChairs(dt){_lnT-=dt;const cp=camera.position;if(_lnT<=0||Math.abs(cp.x-_lnX)+Math.abs(cp.z-_lnZ)>150){_lnT=0.5;_lnX=cp.x;_lnZ=cp.z;slotChairs(false);}
+  for(const c of chairs){const L=c.L,k=(S.state==='lift'&&S.lift===L)?L.ts:1;c.s=(c.s+dt*L.speed*k)%(L.len*2);if(c.idx<0)continue;
     const p=chairAt(L,c.s);_chM.makeRotationY(p.ry).setPosition(p.x,p.y,p.z);c.im.setMatrixAt(c.idx,_chM);
-    for(const [ri,ox] of c.rs){_chR.makeTranslation(ox,-1.85,-0.1).premultiply(_chM);riderIM.setMatrixAt(ri,_chR);}}
+    for(const r of c.rs){if(r[2]<0)continue;_chR.makeTranslation(r[1],-1.85,-0.1).premultiply(_chM);riderIM.setMatrixAt(r[2],_chR);}}
   chairIM.instanceMatrix.needsUpdate=true;cabIM.instanceMatrix.needsUpdate=true;riderIM.instanceMatrix.needsUpdate=true;
 }
 /* open a gap on the up-line so the player's chair slots in between two others */

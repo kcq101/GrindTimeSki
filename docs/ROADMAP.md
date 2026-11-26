@@ -129,6 +129,17 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 - `tileGen` (05-terrain.js) builds a tile as a generator that yields after every row of each heavy loop; `updateTiles` now spends a time budget per frame (`__tileMs`: 2.5 ms, 5 ms when more than 12 tiles are waiting) instead of a tile count, resuming the same tile next frame. A tile joins the scene only when it's complete. Calls with budget ≥ 999 (behind the fade when a run or lift ride starts) still build everything at once, and a missing tile within 190 m of the stream centre is finished immediately.
 - Result on the same runs: Great Eastern worst frame 64 → 9.5 ms, frames over 8 ms 127 → 1; Superstar, Outer Limits, Ovation worst 3–6 ms. No missing or low-detail ground under or ahead of the skier on any of them. Draw calls and triangles unchanged.
 
+## Phone numbers → triangle trim (Nov 26, 2026)
+- Kevin's phone (Android Chrome, 1080×2316, ~29 s of Superstar with the Performance overlay): 40–100 fps (median ~70; a 120 Hz screen), 160–173 draws, 543–645k triangles, auto-resolution down to 0.70× five times. The top half of the run (600k+) averaged ~62 fps, the bottom (<560k) ~85.
+- New `tools/test/tris.js`: skis a run and buckets every drawn triangle (frustum-culled the way three.js does; matches renderer.info exactly). Superstar avg 554k: trees 261k, 2 m terrain 65k, lift chairs/cabins/riders 64k, bamboo poles 46k, whole-mountain mesh 43k, buildings/towers 34k, skier 20k.
+- Trees: three r128 cones emit one zero-area triangle per segment at the apex, so half of every tree's triangles drew nothing (`dropDegen` in 03-scene). −130k counted; GPUs throw those away early, so the real saving is smaller (index fetch and setup only).
+- Bamboo poles: all 5,792 drew everywhere, but a 12 cm pole is under a pixel past ~100 m. Now only the ones within 260 m of the streaming centre (64 m grid, refilled when the centre moves 10 m; ≤0.3 ms).
+- Lifts: chairs and cabins only on lifts within 1.5 km of the camera, riders within 650 m (`__liftR`); slots are reassigned every 0.5 s or after a 150 m jump. The ~650 empty rider slots are gone, and so is most of the per-frame matrix upload.
+- 2 m terrain: a mogul trail's box was its whole bounding box (~60% of near tiles on Superstar were 2 m). Now only the mogul section, in ~120 m chunks, and 2 m only within 200 m of the streaming centre (4 m beyond, 48 m hysteresis). `test:tiles` now reports any 4 m tile under the skier on moguls or a kicker: none on Great Eastern, Superstar, Outer Limits, Ovation.
+- Result, same screenshot spots: Superstar 662k → 361k, Outer Limits 641k → 395k, Cascade 591k → 349k, Great Northern 625k → 368k, lift top 635k → 390k, trail map 261k → 151k. Draw calls unchanged, screenshots unchanged. Superstar run average 554k → 346k, worst frame 680k → 407k.
+- Banners fade out as the chase camera reaches them (in Kevin's recording the camera flew through FINISH after a 2.8 s jump and filled the screen with red).
+- Not done, if the phone still dips: far-tile trees at ~70% with slightly bigger trees (~−20k), whole-mountain mesh 52 → 78 m (~−24k, coarser horizon and trail map).
+
 ## Ghost racer (Nov 26, 2026)
 - 15-ghost.js. While the clock runs, the run is sampled 10×/s: position (2 cm steps from the last reconstructed point, so it never drifts), heading, height in the air, lean, crouch, flip and spin. 11 bytes a sample: Superstar (48 s) is ~7 KB in localStorage. Finish at a base faster than the saved ghost for that start trail (any base) and your run becomes the ghost; if storage fills, the ghost raced longest ago is dropped.
 - Next time you start that trail, a see-through blue skier (primitives merged into one ~600-triangle mesh; tuck folds the upper body in the vertex shader) replays it on your clock, standing on the slope, leaning, tucking, flipping and spinning as you did. Drawn twice: a depth-only pass then the colour, so it reads as one glassy shape with a rim glow. Fades near the camera, when it's on top of you, and after it finishes.
@@ -233,7 +244,7 @@ Fixed-step physics (1/60 s) with render interpolation; trees cut from 182 to 18/
 
 ## Next up
 1. Challenge links: share a run as a link that loads it as the ghost (the ghost encoding is ready; needs a shorter form for URLs)
-2. Measure on a real phone (Performance toggle on the start card); triangles are ~590–650k headless against a 500k budget, so trim whole-mountain mesh resolution or far-tile tree density
-3. Cheap visual upgrades: filmic colour grade in the existing shaders (no extra pass), snow streaks + slight camera roll at speed, light presets (bluebird, golden hour, flat light)
-4. Fun: medals per trail (bronze/silver/gold times), a flow meter that chains carves, tree threading, air and clean landings into Boost, landing grades + a short freeze and buzz on big landings
+2. Cheap visual upgrades: filmic colour grade in the existing shaders (no extra pass), snow streaks + slight camera roll at speed, light presets (bluebird, golden hour, flat light)
+3. Fun: medals per trail (bronze/silver/gold times), a flow meter that chains carves, tree threading, air and clean landings into Boost, landing grades + a short freeze and buzz on big landings
+4. Re-measure on the phone after the triangle trim; if it still dips, far-tile tree density or a coarser whole-mountain mesh
 5. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too

@@ -69,6 +69,12 @@ function jumpLip(x,z){for(const J of JUMPS){const dx=x-J.x,dz=z-J.z;if(dx*dx+dz*
   const jm=terrMatFine.clone();snowify(jm);jm.polygonOffset=true;jm.polygonOffsetFactor=-1;jm.polygonOffsetUnits=-2;
   scene.add(new THREE.Mesh(g,jm));
 })();
+let updatePoles=()=>{};const BANNERS=[];
+/* banners fade out as the chase camera reaches them (after a big jump it used to fly through, filling the screen with red) */
+const _bv=new THREE.Vector3();
+function fadeBanners(){for(const b of BANNERS){const u=b.userData;if(!u.inv){b.updateMatrixWorld();u.inv=b.matrixWorld.clone().invert();}
+  _bv.copy(camera.position).applyMatrix4(u.inv);   /* camera in the banner's frame: x across, y up, z through it */
+  const d=Math.hypot(_bv.z,Math.max(0,Math.abs(_bv.x)-u.w/2),Math.max(0,Math.abs(_bv.y)-u.h/2)),o=clamp((d-6)/10,0,1);b.material.opacity=o;b.visible=o>0.01;}}
 (function(){
   /* bamboo boundary poles on every named trail, one instanced draw */
   const poles=[];
@@ -78,7 +84,13 @@ function jumpLip(x,z){for(const J of JUMPS){const dx=x-J.x,dz=z-J.z;if(dx*dx+dz*
   /* a marker pole each side of every kicker's lip */
   JUMPS.forEach(J=>[-1,1].forEach(sd=>{const l=J.off+sd*(J.hw+1.6);poles.push([J.x+J.uz*(l-J.off),J.z-J.ux*(l-J.off)]);}));
   const pm=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.06,0.06,2.2,4,1,true),new THREE.MeshLambertMaterial({color:0xf2a900}),poles.length);
-  const m=new THREE.Matrix4();poles.forEach(([x,z],i)=>{m.makeTranslation(x,H(x,z)+1.1,z);pm.setMatrixAt(i,m);});scene.add(pm);
+  /* only poles within POLE_R of the streaming centre are drawn: refilled when the centre moves (a 64 m grid, so it's ~0.1 ms) */
+  const POLE_R=260,PG=new Map();poles.forEach(p=>{p[2]=H(p[0],p[1])+1.1;const k=Math.floor(p[0]/64)+','+Math.floor(p[1]/64);if(!PG.has(k))PG.set(k,[]);PG.get(k).push(p);});
+  const m=new THREE.Matrix4();pm.count=0;pm.frustumCulled=false;scene.add(pm);
+  let lpx=1e9,lpz=1e9;updatePoles=(cx,cz)=>{if(Math.abs(cx-lpx)+Math.abs(cz-lpz)<10)return;lpx=cx;lpz=cz;let n=0;const r=Math.ceil(POLE_R/64),gi=Math.floor(cx/64),gj=Math.floor(cz/64);
+    for(let i=gi-r;i<=gi+r;i++)for(let j=gj-r;j<=gj+r;j++){const a=PG.get(i+','+j);if(!a)continue;
+      for(const p of a){if((p[0]-cx)**2+(p[1]-cz)**2>POLE_R*POLE_R)continue;m.makeTranslation(p[0],p[2],p[1]);pm.setMatrixAt(n++,m);}}
+    pm.count=n;pm.instanceMatrix.needsUpdate=true;};
   /* snowguns on Superstar, Outer Limits and Cascade: one mesh for the guns, one for the plumes */
   const gg=[],gc=[],pl=[];
   TRAILS.forEach(tr=>{if(!tr.guns)return;let sd=1;
@@ -112,7 +124,7 @@ function jumpLip(x,z){for(const J of JUMPS){const dx=x-J.x,dz=z-J.z;if(dx*dx+dz*
     const tex=canvasTex(512,128,(g,w,h)=>{g.fillStyle=bg;g.fillRect(0,0,w,h);g.fillStyle=fg;g.font='bold '+(label.length>12?50:76)+'px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(label,w/2,h/2+4);});
     let top=-1e9;const ps=[];[-1,1].forEach(sd=>{const x=cx+nx*sd*fw,z=cz+nz*sd*fw,y=H(x,z);top=Math.max(top,y);ps.push(placed(new THREE.CylinderGeometry(0.33,0.33,9,8),x,y+4.5,z,0));});
     scene.add(new THREE.Mesh(mergeGeos(ps,[0x14202e,0x14202e]),new THREE.MeshLambertMaterial({vertexColors:true})));
-    const b=new THREE.Mesh(new THREE.PlaneGeometry(fw*2,fw*2/7),new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide}));b.position.set(cx,top+7.6,cz);b.rotation.y=headingAt(tr,i)+Math.PI;scene.add(b);}
+    const b=new THREE.Mesh(new THREE.PlaneGeometry(fw*2,fw*2/7),new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide,transparent:true}));b.position.set(cx,top+7.6,cz);b.rotation.y=headingAt(tr,i)+Math.PI;b.userData.w=fw*2;b.userData.h=fw*2/7;scene.add(b);BANNERS.push(b);}
   banner('Superstar',70,'FINISH','#e8432f','#fff');
   banner('Outer Limits',70,'◆◆ OUTER LIMITS','#111','#fff');
   /* a building in its own frame (front faces local −z), turned to face `ry` and merged into one mesh */

@@ -92,7 +92,7 @@ function branchy(g,lobes){const P=g.attributes.position;for(let i=0;i<P.count;i+
 /* two reusable tree models (origin at the ground, both tiers in one geometry, upper tier a touch lighter).
    Snow bands and trunk shading are per-pixel, so the near model needs only one ring of vertices per tier. */
 function treeModel(sl,su,ll,lu){const a=new THREE.ConeGeometry(2.6,6.5,sl,1,true),b=new THREE.ConeGeometry(1.8,5,su,1,true);if(ll)branchy(a,ll);if(lu)branchy(b,lu);
-  a.translate(0,3,0);b.translate(0,6.8,0);return mergeGeos([a,b],[1,1.13]);}
+  a.translate(0,3,0);b.translate(0,6.8,0);return dropDegen(mergeGeos([a,b],[1,1.13]));}
 const TREE_NEAR=treeModel(10,8,5,4),TREE_FAR=treeModel(6,5,0,0),treeMat=new THREE.MeshLambertMaterial({color:0xffffff,vertexColors:true});
 const treePool=[[],[]];   /* per-tile geometry views (shared GPU buffers, own bounding sphere) are recycled, never re-created */
 function treeView(lod){const pool=treePool[lod];if(pool.length)return pool.pop();const base=lod?TREE_FAR:TREE_NEAR,g=new THREE.BufferGeometry();
@@ -130,9 +130,10 @@ function powderAt(x,z,tr,e,w,ux,uz,lod){
   return Math.max(off,edge,flat*(1-0.5*sstep(-0.42*w,0,e)));}
 /* A tile is built as a generator that yields after every row of each heavy loop, so the streamer can spread one tile over several
    frames (a full-detail tile is ~14 ms of JS on a laptop, several times that on a phone). buildTile() runs one straight through. */
-function buildTile(ti,tj,lod){const g=tileGen(ti,tj,lod);let r;do r=g.next();while(!r.done);return r.value;}
-function* tileGen(ti,tj,lod){
-  const x0=ti*TILE,z0=tj*TILE;let fine=false;if(!lod)for(const b of MOGBOX)if(x0<b[2]&&x0+TILE>b[0]&&z0<b[3]&&z0+TILE>b[1]){fine=true;break;}
+function buildTile(ti,tj,lod,noFine){const g=tileGen(ti,tj,lod,noFine);let r;do r=g.next();while(!r.done);return r.value;}
+function tileMog(ti,tj){const x0=ti*TILE,z0=tj*TILE;for(const b of MOGBOX)if(x0<b[2]&&x0+TILE>b[0]&&z0<b[3]&&z0+TILE>b[1])return true;return false;}
+function* tileGen(ti,tj,lod,noFine){
+  const x0=ti*TILE,z0=tj*TILE;const fine=!lod&&!noFine&&tileMog(ti,tj);
   const res=lod?8:(fine?2:4),n=TILE/res+1,N=n*n,E=4*(n-1);
   const pos=new Float32Array((N+E)*3),col=new Float32Array((N+E)*3),uv=new Float32Array((N+E)*2),nor=new Float32Array((N+E)*3),tA=new Float32Array((N+E)*4),pw=new Float32Array(N+E);
   /* heights on a grid padded by one cell, so normals come from neighbours instead of four extra lookups per vertex */
@@ -188,7 +189,7 @@ function* tileGen(ti,tj,lod){
     tg.boundingSphere.center.set(x0+TILE/2,(ylo+yhi)/2,z0+TILE/2);tg.boundingSphere.radius=Math.hypot(TILE*0.72,(yhi-ylo)/2)+6;
     scene.add(low);}
   scene.add(mesh);   /* added last: nothing shows until the whole tile is ready */
-  return {mesh,low,up,trees,lod};
+  return {mesh,low,up,trees,lod,det:lod?'far':fine?'fine':'near'};
 }
 /* the whole mountain at low detail, under the streamed tiles: real ridgelines, white trail cuts and forest out to the horizon.
    It is a 52 m grid 2.5 m under the raw terrain, so in carved dips and cat-track benches (up to ~3.4 m below the raw ground)
@@ -218,20 +219,24 @@ function dropTile(t){scene.remove(t.mesh);t.mesh.geometry.dispose();if(t.low){sc
 /* Streaming: tiles within LOAD_R of the centre (60 m ahead of the skier), full detail within NEAR_R. Work is capped by time per frame
    (budget in ms) instead of by tile count; one tile is built a slice at a time across frames. budget >= 999 builds everything now
    (used behind the fade when a run or lift ride starts). A missing tile close to the centre is finished at once whatever the budget. */
-let tileJob=null;const TILE_URGENT=190;
+let tileJob=null;const TILE_URGENT=190,FINE_R=200,tileMogC=new Map();
+function isMogTile(i,j){const k=i+','+j;let v=tileMogC.get(k);if(v===undefined){v=tileMog(i,j);tileMogC.set(k,v);}return v;}
 function updateTiles(px,pz,budget){
   lowU.uHole.value.set(px,pz,lowHoleOff?0:LOW_HOLE);
   const ci=Math.floor(px/TILE),cj=Math.floor(pz/TILE),r=Math.ceil(LOAD_R/TILE)+1,want=new Map();
   for(let i=ci-r;i<=ci+r;i++)for(let j=cj-r;j<=cj+r;j++){
     if((i+1)*TILE<XMIN||i*TILE>XMAX||(j+1)*TILE<ZMIN||j*TILE>ZMAX)continue;
-    const d=Math.hypot((i+0.5)*TILE-px,(j+0.5)*TILE-pz);if(d>LOAD_R)continue;want.set(i+','+j,{i,j,d,lod:d>NEAR_R?1:0});}
+    const d=Math.hypot((i+0.5)*TILE-px,(j+0.5)*TILE-pz);if(d>LOAD_R)continue;const lod=d>NEAR_R?1:0,k=i+','+j;
+    /* 2 m detail (moguls, kickers) only within FINE_R; a tile that is already 2 m keeps it until 48 m past that */
+    let det=lod?'far':'near';if(!lod&&isMogTile(i,j)){const t=tiles.get(k);if(d<FINE_R||(t&&t.det==='fine'&&d<FINE_R+48))det='fine';}
+    want.set(k,{i,j,d,lod,det});}
   for(const [k,t] of [...tiles]){const [i,j]=k.split(',').map(Number);const d=Math.hypot((i+0.5)*TILE-px,(j+0.5)*TILE-pz);if(d>LOAD_R+TILE){dropTile(t);tiles.delete(k);}}
-  const todo=[];for(const [k,w] of want){const t=tiles.get(k);if(!t||t.lod!==w.lod)todo.push([k,w]);}
+  const todo=[];for(const [k,w] of want){const t=tiles.get(k);if(!t||t.det!==w.det)todo.push([k,w]);}
   todo.sort((a,b)=>a[1].d-b[1].d);
-  if(tileJob){const w=want.get(tileJob.k);if(!w||w.lod!==tileJob.lod||(tiles.get(tileJob.k)||{}).lod===w.lod)tileJob=null;}   /* no longer wanted at that detail */
+  if(tileJob){const w=want.get(tileJob.k);if(!w||w.det!==tileJob.det||(tiles.get(tileJob.k)||{}).det===w.det)tileJob=null;}   /* no longer wanted at that detail */
   const t0=performance.now(),all=budget>=999;let left=todo.length;
   while(left>0){
-    if(!tileJob){const nx=todo.find(([k])=>{const t=tiles.get(k),w=want.get(k);return !t||t.lod!==w.lod;});if(!nx)break;tileJob={k:nx[0],lod:nx[1].lod,urgent:!tiles.get(nx[0])&&nx[1].d<TILE_URGENT,gen:tileGen(nx[1].i,nx[1].j,nx[1].lod)};}
+    if(!tileJob){const nx=todo.find(([k])=>{const t=tiles.get(k),w=want.get(k);return !t||t.det!==w.det;});if(!nx)break;tileJob={k:nx[0],det:nx[1].det,urgent:!tiles.get(nx[0])&&nx[1].d<TILE_URGENT,gen:tileGen(nx[1].i,nx[1].j,nx[1].lod,nx[1].det!=='fine')};}
     let rr;do rr=tileJob.gen.next();while(!rr.done&&(all||tileJob.urgent||performance.now()-t0<budget));
     if(!rr.done)break;
     const old=tiles.get(tileJob.k);tiles.set(tileJob.k,rr.value);if(old)dropTile(old);tileJob=null;left--;

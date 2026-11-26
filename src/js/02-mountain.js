@@ -50,7 +50,12 @@ TRAILS.forEach((tr,ti)=>{
     const j0=Math.floor((Math.min(a[1],b[1])-reach)/CELL),j1=Math.floor((Math.max(a[1],b[1])+reach)/CELL);
     const seg=[a[0],a[1],b[0],b[1],tr,i];
     for(let ii=i0;ii<=i1;ii++)for(let jj=j0;jj<=j1;jj++){const k=ii*100003+jj;if(!segGrid.has(k))segGrid.set(k,[]);segGrid.get(k).push(seg);}}
-  if(tr.mog)MOGBOX.push([bx0-tr.w-10,bz0-tr.w-10,bx1+tr.w+10,bz1+tr.w+10]);
+  /* 2 m terrain only where the moguls are: the mogul section in ~120 m chunks (a whole-trail box made ~60% of near tiles 2 m) */
+  if(tr.mog){const a0=tr.mog[0]-25,a1=tr.L-tr.mog[1]+25,m=tr.w+10;let b=null;
+    for(let i=0;i<n;i++){if(cs[i]<a0||cs[i]>a1){continue;}const [x,z]=s[i];
+      if(!b||cs[i]-b[4]>120){if(b)MOGBOX.push(b.slice(0,4));b=[x,z,x,z,cs[i]];if(i>0&&cs[i-1]>=a0){const [px,pz]=s[i-1];b[0]=Math.min(x,px);b[1]=Math.min(z,pz);b[2]=Math.max(x,px);b[3]=Math.max(z,pz);}}
+      else{b[0]=Math.min(b[0],x);b[1]=Math.min(b[1],z);b[2]=Math.max(b[2],x);b[3]=Math.max(b[3],z);}}
+    if(b)MOGBOX.push(b.slice(0,4));for(let q=MOGBOX.length-1;q>=0&&MOGBOX[q].m===undefined;q--){const B=MOGBOX[q];B[0]-=m;B[1]-=m;B[2]+=m;B[3]+=m;B.m=1;}}
 });
 /* nearest three trails (by distance past their edge), so junctions blend instead of stepping. TI.* = the best one. */
 const TI={d:1e9,w:0,tr:null,cx:0,cz:0,i:0,t:0,sc:1e9,ux:0,uz:1,n:0};

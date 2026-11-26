@@ -15,7 +15,8 @@
     "test:sfx": "node tools/test/sfx.js",
     "test:camera": "node tools/test/camera.js",
     "test:tiles": "node tools/test/tile-stream.js",
-    "test:ghost": "node tools/test/ghost.js"
+    "test:ghost": "node tools/test/ghost.js",
+    "test:tris": "node tools/test/tris.js"
   },
   "devDependencies": {
     "playwright": "^1.49.0",

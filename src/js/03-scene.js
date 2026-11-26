@@ -96,6 +96,11 @@ function mergeGeos(gs,cols){let nv=0,ni=0;gs.forEach(g=>{nv+=g.attributes.positi
     if(g.index)for(let i=0;i<g.index.count;i++)I[io+i]=g.index.getX(i)+vo;else for(let i=0;i<p.count;i++)I[io+i]=i+vo;
     vo+=p.count;io+=g.index?g.index.count:p.count;});
   const out=new THREE.BufferGeometry();out.setAttribute('position',new THREE.BufferAttribute(P,3));out.setAttribute('normal',new THREE.BufferAttribute(Nn,3));out.setAttribute('color',new THREE.BufferAttribute(C,3));out.setIndex(new THREE.BufferAttribute(I,1));return out;}
+/* three r128 cones emit one zero-area triangle per segment at the apex: half of every tree's triangles drew nothing */
+function dropDegen(g){const P=g.attributes.position.array,I=g.index.array,keep=[];
+  for(let t=0;t<I.length;t+=3){const a=I[t]*3,b=I[t+1]*3,c=I[t+2]*3,ux=P[b]-P[a],uy=P[b+1]-P[a+1],uz=P[b+2]-P[a+2],vx=P[c]-P[a],vy=P[c+1]-P[a+1],vz=P[c+2]-P[a+2];
+    const cx=uy*vz-uz*vy,cy=uz*vx-ux*vz,cz=ux*vy-uy*vx;if(cx*cx+cy*cy+cz*cz>1e-12)keep.push(I[t],I[t+1],I[t+2]);}
+  g.setIndex(new THREE.BufferAttribute(new Uint32Array(keep),1));return g;}
 const _mm=new THREE.Matrix4(),_mq=new THREE.Quaternion(),_mp=new THREE.Vector3(),_ms=new THREE.Vector3(1,1,1),_mY=new THREE.Vector3(0,1,0);
 function placed(g,x,y,z,ry){_mq.setFromAxisAngle(_mY,ry||0);_mp.set(x,y,z);_mm.compose(_mp,_mq,_ms);return g.applyMatrix4(_mm);}
 
