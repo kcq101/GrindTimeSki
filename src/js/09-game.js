@@ -136,18 +136,45 @@ function addTracks(){
 }
 function bail(msg){S.crashes++;S.cool=1.2;S.shake=0.5;S.air=false;updPips();if(mixer){S.crashed=true;S.v=0;setMode('fall');}else S.v=0;toast(msg);
   for(let i=0;i<40;i++)emit(S.x,H(S.x,S.z)+0.5,S.z,(rnd()-0.5)*5,rnd()*3,(rnd()-0.5)*5,0.9);}
+/* trees are forgiving (Nov 26): the woods between trails should be fun to duck into, not a minefield.
+   - the hitbox is the trunk, not the branches (was 1.1*s+0.3 ≈ 1.5 m, now ≈ 0.6 m)
+   - an auto-weave nudges you around trunks in your path, harder at speed, so gaps feel bigger than they look
+   - a glancing hit slaps you off the branches and deflects you (keep ~80% speed, no crash);
+     only a square, fast hit slows you hard, and only a really fast square hit knocks you down (49+ mph)
+   - brushing past a trunk at speed sheds snow off the boughs and counts as threading the trees */
+const TREE_R=0.42,TREE_R0=0.18,WEAVE_D=8,WEAVE_W=1.7;
+let threadN=0,threadT=0,threadCd=0;
 function treeHit(gy,dt){
-  S.cool-=dt;
-  if(S.air&&S.y-gy>6)return;
-  if(S.cool>0)return;
-  const ci=Math.floor(S.x/TILE),cj=Math.floor(S.z/TILE);
+  S.cool-=dt;threadCd-=dt;threadT-=dt;if(threadT<0)threadN=0;
+  if(S.air&&S.y-gy>3)return;
+  const ci=Math.floor(S.x/TILE),cj=Math.floor(S.z/TILE),fx=Math.sin(S.th),fz=Math.cos(S.th),rx=Math.cos(S.th),rz=-Math.sin(S.th);
+  let weave=0,near=null,nearD=1e9;
   for(let a=ci-1;a<=ci+1;a++)for(let b=cj-1;b<=cj+1;b++){const tl=tiles.get(a+','+b);if(!tl)continue;
-    for(const t of tl.trees){const ddx=S.x-t[0],ddz=S.z-t[1];const r=1.1*t[2]+0.3;if(ddx*ddx+ddz*ddz<r*r){
-      S.crashes++;S.cool=1.2;S.shake=0.5;const sp=S.v;sfxTree(sp);S.v*=0.15;if(mixer&&sp>9){S.crashed=true;S.v=0;S.air=false;updPips();setMode('fall');}
-      const L=Math.hypot(ddx,ddz)||1;S.x+=ddx/L*1.2;S.z+=ddz/L*1.2;S.th+=(rnd()<0.5?-1:1)*0.9;
-      toast(sp>14?'YARD SALE!':'Oof — tree!');
-      for(let i=0;i<45;i++)emit(S.x,H(S.x,S.z)+0.6,S.z,(rnd()-0.5)*5,rnd()*3.5,(rnd()-0.5)*5,0.9);
-      return;}}}
+    for(const t of tl.trees){const ddx=S.x-t[0],ddz=S.z-t[1];if(ddx>WEAVE_D||ddx<-WEAVE_D||ddz>WEAVE_D||ddz<-WEAVE_D)continue;
+      const r=TREE_R*t[2]+TREE_R0,d2=ddx*ddx+ddz*ddz;
+      if(d2<r*r&&S.cool<=0){
+        const L=Math.sqrt(d2)||1,sp=S.v,head=Math.max(0,-(ddx*fx+ddz*fz)/L);   /* 1 = straight into the trunk */
+        S.x=t[0]+ddx/L*(r+0.15);S.z=t[1]+ddz/L*(r+0.15);
+        /* swing the heading to slide along the tangent, away from the trunk */
+        const side=(ddx*rx+ddz*rz)>=0?1:-1;S.th+=side*(0.35+0.6*head);
+        sfxTree(sp*(0.4+0.6*head));
+        for(let i=0;i<(head>0.7?40:18);i++)emitPuff(t[0]+(rnd()-0.5)*2,gy+1.5+rnd()*3,t[1]+(rnd()-0.5)*2,(rnd()-0.5)*2,-0.5-rnd(),(rnd()-0.5)*2,1+rnd()*0.6);
+        if(head<0.7||sp<8){S.v*=0.82-0.25*head;S.cool=0.5;S.shake=Math.max(S.shake,0.15);toast(sp>12?'Branch slap!':'Close one!');}
+        else if(sp>22&&head>0.9&&mixer){S.crashes++;S.cool=1.2;S.shake=0.5;S.crashed=true;S.v=0;S.air=false;updPips();setMode('fall');toast('YARD SALE!');
+          for(let i=0;i<45;i++)emit(S.x,H(S.x,S.z)+0.6,S.z,(rnd()-0.5)*5,rnd()*3.5,(rnd()-0.5)*5,0.9);}
+        else{S.v*=0.45;S.cool=0.8;S.shake=0.35;toast('Oof — tree!');}
+        threadN=0;return;}
+      if(S.air)continue;
+      /* auto-weave: trunks ahead and close to your line push your heading away from them */
+      const fwd=-(ddx*fx+ddz*fz);if(fwd>0&&fwd<WEAVE_D){const lat=-(ddx*rx+ddz*rz),reach=r+WEAVE_W;
+        if(Math.abs(lat)<reach){const k=(1-Math.abs(lat)/reach)*(1-fwd/WEAVE_D);weave+=(lat>=0?1:-1)*k;}}
+      if(d2<nearD){nearD=d2;near=t;}}}
+  if(!S.air&&S.v>2&&weave){const gain=clamp(S.v/12,0.4,1.6);S.th-=clamp(weave,-1.2,1.2)*gain*1.6*dt;}
+  /* threading: brushed past within ~1.8 m of a trunk at speed */
+  if(near&&!S.air&&S.v>9&&threadCd<=0){const d=Math.sqrt(nearD),r=TREE_R*near[2]+TREE_R0;if(d<r+1.3){
+    threadCd=0.45;threadN++;threadT=2.5;S.v=Math.min(41,S.v+0.35);
+    for(let i=0;i<10;i++)emitPuff(near[0]+(rnd()-0.5)*1.5,H(near[0],near[1])+1.8+rnd()*2.5,near[1]+(rnd()-0.5)*1.5,(rnd()-0.5)*1.5,-0.3-rnd()*0.6,(rnd()-0.5)*1.5,1.1);
+    if(threadN===3)toast('Threading the trees!');else if(threadN===6)toast('Tree ninja!');else if(threadN===10)toast('GLADE MASTER!');}}
 }
 /* skate stroke (quick flick up, or E): alternates skis; queues if you flick mid-stroke so fast flicks become a steady rhythm */
 const SKATE_T=0.55;let skateQ=0;
@@ -199,7 +226,7 @@ function physics(dt){
   const ti=trailInfo(S.x,S.z),off=(!ti.tr||ti.d>ti.w+1)&&!inPad(S.x,S.z)&&!S.pre;   /* the flats around a lift top are packed out, not powder */
   /* powder depth under the skis (smoothed so patches ease in): on the trail it adds drag and loosens the steering; off piste is deep */
   {const pt=S.pre?0:(off?1:powderAt(S.x,S.z,ti.tr,ti.d-ti.w,ti.w,ti.ux,ti.uz));S.pw=(S.pw||0)+(pt-(S.pw||0))*Math.min(1,dt*4);}
-  const mu=off?0.28:0.022+0.075*S.pw;
+  const mu=off?0.1:0.022+0.075*S.pw;   /* off piste 0.28 → 0.1 (Nov 26): deep but skiable, you keep moving through the woods */
   a-=g*mu*(S.v>0.1?1:0);
   /* hard turn at speed: the skis come across the fall line and skid (a hockey stop). Builds with how hard you steer and how fast you go */
   {const tgt=S.air?0:sstep(0.6,0.95,Math.abs(steer))*sstep(7,14,S.v);S.sk=(S.sk||0)+(tgt-(S.sk||0))*Math.min(1,dt*(tgt>(S.sk||0)?6:3.5));
@@ -213,7 +240,7 @@ function physics(dt){
   if(S.skT>=0){if(S.skT<0.28)S.v+=5.5*(1-sstep(3,10,S.v))*dt;S.skT+=dt;if(S.skT>SKATE_T)S.skT=-1;}
   if(S.pre&&S.v<5.5)S.v+=2.2*dt;   /* skating across the top to the trail you want */
   else if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
-  else if(S.v<2.5&&S.state==='ride'&&off)S.v+=3.2*dt;
+  else if(S.v<4&&S.state==='ride'&&off)S.v+=3.2*dt;
   S.v=clamp(S.v,0,41);
   const rate=steer*(2.3-Math.min(1.25,S.v/22))*(1+0.3*(S.sk||0))*(1-0.28*(S.pw||0));
   S.th-=rate*dt;

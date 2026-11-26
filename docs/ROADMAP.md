@@ -115,6 +115,15 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 - Compass: a heading strip under the speed (top right) scrolls with the camera; N in red, labels every 45°, ticks every 15°.
 - Cost: tile builds ~20% slower (curvature + powder), autopilot unchanged (47/55 finish, same times).
 
+## Forgiving trees, skiable woods (Nov 26, 2026)
+- Kevin: the trees between trails should be fun to duck into, not prohibitive.
+- Hitbox is the trunk only (0.42*s+0.18 ≈ 0.6 m, was 1.1*s+0.3 ≈ 1.5 m).
+- Auto-weave: trunks within 8 m ahead and near your line nudge your heading away, scaled with speed.
+- Glancing hit = "Branch slap!": deflected along the trunk, keep ~80% speed, no crash count. Square hit slows to 45%. Only a square hit at 49+ mph knocks you down (was any hit over 20 mph).
+- Brushing past trunks at speed sheds snow off the boughs, adds a little speed, and chains: "Threading the trees!" (3), "Tree ninja!" (6), "GLADE MASTER!" (10).
+- Off-piste powder drag 0.28 → 0.1, and the off-piste crawl assist kicks in below 9 mph instead of 5.6, so you keep moving in the woods.
+- Measured (25 random woods spots, 10 s straight down the fall line, no steering): falls 10 → 3 (remaining are terrain ejections), avg 10 → 28 mph, distance 48 → 127 m per run; tree contacts per 100 m 2.4 → 1.3. On-trail autopilot unchanged (45/55).
+
 ## Valley cloud banks + snowier, varied trees (Nov 25, 2026)
 - From Kevin's photo off a Killington summit (clear above, cloud rolling through the valleys, heavily rimed spruce): a separate valley-cloud layer in 13-weather.js. 10 big soft camera-facing quads (one mesh, +1 draw call) spawn 400-1,900 m out, floating 110-280 m below the camera over lower ground, drift with the wind and slowly breathe. Driven by its own ~5-minute cycle and strongest when it's clear where you are (fades as local fog thickens); off on the trail map. `__wx.forceBank = 0..1` pins it for tests.
 - Trees: size variety (0.7-1.45 base, 12% saplings at 0.55x, 7% big at 1.35x), separate height and width scales per tree, stunted toward the summits (up to -30% above 950-1,200 m). Snow load per tree in the shader from the instance position: a random share plus more with altitude; it widens the snow bands, adds snowy tips and an overall frosting. Same geometry, no new draw calls.
