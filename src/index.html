@@ -31,6 +31,9 @@
   .sq{width:11px;height:11px;background:#2f6fe0;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
   .dia{width:11px;height:11px;background:#111;transform:rotate(45deg);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
   .sub{font-size:12px;opacity:.9;margin-top:3px;font-weight:500}
+  /* gap to your ghost, next to the clock: green = ahead, red = behind */
+  #gap{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:8px;font-weight:800;font-size:12px;background:rgba(20,32,46,.55);color:#cfe9ff;font-variant-numeric:tabular-nums}
+  #gap.ga{color:#6ff09a}#gap.gb{color:#ff8a78}
   .spd{text-align:right}
   /* compass heading strip (top right, under the speed): scrolls with the camera, N in red, centre tick = where you're looking */
   #cmp{position:relative;width:104px;height:20px;margin:7px 0 0 auto;overflow:hidden;border-radius:10px;background:rgba(20,32,52,.28);
@@ -165,7 +168,7 @@
 <div class="hud hidden" id="top">
   <div>
     <div class="trail"><span id="ticon" class="ic"><div class="dia"></div></span><span id="ttext">SUPERSTAR</span></div>
-    <div class="sub" id="time">0:00.0</div>
+    <div class="sub"><span id="time">0:00.0</span><span id="gap" class="hidden"></span></div>
   </div>
   <div class="spd"><b id="spd">0</b><span>MPH</span><div class="sub" id="vert">1,190 ft to go</div><div id="cmp"><div id="cmpT"></div></div></div>
 </div>

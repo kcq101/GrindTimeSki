@@ -124,6 +124,20 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 - Off-piste powder drag 0.28 → 0.1, and the off-piste crawl assist kicks in below 9 mph instead of 5.6, so you keep moving in the woods.
 - Measured (25 random woods spots, 10 s straight down the fall line, no steering): falls 10 → 3 (remaining are terrain ejections), avg 10 → 28 mph, distance 48 → 127 m per run; tree contacts per 100 m 2.4 → 1.3. On-trail autopilot unchanged (45/55).
 
+## Smooth terrain streaming (Nov 26, 2026)
+- Kevin: make it smoother without spending more compute. Measured first (`npm run test:tiles`): a full-detail 128 m tile is ~13–14 ms of JS to build on the workspace CPU (heights, powder, curvature, trees), a far tile ~2–3 ms, and the streamer built up to two tiles in one frame. Skiing Great Eastern that meant 127 frames over 8 ms and spikes to 64 ms; a phone is several times slower, so those were visible stutters.
+- `tileGen` (05-terrain.js) builds a tile as a generator that yields after every row of each heavy loop; `updateTiles` now spends a time budget per frame (`__tileMs`: 2.5 ms, 5 ms when more than 12 tiles are waiting) instead of a tile count, resuming the same tile next frame. A tile joins the scene only when it's complete. Calls with budget ≥ 999 (behind the fade when a run or lift ride starts) still build everything at once, and a missing tile within 190 m of the stream centre is finished immediately.
+- Result on the same runs: Great Eastern worst frame 64 → 9.5 ms, frames over 8 ms 127 → 1; Superstar, Outer Limits, Ovation worst 3–6 ms. No missing or low-detail ground under or ahead of the skier on any of them. Draw calls and triangles unchanged.
+
+## Ghost racer (Nov 26, 2026)
+- 15-ghost.js. While the clock runs, the run is sampled 10×/s: position (2 cm steps from the last reconstructed point, so it never drifts), heading, height in the air, lean, crouch, flip and spin. 11 bytes a sample: Superstar (48 s) is ~7 KB in localStorage. Finish at a base faster than the saved ghost for that start trail (any base) and your run becomes the ghost; if storage fills, the ghost raced longest ago is dropped.
+- Next time you start that trail, a see-through blue skier (primitives merged into one ~600-triangle mesh; tuck folds the upper body in the vertex shader) replays it on your clock, standing on the slope, leaning, tucking, flipping and spinning as you did. Drawn twice: a depth-only pass then the colour, so it reads as one glassy shape with a rim glow. Fades near the camera, when it's on top of you, and after it finishes.
+- A small blue marker floats over its head, constant size on screen and drawn over terrain, so you can find it 60 m down the hill.
+- HUD: a pill next to the clock shows "Ghost 0:48.2" for the first seconds, then the gap: green −1.2 when you're ahead, red +0.8 behind. The gap is the ghost's time at the point on its line nearest you (searched in a window along its line), so it's fair anywhere on the run; it hides when you're more than 25 m off the ghost's line.
+- Finish card: "Ghost saved: race it next time." / "Beat your ghost by 1.2 s." / "Your ghost was 5.8 s faster." / "Dead heat with your ghost."
+- Cost: +2 draw calls and ~1.2k triangles for the figure, +1 sprite for the marker, only while a ghost is on screen. `npm run test:ghost` skis a run, then a slower one (gap +0.4 → +1.8 → +3.6 s, ghost 7 → 36 → 65 m ahead), then the same line again (dead heat). Test hooks: `window.__kr.ghost`.
+- Challenge links can reuse this encoding (a 48 s run is ~10 KB of base64; drop to 5 Hz or trim channels for a link).
+
 ## Valley cloud banks + snowier, varied trees (Nov 25, 2026)
 - From Kevin's photo off a Killington summit (clear above, cloud rolling through the valleys, heavily rimed spruce): a separate valley-cloud layer in 13-weather.js. 10 big soft camera-facing quads (one mesh, +1 draw call) spawn 400-1,900 m out, floating 110-280 m below the camera over lower ground, drift with the wind and slowly breathe. Driven by its own ~5-minute cycle and strongest when it's clear where you are (fades as local fog thickens); off on the trail map. `__wx.forceBank = 0..1` pins it for tests.
 - Trees: size variety (0.7-1.45 base, 12% saplings at 0.55x, 7% big at 1.35x), separate height and width scales per tree, stunted toward the summits (up to -30% above 950-1,200 m). Snow load per tree in the shader from the instance position: a random share plus more with altitude; it widens the snow bands, adds snowy tips and an overall frosting. Same geometry, no new draw calls.
@@ -218,6 +232,8 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 Fixed-step physics (1/60 s) with render interpolation; trees cut from 182 to 18/11 tris and merged per tile; shadow map replaced by contact + decal shadows; chairs instanced; snow shader moved to noise-texture fetches; render-resolution scaling on phones; performance overlay toggle on the start card.
 
 ## Next up
-1. Challenge links + ghost
-2. Measure on a real phone; triangles are now ~530–610k headless, so likely trim whole-mountain mesh resolution or far-tile tree density
-3. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too
+1. Challenge links: share a run as a link that loads it as the ghost (the ghost encoding is ready; needs a shorter form for URLs)
+2. Measure on a real phone (Performance toggle on the start card); triangles are ~590–650k headless against a 500k budget, so trim whole-mountain mesh resolution or far-tile tree density
+3. Cheap visual upgrades: filmic colour grade in the existing shaders (no extra pass), snow streaks + slight camera roll at speed, light presets (bluebird, golden hour, flat light)
+4. Fun: medals per trail (bronze/silver/gold times), a flow meter that chains carves, tree threading, air and clean landings into Boost, landing grades + a short freeze and buzz on big landings
+5. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too

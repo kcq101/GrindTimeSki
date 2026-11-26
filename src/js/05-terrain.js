@@ -128,13 +128,17 @@ function powderAt(x,z,tr,e,w,ux,uz,lod){
   const edge=sstep(-Math.min(0.4*w,5),-0.5,e)*(0.5+0.5*n)*(tr.k===1?0.55:0.9);
   let flat=0;if(tr.k!==1&&!lod){const bs=(a,b)=>Math.hypot(Bm(a+4,b)-Bm(a-4,b),Bm(a,b+4)-Bm(a,b-4))/8,s0=bs(x,z),s1=bs(x-ux*30,z-uz*30);   /* bare-earth slope: cheap, and the DEM is what decides where a pitch runs out */flat=sstep(0.04,0.15,s1-s0)*sstep(0.2,0.6,n)*0.95;}
   return Math.max(off,edge,flat*(1-0.5*sstep(-0.42*w,0,e)));}
-function buildTile(ti,tj,lod){
+/* A tile is built as a generator that yields after every row of each heavy loop, so the streamer can spread one tile over several
+   frames (a full-detail tile is ~14 ms of JS on a laptop, several times that on a phone). buildTile() runs one straight through. */
+function buildTile(ti,tj,lod){const g=tileGen(ti,tj,lod);let r;do r=g.next();while(!r.done);return r.value;}
+function* tileGen(ti,tj,lod){
   const x0=ti*TILE,z0=tj*TILE;let fine=false;if(!lod)for(const b of MOGBOX)if(x0<b[2]&&x0+TILE>b[0]&&z0<b[3]&&z0+TILE>b[1]){fine=true;break;}
   const res=lod?8:(fine?2:4),n=TILE/res+1,N=n*n,E=4*(n-1);
   const pos=new Float32Array((N+E)*3),col=new Float32Array((N+E)*3),uv=new Float32Array((N+E)*2),nor=new Float32Array((N+E)*3),tA=new Float32Array((N+E)*4),pw=new Float32Array(N+E);
   /* heights on a grid padded by one cell, so normals come from neighbours instead of four extra lookups per vertex */
   const np=n+2,hp=new Float32Array(np*np);
   for(let j=0;j<np;j++)for(let i=0;i<np;i++){const x=x0+(i-1)*res,z=z0+(j-1)*res;
+    if(i===0&&j>0)yield;
     if(i===0||j===0||i===np-1||j===np-1){hp[j*np+i]=H(x,z);continue;}
     const k=(j-1)*n+(i-1),y=H(x,z),t=TI;hp[j*np+i]=y;const e=t.tr?t.d-t.w:1e9;
     pos[k*3]=x;pos[k*3+1]=y;pos[k*3+2]=z;tA[k*4]=clamp(e,-60,200);tA[k*4+1]=t.tr?clamp(t.d/t.w,0,3):3;tA[k*4+2]=t.tr?t.ux:0;tA[k*4+3]=t.tr?t.uz:1;
@@ -144,7 +148,7 @@ function buildTile(ti,tj,lod){
     if(fine&&t.tr&&t.tr.mog&&e<0){const mk=mogK(t.tr,t.i,t.t)*sstep(0,-6,e);if(mk>0){const mv=clamp((mogul(x,z)+0.35)/1.3,0,1);cTmp.multiplyScalar(1-mk*(0.16-0.16*mv));}}
     {const tr=t.tr,w=t.w,ux=t.ux,uz=t.uz;pw[k]=(pad||ec<e)?0:powderAt(x,z,tr,e,w,ux,uz,lod);}   /* after everything that reads TI: powderAt calls H */
     col[k*3]=cTmp.r;col[k*3+1]=cTmp.g;col[k*3+2]=cTmp.b;uv[k*2]=x/2.4;uv[k*2+1]=z/7;}
-  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const k=j*n+i,c=(j+1)*np+(i+1);
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const k=j*n+i,c=(j+1)*np+(i+1);if(i===0&&(j&3)===0)yield;
     const gx=(hp[c+1]-hp[c-1])/(2*res),gz=(hp[c+np]-hp[c-np])/(2*res),il=1/Math.sqrt(gx*gx+1+gz*gz);nor[k*3]=-gx*il;nor[k*3+1]=il;nor[k*3+2]=-gz*il;
     /* hollows a shade darker, crests a touch brighter (near tiles only): makes rollers and dips readable even facing the sun */
     if(!lod){const lap=(hp[c+1]+hp[c-1]+hp[c+np]+hp[c-np]-4*hp[c])/(res*res),f=1-clamp(lap*CURV_K,-0.035,0.09);col[k*3]*=f;col[k*3+1]*=f;col[k*3+2]*=Math.min(1,f*1.015+0.004);}
@@ -152,14 +156,14 @@ function buildTile(ti,tj,lod){
   /* skirts hide cracks between near and far detail levels */
   const ring=[];for(let i=0;i<n-1;i++)ring.push(i);for(let j=0;j<n-1;j++)ring.push(j*n+n-1);for(let i=n-1;i>0;i--)ring.push((n-1)*n+i);for(let j=n-1;j>0;j--)ring.push(j*n);
   ring.forEach((src,r)=>{const k=N+r;pos[k*3]=pos[src*3];pos[k*3+1]=pos[src*3+1]-5;pos[k*3+2]=pos[src*3+2];col[k*3]=col[src*3];col[k*3+1]=col[src*3+1];col[k*3+2]=col[src*3+2];nor[k*3]=nor[src*3];nor[k*3+1]=nor[src*3+1];nor[k*3+2]=nor[src*3+2];uv[k*2]=uv[src*2];uv[k*2+1]=uv[src*2+1];for(let q=0;q<4;q++)tA[k*4+q]=tA[src*4+q];pw[k]=pw[src];});
-  const idx=[];
+  yield;const idx=[];
   for(let j=0;j<n-1;j++)for(let i=0;i<n-1;i++){const a=j*n+i,b=a+1,c=a+n,d=c+1;idx.push(a,c,b,b,c,d);}
   for(let r=0;r<E;r++){const a=ring[r],b=ring[(r+1)%E],sa=N+r,sb=N+(r+1)%E;idx.push(a,sa,b,b,sa,sb);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.setAttribute('uv',new THREE.BufferAttribute(uv,2));g.setAttribute('normal',new THREE.BufferAttribute(nor,3));g.setAttribute('aT',new THREE.BufferAttribute(tA,4));g.setAttribute('aP',new THREE.BufferAttribute(pw,1));g.setIndex(idx);
-  const mesh=new THREE.Mesh(g,fine?terrMatFine:terrMat);mesh.receiveShadow=!lod;scene.add(mesh);
+  const mesh=new THREE.Mesh(g,fine?terrMatFine:terrMat);mesh.receiveShadow=!lod;yield;
   /* trees: deterministic per cell, so a tile rebuilds identically every time it streams back in. Glades keep a sparse stand. */
   const step=lod?8:6,trees=[];
-  for(let cj=0;cj<TILE/step;cj++)for(let ci=0;ci<TILE/step;ci++){
+  for(let cj=0;cj<TILE/step;cj++)for(let ci=0;ci<TILE/step;ci++){if(ci===0&&(cj&1)===0)yield;
     const gi=Math.round(x0/step)+ci,gj=Math.round(z0/step)+cj;
     const x=x0+(ci+hash2(gi,gj,1))*step,z=z0+(cj+hash2(gi,gj,2))*step;
     if(z<ZMIN||z>ZMAX||x<XMIN||x>XMAX)continue;
@@ -172,17 +176,18 @@ function buildTile(ti,tj,lod){
     let s=0.7+hash2(gi,gj,4)*0.75;const r8=hash2(gi,gj,8);if(r8<0.12)s*=0.55;else if(r8>0.93)s*=1.35;
     trees.push([x,z,s,hash2(gi,gj,5),hash2(gi,gj,7)]);}
   if(!lod&&trees.length){const cg=mesh.geometry.attributes.color;const tg=new Map();trees.forEach(t=>{const k=Math.floor(t[0]/8)+','+Math.floor(t[1]/8);if(!tg.has(k))tg.set(k,[]);tg.get(k).push(t);});
-    for(let k=0;k<N;k++){const x=pos[k*3],z=pos[k*3+2];let occ=0;const ci=Math.floor(x/8),cj=Math.floor(z/8);
+    for(let k=0;k<N;k++){if(k%(n*4)===0)yield;const x=pos[k*3],z=pos[k*3+2];let occ=0;const ci=Math.floor(x/8),cj=Math.floor(z/8);
       for(let a=ci-1;a<=ci+1;a++)for(let b=cj-1;b<=cj+1;b++){const arr=tg.get(a+','+b);if(!arr)continue;for(const t of arr){const d=Math.hypot(x-t[0],z-t[1]);occ=Math.max(occ,1-sstep(1.2,4.2*t[2],d));}}
       if(occ>0){const f=1-0.3*occ;cg.array[k*3]*=f;cg.array[k*3+1]*=f*1.01;cg.array[k*3+2]*=Math.min(1,f*1.06);}}
     cg.needsUpdate=true;}
   let low=null,up=null;
   if(trees.length){const tg=treeView(lod?1:0);low=new THREE.InstancedMesh(tg,treeMat,trees.length);
     const m=_tm4,q=_tq,sc=_tv1,p=_tv2,c=_tc;let ylo=1e9,yhi=-1e9;
-    trees.forEach(([x,z,s,h,v],i)=>{const y=H(x,z);const st=1-0.3*sstep(950,1200,y),hs=s*st*(0.85+0.4*(v||0)),ws=s*st*(0.82+0.3*h);ylo=Math.min(ylo,y);yhi=Math.max(yhi,y+12*hs);q.setFromAxisAngle(_Y,h*6.283);sc.set(ws,hs,ws);p.set(x,y,z);m.compose(p,q,sc);low.setMatrixAt(i,m);
-      c.setHSL(0.37+h*0.05,0.32+h*0.15,0.17+h*0.07);low.setColorAt(i,c);});
+    for(let i=0;i<trees.length;i++){if(i&&(i&127)===0)yield;const [x,z,s,h,v]=trees[i];const y=H(x,z);const st=1-0.3*sstep(950,1200,y),hs=s*st*(0.85+0.4*(v||0)),ws=s*st*(0.82+0.3*h);ylo=Math.min(ylo,y);yhi=Math.max(yhi,y+12*hs);q.setFromAxisAngle(_Y,h*6.283);sc.set(ws,hs,ws);p.set(x,y,z);m.compose(p,q,sc);low.setMatrixAt(i,m);
+      c.setHSL(0.37+h*0.05,0.32+h*0.15,0.17+h*0.07);low.setColorAt(i,c);}
     tg.boundingSphere.center.set(x0+TILE/2,(ylo+yhi)/2,z0+TILE/2);tg.boundingSphere.radius=Math.hypot(TILE*0.72,(yhi-ylo)/2)+6;
     scene.add(low);}
+  scene.add(mesh);   /* added last: nothing shows until the whole tile is ready */
   return {mesh,low,up,trees,lod};
 }
 /* the whole mountain at low detail, under the streamed tiles: real ridgelines, white trail cuts and forest out to the horizon.
@@ -210,6 +215,10 @@ const lowMtn=(function(){const X0=-3400,X1=5000,Z0=-3900,Z1=3000,st=52,nx=Math.r
   const m=new THREE.Mesh(g,mat);m.renderOrder=1;scene.add(m);   /* drawn after the tiles so early-z rejects it where they cover it */
   lowU.uBox.value.set(XMIN,ZMIN,XMAX,ZMAX);return m;})();
 function dropTile(t){scene.remove(t.mesh);t.mesh.geometry.dispose();if(t.low){scene.remove(t.low);t.low.dispose&&t.low.dispose();treePool[t.low.geometry.userData.lod].push(t.low.geometry);}}
+/* Streaming: tiles within LOAD_R of the centre (60 m ahead of the skier), full detail within NEAR_R. Work is capped by time per frame
+   (budget in ms) instead of by tile count; one tile is built a slice at a time across frames. budget >= 999 builds everything now
+   (used behind the fade when a run or lift ride starts). A missing tile close to the centre is finished at once whatever the budget. */
+let tileJob=null;const TILE_URGENT=190;
 function updateTiles(px,pz,budget){
   lowU.uHole.value.set(px,pz,lowHoleOff?0:LOW_HOLE);
   const ci=Math.floor(px/TILE),cj=Math.floor(pz/TILE),r=Math.ceil(LOAD_R/TILE)+1,want=new Map();
@@ -219,7 +228,13 @@ function updateTiles(px,pz,budget){
   for(const [k,t] of [...tiles]){const [i,j]=k.split(',').map(Number);const d=Math.hypot((i+0.5)*TILE-px,(j+0.5)*TILE-pz);if(d>LOAD_R+TILE){dropTile(t);tiles.delete(k);}}
   const todo=[];for(const [k,w] of want){const t=tiles.get(k);if(!t||t.lod!==w.lod)todo.push([k,w]);}
   todo.sort((a,b)=>a[1].d-b[1].d);
-  let n=0;for(const [k,w] of todo){if(n++>=budget)break;const old=tiles.get(k);tiles.set(k,buildTile(w.i,w.j,w.lod));if(old)dropTile(old);}
-  return todo.length;
+  if(tileJob){const w=want.get(tileJob.k);if(!w||w.lod!==tileJob.lod||(tiles.get(tileJob.k)||{}).lod===w.lod)tileJob=null;}   /* no longer wanted at that detail */
+  const t0=performance.now(),all=budget>=999;let left=todo.length;
+  while(left>0){
+    if(!tileJob){const nx=todo.find(([k])=>{const t=tiles.get(k),w=want.get(k);return !t||t.lod!==w.lod;});if(!nx)break;tileJob={k:nx[0],lod:nx[1].lod,urgent:!tiles.get(nx[0])&&nx[1].d<TILE_URGENT,gen:tileGen(nx[1].i,nx[1].j,nx[1].lod)};}
+    let rr;do rr=tileJob.gen.next();while(!rr.done&&(all||tileJob.urgent||performance.now()-t0<budget));
+    if(!rr.done)break;
+    const old=tiles.get(tileJob.k);tiles.set(tileJob.k,rr.value);if(old)dropTile(old);tileJob=null;left--;
+    if(!all&&performance.now()-t0>=budget)break;}
+  return left;
 }
-

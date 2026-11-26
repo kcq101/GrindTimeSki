@@ -5,7 +5,7 @@ const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
 const diffIcon=d=>d==='g'?'<div class="ci"></div>':d==='b'?'<div class="sq"></div>':d==='dd'?'<div class="dia"></div><div class="dia"></div>':'<div class="dia"></div>';
-function reset(){S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
+function reset(){S.runId=(S.runId||0)+1;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
   S.x=RUN.x;S.z=RUN.z;S.gyp=undefined;S.gvp=undefined;setTxt('lblTop',RUN.top);setTxt('lblBot',RUN.dest?RUN.dest.name:'Base');S.th=RUN.th;S.v=2;S.t=0;S.top=0;S.crashes=0;S.cool=0;S.shake=0;S.finT=0;steer=0;steerIn=0;snapPrev();lerpIn(1);lerpOut();placeCam(true);}
 let curTrail='';
 function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
@@ -51,7 +51,7 @@ function startLift(L){
     S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
     myChair.visible=false;myCab.visible=false;myRide=L.gond?myCab:myChair;
     gapChairs(L,S.ls);if(L.gond)myCab.userData.mat.color.setHex(L.col);else myChair.children[1].material.color.setHex(L.col);myRide.visible=true;blob.visible=false;castSh.visible=false;clearTracks();
-    updateTiles(L.bx+L.dx*60,L.bz+L.dz*60,30);
+    updateTiles(L.bx+L.dx*60,L.bz+L.dz*60,999);
     if(mixer){crouch=0.55;setMode('ride',0);}
     showHud(false);$('top').classList.remove('hidden');$('bot').classList.remove('hidden');$('skipBtn').classList.remove('hidden');$('lookHint').classList.remove('hidden');
     $('ticon').innerHTML='<span style="font-size:15px">▲</span>';$('ttext').textContent=L.name.toUpperCase();

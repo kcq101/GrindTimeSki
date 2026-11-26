@@ -49,7 +49,7 @@ function lerpIn(a){CUR.x=S.x;CUR.z=S.z;CUR.y=S.y||0;CUR.th=S.th;CUR.v=S.v;
 function lerpOut(){S.x=CUR.x;S.z=CUR.z;if(S.air)S.y=CUR.y;S.th=CUR.th;S.v=CUR.v;}
 function simStep(h){
   const r=physics(h);
-  if(S.state==='ride'){if(!S.pre)S.t+=h;const b=baseHit();if(b){S.endBase=b;S.state='finishing';S.finT=0;toast(b.name.toUpperCase()+'!');}
+  if(S.state==='ride'){if(!S.pre)S.t+=h;ghostTick();const b=baseHit();if(b){S.endBase=b;S.state='finishing';S.finT=0;toast(b.name.toUpperCase()+'!');}
     else if(S.x<XMIN+22||S.x>XMAX-22||S.z<ZMIN+22||S.z>ZMAX-22){S.endBase=null;S.endWhy='Edge of the map';S.state='finishing';S.finT=0;toast('Edge of the map');}}
   else{S.v*=1-h*1.6;S.finT+=h;if(S.finT>1.6){S.state='done';finish();}}
   S.shake=Math.max(0,S.shake-h);
@@ -58,6 +58,10 @@ function simStep(h){
 const _hud={};function setTxt(id,v){v=String(v);if(_hud[id]!==v){_hud[id]=v;$(id).textContent=v;}}
 let _barP=-1;function setBar(pr){const q=Math.round(pr*400)/4;if(q!==_barP){_barP=q;$('fill').style.width=q+'%';$('dot').style.left=q+'%';}}
 let _vigO=-1,_tileX=1e9,_tileZ=1e9,_tilePend=1;
+/* terrain streaming gets ~2.5 ms of JS per frame (more when it falls behind); see updateTiles in 05-terrain.js */
+const TILE_MS={base:2.5,behind:5};window.__tileMs=TILE_MS;
+function streamTiles(){const tx=S.state==='menu'?MENU.tx:S.x+Math.sin(S.th)*60,tz=S.state==='menu'?MENU.tz:S.z+Math.cos(S.th)*60;
+  if(_tilePend>0||Math.abs(tx-_tileX)+Math.abs(tz-_tileZ)>12){_tilePend=updateTiles(tx,tz,_tilePend>12?TILE_MS.behind:TILE_MS.base);_tileX=tx;_tileZ=tz;}}
 /* dynamic resolution: frame time EMA, checked every 2 s */
 function adaptRes(ms,dt){if(ms<80)RES.ema=RES.ema*0.94+ms*0.06;RES.t+=dt;if(RES.t<2)return;RES.t=0;
   let s=RES.scale;if(RES.ema>21&&s>RES.min+1e-3)s=Math.max(RES.min,s-0.1);else if(RES.ema<13&&s<RES.max-1e-3)s=Math.min(RES.max,s+0.05);
@@ -69,16 +73,16 @@ function frame(now){
   const raw=now-last,fdt=Math.min(0.1,raw/1000),dt=Math.min(0.05,raw/1000);last=now;fcount++;
   adaptRes(raw,dt);perfHud(raw,dt);
   updateChairs(dt);updCrowd(now);mapFrame(dt);
-  {const tx=S.state==='menu'?MENU.tx:S.x+Math.sin(S.th)*60,tz=S.state==='menu'?MENU.tz:S.z+Math.cos(S.th)*60;
-   if(_tilePend>0||Math.abs(tx-_tileX)+Math.abs(tz-_tileZ)>12){const todo=updateTiles(tx,tz,2);_tilePend=Math.max(0,todo-2);_tileX=tx;_tileZ=tz;}}
+  streamTiles();
   if(S.state==='ride'||S.state==='finishing'){
-    if(window.__freeze){if(window.__camHook)window.__camHook(camera,skier,S);else placeCam(true);return endFrame(now,dt);}   /* test hook: hold the pose for screenshots */
+    if(window.__freeze){if(window.__camHook)window.__camHook(camera,skier,S);else placeCam(true);ghostFrame(S.t,dt);return endFrame(now,dt);}   /* test hook: hold the pose for screenshots */
     /* physics runs in fixed 1/60 s steps (what it was tuned at); visuals interpolate between the last two steps */
     simAcc+=fdt;let n=0,r=lastSim;
     while(simAcc>=STEP&&n<MAX_STEPS){snapPrev();r=simStep(STEP);simAcc-=STEP;n++;if(S.state!=='ride'&&S.state!=='finishing')break;}
     if(n===MAX_STEPS)simAcc=0;lastSim=r;
     if(S.state==='done')return endFrame(now,dt);
     const al=simAcc/STEP;lerpIn(al);
+    ghostFrame(S.pre?0:Math.max(0,S.t-STEP*(1-al)),dt);   /* the clock of the step being shown, so the ghost moves as smoothly as you do */
     const y=S.air?S.y:H(S.x,S.z)+0.02;const [gx,gz]=grad(S.x,S.z);
     placeShadows(gx,gz,Math.max(0,y-H(S.x,S.z)));
     alignToSlope(S.air?gx*0.5:gx,S.air?gz*0.5:gz,dt);poseSkier(y);
@@ -110,6 +114,7 @@ function endFrame(now,dt){
   {const sp=(S.state==='ride'||S.state==='finishing')?clamp(S.v/30,0,1):0;const o=Math.round((0.45+sp*0.5)*25)/25;if(o!==_vigO){_vigO=o;$('vig').style.opacity=o;}}
   if(window.__close&&BN.head){BN.head.getWorldPosition(_hp);const a=window.__close;camera.position.set(_hp.x+Math.sin(S.th+a)*1.3,_hp.y+0.15,_hp.z+Math.cos(S.th+a)*1.3);camera.lookAt(_hp.x,_hp.y+0.05,_hp.z);}
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.style.opacity=0;}
+  if(S.state!=='ride'&&S.state!=='finishing')ghostG.visible=ghostPin.visible=false;ghostHud(dt);
   weatherFrame(dt,now);sfxFrame(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
@@ -124,13 +129,14 @@ function finish(){
   $('fTime').textContent=fmt(S.t);$('fTop').textContent=Math.round(S.top*2.237);$('fCr').textContent=S.crashes;
   let msg='';if(base){if(best===null||S.t<best){if(best!==null)msg='New personal best! Old: '+fmt(best);else msg='First run in the books.';best=S.t;try{localStorage.setItem(key,String(best));}catch(e){}}else msg='Personal best: '+fmt(best);}
   else msg=ft(drop).toLocaleString()+' ft of vert.';
+  {const g=ghostFinish(base);if(g)msg+=' '+g;}
   const ol=route.includes('Outer Limits')&&base&&base.id==='bear';
   $('fBest').textContent=(ol?(S.crashes===0?'The Deck goes wild! ':'The Deck jeers. '):'')+msg+(S.tricks?' · Tricks landed: '+S.tricks:'');
   $('nextK').textContent=base?'Next chair from '+base.name:'Skate to a chair';showLifts(base,'liftList');
   $('sess').textContent='Today: '+SES.laps+' run'+(SES.laps===1?'':'s')+' · '+Math.round(SES.vert).toLocaleString()+' vert ft · '+SES.chairs+' chair'+(SES.chairs===1?'':'s');
   $('finish').classList.remove('hidden');
 }
-window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.state='ride';if(sc){S.x=sc.x;S.z=sc.z;S.v=sc.v;S.gyp=undefined;S.gvp=undefined;}let t=0,acc=0;const fd=1/fps;while(t<secs){steerIn=steerFn(t);postIn=t>2?1:0;acc+=Math.min(0.1,fd);while(acc>=STEP){physics(STEP);S.t+=STEP;acc-=STEP;}t+=fd;}return{z:+S.z.toFixed(1),x:+S.x.toFixed(1),v:+S.v.toFixed(2),crashes:S.crashes};},get RES(){return RES},get model(){return model},get gear(){return gear},skier,get envTex(){return envTex},POSE,S,TRAILS,LIFTS,BASES,simStep,physicsOnly:(n)=>{for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){snapPrev();simStep(STEP);}return S.state;},H,Bm,trailInfo,runFromTrail,JUMPS,jumpLip,get KT(){return KT},KDd,KX,KZ,KI,KTT,KS,dropIn,showPicker,get RUN(){return RUN},MENU,updateTiles,tiles,renderer,camera,startLift,SES,finish:()=>{S.state='done';finish();},jump,placeCam,skate,
+window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.state='ride';if(sc){S.x=sc.x;S.z=sc.z;S.v=sc.v;S.gyp=undefined;S.gvp=undefined;}let t=0,acc=0;const fd=1/fps;while(t<secs){steerIn=steerFn(t);postIn=t>2?1:0;acc+=Math.min(0.1,fd);while(acc>=STEP){physics(STEP);S.t+=STEP;acc-=STEP;}t+=fd;}return{z:+S.z.toFixed(1),x:+S.x.toFixed(1),v:+S.v.toFixed(2),crashes:S.crashes};},get RES(){return RES},get model(){return model},get gear(){return gear},skier,get envTex(){return envTex},POSE,S,TRAILS,LIFTS,BASES,simStep,physicsOnly:(n)=>{for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){snapPrev();simStep(STEP);}return S.state;},H,Bm,trailInfo,runFromTrail,JUMPS,jumpLip,get KT(){return KT},KDd,KX,KZ,KI,KTT,KS,dropIn,showPicker,get RUN(){return RUN},MENU,updateTiles,streamTiles,buildTileSync:buildTile,dropTile,XMIN,XMAX,ZMIN,ZMAX,tiles,renderer,camera,startLift,SES,finish:()=>{S.state='done';finish();},jump,placeCam,skate,
   /* test hook: advance physics + skier visuals in lock-step at 60 Hz without rendering (headless renders are too slow for real-time pose checks) */
   stepVis(n,inp){for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){const o=inp?inp(i/60,S):{};if(o.stop)break;steerIn=o.s||0;postIn=o.p||0;if(o.jump)jump();if(o.skate)skate();snapPrev();simStep(STEP);
     const y=S.air?S.y:H(S.x,S.z)+0.02,g=grad(S.x,S.z);placeShadows(g[0],g[1],Math.max(0,y-H(S.x,S.z)));alignToSlope(S.air?g[0]*0.5:g[0],S.air?g[1]*0.5:g[1],STEP);poseSkier(y);updModel(STEP,false);

@@ -31,6 +31,9 @@
   .sq{width:11px;height:11px;background:#2f6fe0;border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
   .dia{width:11px;height:11px;background:#111;transform:rotate(45deg);border:1.5px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
   .sub{font-size:12px;opacity:.9;margin-top:3px;font-weight:500}
+  /* gap to your ghost, next to the clock: green = ahead, red = behind */
+  #gap{display:inline-block;margin-left:7px;padding:1px 6px;border-radius:8px;font-weight:800;font-size:12px;background:rgba(20,32,46,.55);color:#cfe9ff;font-variant-numeric:tabular-nums}
+  #gap.ga{color:#6ff09a}#gap.gb{color:#ff8a78}
   .spd{text-align:right}
   /* compass heading strip (top right, under the speed): scrolls with the camera, N in red, centre tick = where you're looking */
   #cmp{position:relative;width:104px;height:20px;margin:7px 0 0 auto;overflow:hidden;border-radius:10px;background:rgba(20,32,52,.28);
@@ -165,7 +168,7 @@
 <div class="hud hidden" id="top">
   <div>
     <div class="trail"><span id="ticon" class="ic"><div class="dia"></div></span><span id="ttext">SUPERSTAR</span></div>
-    <div class="sub" id="time">0:00.0</div>
+    <div class="sub"><span id="time">0:00.0</span><span id="gap" class="hidden"></span></div>
   </div>
   <div class="spd"><b id="spd">0</b><span>MPH</span><div class="sub" id="vert">1,190 ft to go</div><div id="cmp"><div id="cmpT"></div></div></div>
 </div>
@@ -756,13 +759,17 @@ function powderAt(x,z,tr,e,w,ux,uz,lod){
   const edge=sstep(-Math.min(0.4*w,5),-0.5,e)*(0.5+0.5*n)*(tr.k===1?0.55:0.9);
   let flat=0;if(tr.k!==1&&!lod){const bs=(a,b)=>Math.hypot(Bm(a+4,b)-Bm(a-4,b),Bm(a,b+4)-Bm(a,b-4))/8,s0=bs(x,z),s1=bs(x-ux*30,z-uz*30);   /* bare-earth slope: cheap, and the DEM is what decides where a pitch runs out */flat=sstep(0.04,0.15,s1-s0)*sstep(0.2,0.6,n)*0.95;}
   return Math.max(off,edge,flat*(1-0.5*sstep(-0.42*w,0,e)));}
-function buildTile(ti,tj,lod){
+/* A tile is built as a generator that yields after every row of each heavy loop, so the streamer can spread one tile over several
+   frames (a full-detail tile is ~14 ms of JS on a laptop, several times that on a phone). buildTile() runs one straight through. */
+function buildTile(ti,tj,lod){const g=tileGen(ti,tj,lod);let r;do r=g.next();while(!r.done);return r.value;}
+function* tileGen(ti,tj,lod){
   const x0=ti*TILE,z0=tj*TILE;let fine=false;if(!lod)for(const b of MOGBOX)if(x0<b[2]&&x0+TILE>b[0]&&z0<b[3]&&z0+TILE>b[1]){fine=true;break;}
   const res=lod?8:(fine?2:4),n=TILE/res+1,N=n*n,E=4*(n-1);
   const pos=new Float32Array((N+E)*3),col=new Float32Array((N+E)*3),uv=new Float32Array((N+E)*2),nor=new Float32Array((N+E)*3),tA=new Float32Array((N+E)*4),pw=new Float32Array(N+E);
   /* heights on a grid padded by one cell, so normals come from neighbours instead of four extra lookups per vertex */
   const np=n+2,hp=new Float32Array(np*np);
   for(let j=0;j<np;j++)for(let i=0;i<np;i++){const x=x0+(i-1)*res,z=z0+(j-1)*res;
+    if(i===0&&j>0)yield;
     if(i===0||j===0||i===np-1||j===np-1){hp[j*np+i]=H(x,z);continue;}
     const k=(j-1)*n+(i-1),y=H(x,z),t=TI;hp[j*np+i]=y;const e=t.tr?t.d-t.w:1e9;
     pos[k*3]=x;pos[k*3+1]=y;pos[k*3+2]=z;tA[k*4]=clamp(e,-60,200);tA[k*4+1]=t.tr?clamp(t.d/t.w,0,3):3;tA[k*4+2]=t.tr?t.ux:0;tA[k*4+3]=t.tr?t.uz:1;
@@ -772,7 +779,7 @@ function buildTile(ti,tj,lod){
     if(fine&&t.tr&&t.tr.mog&&e<0){const mk=mogK(t.tr,t.i,t.t)*sstep(0,-6,e);if(mk>0){const mv=clamp((mogul(x,z)+0.35)/1.3,0,1);cTmp.multiplyScalar(1-mk*(0.16-0.16*mv));}}
     {const tr=t.tr,w=t.w,ux=t.ux,uz=t.uz;pw[k]=(pad||ec<e)?0:powderAt(x,z,tr,e,w,ux,uz,lod);}   /* after everything that reads TI: powderAt calls H */
     col[k*3]=cTmp.r;col[k*3+1]=cTmp.g;col[k*3+2]=cTmp.b;uv[k*2]=x/2.4;uv[k*2+1]=z/7;}
-  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const k=j*n+i,c=(j+1)*np+(i+1);
+  for(let j=0;j<n;j++)for(let i=0;i<n;i++){const k=j*n+i,c=(j+1)*np+(i+1);if(i===0&&(j&3)===0)yield;
     const gx=(hp[c+1]-hp[c-1])/(2*res),gz=(hp[c+np]-hp[c-np])/(2*res),il=1/Math.sqrt(gx*gx+1+gz*gz);nor[k*3]=-gx*il;nor[k*3+1]=il;nor[k*3+2]=-gz*il;
     /* hollows a shade darker, crests a touch brighter (near tiles only): makes rollers and dips readable even facing the sun */
     if(!lod){const lap=(hp[c+1]+hp[c-1]+hp[c+np]+hp[c-np]-4*hp[c])/(res*res),f=1-clamp(lap*CURV_K,-0.035,0.09);col[k*3]*=f;col[k*3+1]*=f;col[k*3+2]*=Math.min(1,f*1.015+0.004);}
@@ -780,14 +787,14 @@ function buildTile(ti,tj,lod){
   /* skirts hide cracks between near and far detail levels */
   const ring=[];for(let i=0;i<n-1;i++)ring.push(i);for(let j=0;j<n-1;j++)ring.push(j*n+n-1);for(let i=n-1;i>0;i--)ring.push((n-1)*n+i);for(let j=n-1;j>0;j--)ring.push(j*n);
   ring.forEach((src,r)=>{const k=N+r;pos[k*3]=pos[src*3];pos[k*3+1]=pos[src*3+1]-5;pos[k*3+2]=pos[src*3+2];col[k*3]=col[src*3];col[k*3+1]=col[src*3+1];col[k*3+2]=col[src*3+2];nor[k*3]=nor[src*3];nor[k*3+1]=nor[src*3+1];nor[k*3+2]=nor[src*3+2];uv[k*2]=uv[src*2];uv[k*2+1]=uv[src*2+1];for(let q=0;q<4;q++)tA[k*4+q]=tA[src*4+q];pw[k]=pw[src];});
-  const idx=[];
+  yield;const idx=[];
   for(let j=0;j<n-1;j++)for(let i=0;i<n-1;i++){const a=j*n+i,b=a+1,c=a+n,d=c+1;idx.push(a,c,b,b,c,d);}
   for(let r=0;r<E;r++){const a=ring[r],b=ring[(r+1)%E],sa=N+r,sb=N+(r+1)%E;idx.push(a,sa,b,b,sa,sb);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));g.setAttribute('color',new THREE.BufferAttribute(col,3));g.setAttribute('uv',new THREE.BufferAttribute(uv,2));g.setAttribute('normal',new THREE.BufferAttribute(nor,3));g.setAttribute('aT',new THREE.BufferAttribute(tA,4));g.setAttribute('aP',new THREE.BufferAttribute(pw,1));g.setIndex(idx);
-  const mesh=new THREE.Mesh(g,fine?terrMatFine:terrMat);mesh.receiveShadow=!lod;scene.add(mesh);
+  const mesh=new THREE.Mesh(g,fine?terrMatFine:terrMat);mesh.receiveShadow=!lod;yield;
   /* trees: deterministic per cell, so a tile rebuilds identically every time it streams back in. Glades keep a sparse stand. */
   const step=lod?8:6,trees=[];
-  for(let cj=0;cj<TILE/step;cj++)for(let ci=0;ci<TILE/step;ci++){
+  for(let cj=0;cj<TILE/step;cj++)for(let ci=0;ci<TILE/step;ci++){if(ci===0&&(cj&1)===0)yield;
     const gi=Math.round(x0/step)+ci,gj=Math.round(z0/step)+cj;
     const x=x0+(ci+hash2(gi,gj,1))*step,z=z0+(cj+hash2(gi,gj,2))*step;
     if(z<ZMIN||z>ZMAX||x<XMIN||x>XMAX)continue;
@@ -800,17 +807,18 @@ function buildTile(ti,tj,lod){
     let s=0.7+hash2(gi,gj,4)*0.75;const r8=hash2(gi,gj,8);if(r8<0.12)s*=0.55;else if(r8>0.93)s*=1.35;
     trees.push([x,z,s,hash2(gi,gj,5),hash2(gi,gj,7)]);}
   if(!lod&&trees.length){const cg=mesh.geometry.attributes.color;const tg=new Map();trees.forEach(t=>{const k=Math.floor(t[0]/8)+','+Math.floor(t[1]/8);if(!tg.has(k))tg.set(k,[]);tg.get(k).push(t);});
-    for(let k=0;k<N;k++){const x=pos[k*3],z=pos[k*3+2];let occ=0;const ci=Math.floor(x/8),cj=Math.floor(z/8);
+    for(let k=0;k<N;k++){if(k%(n*4)===0)yield;const x=pos[k*3],z=pos[k*3+2];let occ=0;const ci=Math.floor(x/8),cj=Math.floor(z/8);
       for(let a=ci-1;a<=ci+1;a++)for(let b=cj-1;b<=cj+1;b++){const arr=tg.get(a+','+b);if(!arr)continue;for(const t of arr){const d=Math.hypot(x-t[0],z-t[1]);occ=Math.max(occ,1-sstep(1.2,4.2*t[2],d));}}
       if(occ>0){const f=1-0.3*occ;cg.array[k*3]*=f;cg.array[k*3+1]*=f*1.01;cg.array[k*3+2]*=Math.min(1,f*1.06);}}
     cg.needsUpdate=true;}
   let low=null,up=null;
   if(trees.length){const tg=treeView(lod?1:0);low=new THREE.InstancedMesh(tg,treeMat,trees.length);
     const m=_tm4,q=_tq,sc=_tv1,p=_tv2,c=_tc;let ylo=1e9,yhi=-1e9;
-    trees.forEach(([x,z,s,h,v],i)=>{const y=H(x,z);const st=1-0.3*sstep(950,1200,y),hs=s*st*(0.85+0.4*(v||0)),ws=s*st*(0.82+0.3*h);ylo=Math.min(ylo,y);yhi=Math.max(yhi,y+12*hs);q.setFromAxisAngle(_Y,h*6.283);sc.set(ws,hs,ws);p.set(x,y,z);m.compose(p,q,sc);low.setMatrixAt(i,m);
-      c.setHSL(0.37+h*0.05,0.32+h*0.15,0.17+h*0.07);low.setColorAt(i,c);});
+    for(let i=0;i<trees.length;i++){if(i&&(i&127)===0)yield;const [x,z,s,h,v]=trees[i];const y=H(x,z);const st=1-0.3*sstep(950,1200,y),hs=s*st*(0.85+0.4*(v||0)),ws=s*st*(0.82+0.3*h);ylo=Math.min(ylo,y);yhi=Math.max(yhi,y+12*hs);q.setFromAxisAngle(_Y,h*6.283);sc.set(ws,hs,ws);p.set(x,y,z);m.compose(p,q,sc);low.setMatrixAt(i,m);
+      c.setHSL(0.37+h*0.05,0.32+h*0.15,0.17+h*0.07);low.setColorAt(i,c);}
     tg.boundingSphere.center.set(x0+TILE/2,(ylo+yhi)/2,z0+TILE/2);tg.boundingSphere.radius=Math.hypot(TILE*0.72,(yhi-ylo)/2)+6;
     scene.add(low);}
+  scene.add(mesh);   /* added last: nothing shows until the whole tile is ready */
   return {mesh,low,up,trees,lod};
 }
 /* the whole mountain at low detail, under the streamed tiles: real ridgelines, white trail cuts and forest out to the horizon.
@@ -838,6 +846,10 @@ const lowMtn=(function(){const X0=-3400,X1=5000,Z0=-3900,Z1=3000,st=52,nx=Math.r
   const m=new THREE.Mesh(g,mat);m.renderOrder=1;scene.add(m);   /* drawn after the tiles so early-z rejects it where they cover it */
   lowU.uBox.value.set(XMIN,ZMIN,XMAX,ZMAX);return m;})();
 function dropTile(t){scene.remove(t.mesh);t.mesh.geometry.dispose();if(t.low){scene.remove(t.low);t.low.dispose&&t.low.dispose();treePool[t.low.geometry.userData.lod].push(t.low.geometry);}}
+/* Streaming: tiles within LOAD_R of the centre (60 m ahead of the skier), full detail within NEAR_R. Work is capped by time per frame
+   (budget in ms) instead of by tile count; one tile is built a slice at a time across frames. budget >= 999 builds everything now
+   (used behind the fade when a run or lift ride starts). A missing tile close to the centre is finished at once whatever the budget. */
+let tileJob=null;const TILE_URGENT=190;
 function updateTiles(px,pz,budget){
   lowU.uHole.value.set(px,pz,lowHoleOff?0:LOW_HOLE);
   const ci=Math.floor(px/TILE),cj=Math.floor(pz/TILE),r=Math.ceil(LOAD_R/TILE)+1,want=new Map();
@@ -847,10 +859,16 @@ function updateTiles(px,pz,budget){
   for(const [k,t] of [...tiles]){const [i,j]=k.split(',').map(Number);const d=Math.hypot((i+0.5)*TILE-px,(j+0.5)*TILE-pz);if(d>LOAD_R+TILE){dropTile(t);tiles.delete(k);}}
   const todo=[];for(const [k,w] of want){const t=tiles.get(k);if(!t||t.lod!==w.lod)todo.push([k,w]);}
   todo.sort((a,b)=>a[1].d-b[1].d);
-  let n=0;for(const [k,w] of todo){if(n++>=budget)break;const old=tiles.get(k);tiles.set(k,buildTile(w.i,w.j,w.lod));if(old)dropTile(old);}
-  return todo.length;
+  if(tileJob){const w=want.get(tileJob.k);if(!w||w.lod!==tileJob.lod||(tiles.get(tileJob.k)||{}).lod===w.lod)tileJob=null;}   /* no longer wanted at that detail */
+  const t0=performance.now(),all=budget>=999;let left=todo.length;
+  while(left>0){
+    if(!tileJob){const nx=todo.find(([k])=>{const t=tiles.get(k),w=want.get(k);return !t||t.lod!==w.lod;});if(!nx)break;tileJob={k:nx[0],lod:nx[1].lod,urgent:!tiles.get(nx[0])&&nx[1].d<TILE_URGENT,gen:tileGen(nx[1].i,nx[1].j,nx[1].lod)};}
+    let rr;do rr=tileJob.gen.next();while(!rr.done&&(all||tileJob.urgent||performance.now()-t0<budget));
+    if(!rr.done)break;
+    const old=tiles.get(tileJob.k);tiles.set(tileJob.k,rr.value);if(old)dropTile(old);tileJob=null;left--;
+    if(!all&&performance.now()-t0>=budget)break;}
+  return left;
 }
-
 /* ---------- procedural set dressing driven by trail data ---------- */
 const DECK={x:1640,z:880};
 let crowd=null;const crowdPos=[];const _cm=new THREE.Matrix4();
@@ -1340,7 +1358,7 @@ const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
 const diffIcon=d=>d==='g'?'<div class="ci"></div>':d==='b'?'<div class="sq"></div>':d==='dd'?'<div class="dia"></div><div class="dia"></div>':'<div class="dia"></div>';
-function reset(){S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
+function reset(){S.runId=(S.runId||0)+1;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
   S.x=RUN.x;S.z=RUN.z;S.gyp=undefined;S.gvp=undefined;setTxt('lblTop',RUN.top);setTxt('lblBot',RUN.dest?RUN.dest.name:'Base');S.th=RUN.th;S.v=2;S.t=0;S.top=0;S.crashes=0;S.cool=0;S.shake=0;S.finT=0;steer=0;steerIn=0;snapPrev();lerpIn(1);lerpOut();placeCam(true);}
 let curTrail='';
 function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
@@ -1386,7 +1404,7 @@ function startLift(L){
     S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
     myChair.visible=false;myCab.visible=false;myRide=L.gond?myCab:myChair;
     gapChairs(L,S.ls);if(L.gond)myCab.userData.mat.color.setHex(L.col);else myChair.children[1].material.color.setHex(L.col);myRide.visible=true;blob.visible=false;castSh.visible=false;clearTracks();
-    updateTiles(L.bx+L.dx*60,L.bz+L.dz*60,30);
+    updateTiles(L.bx+L.dx*60,L.bz+L.dz*60,999);
     if(mixer){crouch=0.55;setMode('ride',0);}
     showHud(false);$('top').classList.remove('hidden');$('bot').classList.remove('hidden');$('skipBtn').classList.remove('hidden');$('lookHint').classList.remove('hidden');
     $('ticon').innerHTML='<span style="font-size:15px">▲</span>';$('ttext').textContent=L.name.toUpperCase();
@@ -1661,7 +1679,7 @@ function lerpIn(a){CUR.x=S.x;CUR.z=S.z;CUR.y=S.y||0;CUR.th=S.th;CUR.v=S.v;
 function lerpOut(){S.x=CUR.x;S.z=CUR.z;if(S.air)S.y=CUR.y;S.th=CUR.th;S.v=CUR.v;}
 function simStep(h){
   const r=physics(h);
-  if(S.state==='ride'){if(!S.pre)S.t+=h;const b=baseHit();if(b){S.endBase=b;S.state='finishing';S.finT=0;toast(b.name.toUpperCase()+'!');}
+  if(S.state==='ride'){if(!S.pre)S.t+=h;ghostTick();const b=baseHit();if(b){S.endBase=b;S.state='finishing';S.finT=0;toast(b.name.toUpperCase()+'!');}
     else if(S.x<XMIN+22||S.x>XMAX-22||S.z<ZMIN+22||S.z>ZMAX-22){S.endBase=null;S.endWhy='Edge of the map';S.state='finishing';S.finT=0;toast('Edge of the map');}}
   else{S.v*=1-h*1.6;S.finT+=h;if(S.finT>1.6){S.state='done';finish();}}
   S.shake=Math.max(0,S.shake-h);
@@ -1670,6 +1688,10 @@ function simStep(h){
 const _hud={};function setTxt(id,v){v=String(v);if(_hud[id]!==v){_hud[id]=v;$(id).textContent=v;}}
 let _barP=-1;function setBar(pr){const q=Math.round(pr*400)/4;if(q!==_barP){_barP=q;$('fill').style.width=q+'%';$('dot').style.left=q+'%';}}
 let _vigO=-1,_tileX=1e9,_tileZ=1e9,_tilePend=1;
+/* terrain streaming gets ~2.5 ms of JS per frame (more when it falls behind); see updateTiles in 05-terrain.js */
+const TILE_MS={base:2.5,behind:5};window.__tileMs=TILE_MS;
+function streamTiles(){const tx=S.state==='menu'?MENU.tx:S.x+Math.sin(S.th)*60,tz=S.state==='menu'?MENU.tz:S.z+Math.cos(S.th)*60;
+  if(_tilePend>0||Math.abs(tx-_tileX)+Math.abs(tz-_tileZ)>12){_tilePend=updateTiles(tx,tz,_tilePend>12?TILE_MS.behind:TILE_MS.base);_tileX=tx;_tileZ=tz;}}
 /* dynamic resolution: frame time EMA, checked every 2 s */
 function adaptRes(ms,dt){if(ms<80)RES.ema=RES.ema*0.94+ms*0.06;RES.t+=dt;if(RES.t<2)return;RES.t=0;
   let s=RES.scale;if(RES.ema>21&&s>RES.min+1e-3)s=Math.max(RES.min,s-0.1);else if(RES.ema<13&&s<RES.max-1e-3)s=Math.min(RES.max,s+0.05);
@@ -1681,16 +1703,16 @@ function frame(now){
   const raw=now-last,fdt=Math.min(0.1,raw/1000),dt=Math.min(0.05,raw/1000);last=now;fcount++;
   adaptRes(raw,dt);perfHud(raw,dt);
   updateChairs(dt);updCrowd(now);mapFrame(dt);
-  {const tx=S.state==='menu'?MENU.tx:S.x+Math.sin(S.th)*60,tz=S.state==='menu'?MENU.tz:S.z+Math.cos(S.th)*60;
-   if(_tilePend>0||Math.abs(tx-_tileX)+Math.abs(tz-_tileZ)>12){const todo=updateTiles(tx,tz,2);_tilePend=Math.max(0,todo-2);_tileX=tx;_tileZ=tz;}}
+  streamTiles();
   if(S.state==='ride'||S.state==='finishing'){
-    if(window.__freeze){if(window.__camHook)window.__camHook(camera,skier,S);else placeCam(true);return endFrame(now,dt);}   /* test hook: hold the pose for screenshots */
+    if(window.__freeze){if(window.__camHook)window.__camHook(camera,skier,S);else placeCam(true);ghostFrame(S.t,dt);return endFrame(now,dt);}   /* test hook: hold the pose for screenshots */
     /* physics runs in fixed 1/60 s steps (what it was tuned at); visuals interpolate between the last two steps */
     simAcc+=fdt;let n=0,r=lastSim;
     while(simAcc>=STEP&&n<MAX_STEPS){snapPrev();r=simStep(STEP);simAcc-=STEP;n++;if(S.state!=='ride'&&S.state!=='finishing')break;}
     if(n===MAX_STEPS)simAcc=0;lastSim=r;
     if(S.state==='done')return endFrame(now,dt);
     const al=simAcc/STEP;lerpIn(al);
+    ghostFrame(S.pre?0:Math.max(0,S.t-STEP*(1-al)),dt);   /* the clock of the step being shown, so the ghost moves as smoothly as you do */
     const y=S.air?S.y:H(S.x,S.z)+0.02;const [gx,gz]=grad(S.x,S.z);
     placeShadows(gx,gz,Math.max(0,y-H(S.x,S.z)));
     alignToSlope(S.air?gx*0.5:gx,S.air?gz*0.5:gz,dt);poseSkier(y);
@@ -1722,6 +1744,7 @@ function endFrame(now,dt){
   {const sp=(S.state==='ride'||S.state==='finishing')?clamp(S.v/30,0,1):0;const o=Math.round((0.45+sp*0.5)*25)/25;if(o!==_vigO){_vigO=o;$('vig').style.opacity=o;}}
   if(window.__close&&BN.head){BN.head.getWorldPosition(_hp);const a=window.__close;camera.position.set(_hp.x+Math.sin(S.th+a)*1.3,_hp.y+0.15,_hp.z+Math.cos(S.th+a)*1.3);camera.lookAt(_hp.x,_hp.y+0.05,_hp.z);}
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.style.opacity=0;}
+  if(S.state!=='ride'&&S.state!=='finishing')ghostG.visible=ghostPin.visible=false;ghostHud(dt);
   weatherFrame(dt,now);sfxFrame(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
@@ -1736,13 +1759,14 @@ function finish(){
   $('fTime').textContent=fmt(S.t);$('fTop').textContent=Math.round(S.top*2.237);$('fCr').textContent=S.crashes;
   let msg='';if(base){if(best===null||S.t<best){if(best!==null)msg='New personal best! Old: '+fmt(best);else msg='First run in the books.';best=S.t;try{localStorage.setItem(key,String(best));}catch(e){}}else msg='Personal best: '+fmt(best);}
   else msg=ft(drop).toLocaleString()+' ft of vert.';
+  {const g=ghostFinish(base);if(g)msg+=' '+g;}
   const ol=route.includes('Outer Limits')&&base&&base.id==='bear';
   $('fBest').textContent=(ol?(S.crashes===0?'The Deck goes wild! ':'The Deck jeers. '):'')+msg+(S.tricks?' · Tricks landed: '+S.tricks:'');
   $('nextK').textContent=base?'Next chair from '+base.name:'Skate to a chair';showLifts(base,'liftList');
   $('sess').textContent='Today: '+SES.laps+' run'+(SES.laps===1?'':'s')+' · '+Math.round(SES.vert).toLocaleString()+' vert ft · '+SES.chairs+' chair'+(SES.chairs===1?'':'s');
   $('finish').classList.remove('hidden');
 }
-window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.state='ride';if(sc){S.x=sc.x;S.z=sc.z;S.v=sc.v;S.gyp=undefined;S.gvp=undefined;}let t=0,acc=0;const fd=1/fps;while(t<secs){steerIn=steerFn(t);postIn=t>2?1:0;acc+=Math.min(0.1,fd);while(acc>=STEP){physics(STEP);S.t+=STEP;acc-=STEP;}t+=fd;}return{z:+S.z.toFixed(1),x:+S.x.toFixed(1),v:+S.v.toFixed(2),crashes:S.crashes};},get RES(){return RES},get model(){return model},get gear(){return gear},skier,get envTex(){return envTex},POSE,S,TRAILS,LIFTS,BASES,simStep,physicsOnly:(n)=>{for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){snapPrev();simStep(STEP);}return S.state;},H,Bm,trailInfo,runFromTrail,JUMPS,jumpLip,get KT(){return KT},KDd,KX,KZ,KI,KTT,KS,dropIn,showPicker,get RUN(){return RUN},MENU,updateTiles,tiles,renderer,camera,startLift,SES,finish:()=>{S.state='done';finish();},jump,placeCam,skate,
+window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.state='ride';if(sc){S.x=sc.x;S.z=sc.z;S.v=sc.v;S.gyp=undefined;S.gvp=undefined;}let t=0,acc=0;const fd=1/fps;while(t<secs){steerIn=steerFn(t);postIn=t>2?1:0;acc+=Math.min(0.1,fd);while(acc>=STEP){physics(STEP);S.t+=STEP;acc-=STEP;}t+=fd;}return{z:+S.z.toFixed(1),x:+S.x.toFixed(1),v:+S.v.toFixed(2),crashes:S.crashes};},get RES(){return RES},get model(){return model},get gear(){return gear},skier,get envTex(){return envTex},POSE,S,TRAILS,LIFTS,BASES,simStep,physicsOnly:(n)=>{for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){snapPrev();simStep(STEP);}return S.state;},H,Bm,trailInfo,runFromTrail,JUMPS,jumpLip,get KT(){return KT},KDd,KX,KZ,KI,KTT,KS,dropIn,showPicker,get RUN(){return RUN},MENU,updateTiles,streamTiles,buildTileSync:buildTile,dropTile,XMIN,XMAX,ZMIN,ZMAX,tiles,renderer,camera,startLift,SES,finish:()=>{S.state='done';finish();},jump,placeCam,skate,
   /* test hook: advance physics + skier visuals in lock-step at 60 Hz without rendering (headless renders are too slow for real-time pose checks) */
   stepVis(n,inp){for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){const o=inp?inp(i/60,S):{};if(o.stop)break;steerIn=o.s||0;postIn=o.p||0;if(o.jump)jump();if(o.skate)skate();snapPrev();simStep(STEP);
     const y=S.air?S.y:H(S.x,S.z)+0.02,g=grad(S.x,S.z);placeShadows(g[0],g[1],Math.max(0,y-H(S.x,S.z)));alignToSlope(S.air?g[0]*0.5:g[0],S.air?g[1]*0.5:g[1],STEP);poseSkier(y);updModel(STEP,false);
@@ -2275,6 +2299,133 @@ function sfxFrame(dt){if(!SFX.on)return;
 window.__kr.sfxState=()=>SFX.on?{wind:wind?[+wind.gain.value.toFixed(3),Math.round(windF.frequency.value)]:null,glide:+SFX.glide.g.gain.value.toFixed(3),glideRate:+SFX.glide.src.playbackRate.value.toFixed(3),edge:+SFX.edge.g.gain.value.toFixed(3),edgeRate:+SFX.edge.src.playbackRate.value.toFixed(3),
   loops:Object.fromEntries(['glide','edge'].map(k=>[k,[+SFX[k].src.loopStart.toFixed(4),+SFX[k].src.loopEnd.toFixed(4),SFX.buf[k].length,SFX.buf[k].sampleRate]]))}:{on:false};
 window.__kr.sfxTest=()=>{sfxLand(12);sfxBump(0.5);sfxPop();sfxFall();sfxTree(14);sfxPlant();sfxClank();return actx.currentTime;};
+/* ---------- ghost: race your best run from this trail top ----------
+   While the clock runs, the run is sampled 10 times a second: position, heading, height in the air, lean, crouch, flip and spin
+   (11 bytes a sample, ~1 KB per 10 s, kept in localStorage). Finish at a base faster than the saved ghost for that start trail and
+   your run becomes the ghost. Start that trail again and a see-through skier replays it on the same clock; the HUD shows the gap,
+   measured as the ghost's time at the point on its line nearest you (so it means the same thing on any part of the run).
+   Cost: one small merged mesh (~600 triangles) drawn twice (a depth pass so it reads as one solid shape, then the colour), +2 draw calls. */
+const GH_HZ=10,GH_B=11,GH_KEY='kr_ghost_';
+const GREC={run:-1,n:0,buf:new Uint8Array(GH_B*3000),dv:null,qx:0,qz:0,x0:0,z0:0,name:''};GREC.dv=new DataView(GREC.buf.buffer);
+let GHOST=null,ghostTf=0,ghostGapT=0;
+const wrapA=a=>Math.atan2(Math.sin(a),Math.cos(a));
+function recSample(){
+  if((GREC.n+1)*GH_B>GREC.buf.length){const nb=new Uint8Array(GREC.buf.length*2);nb.set(GREC.buf);GREC.buf=nb;GREC.dv=new DataView(nb.buffer);}
+  const dv=GREC.dv,o=GREC.n*GH_B;
+  /* positions as 2 cm steps from the last *reconstructed* position, so rounding never drifts */
+  const dx=clamp(Math.round((S.x-GREC.qx)/0.02),-32767,32767),dz=clamp(Math.round((S.z-GREC.qz)/0.02),-32767,32767);GREC.qx+=dx*0.02;GREC.qz+=dz*0.02;
+  dv.setInt16(o,dx,true);dv.setInt16(o+2,dz,true);dv.setInt16(o+4,Math.round(wrapA(S.th)/Math.PI*32767),true);
+  dv.setUint8(o+6,S.air?clamp(Math.round((S.y-H(S.x,S.z))*10),0,255):0);
+  dv.setInt8(o+7,clamp(Math.round(lean*100),-127,127));dv.setUint8(o+8,clamp(Math.round(crouch*255),0,255));
+  dv.setInt8(o+9,clamp(Math.round(wrapA(S.flip)/Math.PI*127),-127,127));dv.setInt8(o+10,clamp(Math.round(wrapA(S.spin)/Math.PI*127),-127,127));
+  GREC.n++;}
+/* called after every physics step: starts a recording when the clock starts, then samples on the run clock */
+function ghostTick(){
+  if(S.state!=='ride'||S.pre)return;
+  if(GREC.run!==S.runId){GREC.run=S.runId;GREC.n=0;GREC.x0=GREC.qx=S.x;GREC.z0=GREC.qz=S.z;GREC.name=RUN.name;ghostTf=0;ghostGapT=0;GHOST=ghostLoad(RUN.name);}
+  while(GREC.n<=S.t*GH_HZ+1e-6&&GREC.n<36000)recSample();}
+function ghostB64(u8){let s='';for(let i=0;i<u8.length;i+=8192)s+=String.fromCharCode.apply(null,u8.subarray(i,i+8192));return btoa(s);}
+function ghostDecode(o){
+  const bin=atob(o.d),n=Math.floor(bin.length/GH_B),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
+  if(n<2)return null;const dv=new DataView(u8.buffer),F=()=>new Float32Array(n),G={name:o.name,t:o.t,base:o.bn,n,X:F(),Z:F(),A:F(),TH:F(),LE:F(),CR:F(),FL:F(),SP:F(),gi:0,off:false};
+  let x=o.x0,z=o.z0;
+  for(let i=0;i<n;i++){const q=i*GH_B;x+=dv.getInt16(q,true)*0.02;z+=dv.getInt16(q+2,true)*0.02;G.X[i]=x;G.Z[i]=z;G.TH[i]=dv.getInt16(q+4,true)/32767*Math.PI;
+    G.A[i]=dv.getUint8(q+6)/10;G.LE[i]=dv.getInt8(q+7)/100;G.CR[i]=dv.getUint8(q+8)/255;G.FL[i]=dv.getInt8(q+9)/127*Math.PI;G.SP[i]=dv.getInt8(q+10)/127*Math.PI;}
+  G.dur=(n-1)/GH_HZ;return G;}
+function ghostLoad(name){try{const s=localStorage.getItem(GH_KEY+name);if(!s)return null;const o=JSON.parse(s);return o&&o.v===1?ghostDecode(o):null;}catch(e){return null;}}
+/* save, and if storage is full drop the ghosts you raced longest ago until it fits */
+function ghostStore(name,val){
+  for(let a=0;a<8;a++){try{localStorage.setItem(GH_KEY+name,val);return true;}catch(e){
+    const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(GH_KEY)&&k!==GH_KEY+name){let w=0;try{w=JSON.parse(localStorage.getItem(k)).w||0;}catch(_){}ks.push([w,k]);}}
+    if(!ks.length)return false;ks.sort((p,q)=>p[0]-q[0]);localStorage.removeItem(ks[0][1]);}}
+  return false;}
+function ghostSave(base){
+  const o={v:1,name:GREC.name,t:+S.t.toFixed(2),b:base.id,bn:base.name,x0:+GREC.x0.toFixed(2),z0:+GREC.z0.toFixed(2),w:Date.now(),d:ghostB64(GREC.buf.subarray(0,GREC.n*GH_B))};
+  return ghostStore(GREC.name,JSON.stringify(o));}
+const fmtGap=d=>d>=60?fmt(d):d.toFixed(1);
+/* finish card line; saves this run as the ghost when it's the first or the fastest from this start */
+function ghostFinish(base){
+  if(GREC.run!==S.runId||GREC.n<2||!base)return '';
+  const prev=GHOST&&GHOST.name===GREC.name?GHOST:null;let msg;
+  if(prev){const d=S.t-prev.t;msg=d<0?'Beat your ghost by '+fmtGap(-d)+' s.':d<0.05?'Dead heat with your ghost.':'Your ghost was '+fmtGap(d)+' s faster.';}
+  else msg='Ghost saved: race it next time.';
+  if(!prev||S.t<prev.t){try{ghostSave(base);}catch(e){}}   /* storage can be blocked (private mode, some embeds): never break the finish card */
+  return msg;}
+
+/* the see-through skier: primitives merged into one geometry (+z = forward, y = up, skis on y = 0) */
+const ghostG=new THREE.Group();ghostG.visible=false;scene.add(ghostG);
+const ghostU={uTuck:{value:0}};
+(function(){
+  const parts=[];const P=(g,x,y,z,rx)=>{if(rx)g.rotateX(rx);g.translate(x,y,z);parts.push(g);};
+  for(const sx of [0.16,-0.16]){
+    P(new THREE.BoxGeometry(0.1,0.035,1.7),sx,0.02,0.1);P(new THREE.BoxGeometry(0.1,0.035,0.22),sx,0.07,1.0,-0.5);
+    P(new THREE.BoxGeometry(0.13,0.15,0.28),sx,0.1,0.02);
+    P(new THREE.CylinderGeometry(0.075,0.065,0.5,7),sx,0.4,0.1,0.35);          /* shin, leaning forward */
+    P(new THREE.CylinderGeometry(0.09,0.078,0.48,7),sx*0.94,0.84,0.12,-0.45);  /* thigh, hips back over the boots */
+    P(new THREE.CylinderGeometry(0.05,0.042,0.32,6),sx*1.35,1.36,0.3,0.25);    /* upper arm */
+    P(new THREE.CylinderGeometry(0.042,0.036,0.3,6),sx*1.5,1.2,0.44,1.35);     /* forearm, fists forward */
+    P(new THREE.CylinderGeometry(0.012,0.012,1.3,4),sx*1.8,0.67,0.19,0.65);}   /* pole, tips back */
+  P(new THREE.CylinderGeometry(0.16,0.13,0.62,8),0,1.28,0.15,0.5);             /* torso, folded forward */
+  P(new THREE.SphereGeometry(0.125,10,8),0,1.68,0.37);                         /* helmet */
+  let nv=0,ni=0;parts.forEach(g=>{nv+=g.attributes.position.count;ni+=g.index.count;});
+  const pos=new Float32Array(nv*3),nor=new Float32Array(nv*3),idx=new Uint16Array(ni);let ov=0,oi=0;
+  parts.forEach(g=>{pos.set(g.attributes.position.array,ov*3);nor.set(g.attributes.normal.array,ov*3);const I=g.index.array;for(let i=0;i<I.length;i++)idx[oi+i]=I[i]+ov;ov+=g.attributes.position.count;oi+=I.length;g.dispose();});
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('normal',new THREE.BufferAttribute(nor,3));geo.setIndex(new THREE.BufferAttribute(idx,1));
+  geo.computeBoundingSphere();geo.boundingSphere.radius+=0.4;
+  /* tuck: everything above the knees folds down and forward (same uniform in both passes so the depth matches the colour) */
+  const tuck=sh=>{Object.assign(sh.uniforms,ghostU);sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uTuck;')
+    .replace('#include <begin_vertex>','#include <begin_vertex>\n  {float a=max(0.,transformed.y-.55);transformed.y-=a*.32*uTuck;transformed.z+=a*.42*uTuck;}');};
+  const depthM=new THREE.MeshBasicMaterial({colorWrite:false,transparent:true});depthM.onBeforeCompile=tuck;depthM.customProgramCacheKey=()=>'ghostD1';
+  const colM=new THREE.MeshLambertMaterial({color:0x46b8ff,emissive:0x124f8c,transparent:true,opacity:0.6,depthWrite:false});
+  colM.onBeforeCompile=sh=>{tuck(sh);
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying float vRim;').replace('#include <project_vertex>','#include <project_vertex>\n  vRim=pow(1.-abs(dot(normalize(transformedNormal),normalize(-mvPosition.xyz))),2.);');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vRim;').replace('#include <tonemapping_fragment>','gl_FragColor.rgb=mix(gl_FragColor.rgb,vec3(.82,.96,1.),vRim*.75);gl_FragColor.a=min(1.,gl_FragColor.a*(1.+1.3*vRim));\n#include <tonemapping_fragment>');};
+  colM.customProgramCacheKey=()=>'ghostC1';
+  const d=new THREE.Mesh(geo,depthM),c=new THREE.Mesh(geo,colM);d.renderOrder=20;c.renderOrder=21;ghostG.add(d,c);ghostG.userData.mat=colM;})();
+/* a small marker over the ghost's head, constant size on screen and drawn over everything, so you can find it 50 m down the hill */
+const ghostPin=(function(){const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
+  g.lineJoin='round';g.beginPath();g.moveTo(9,13);g.lineTo(55,13);g.lineTo(32,52);g.closePath();
+  g.shadowColor='rgba(0,20,40,.45)';g.shadowBlur=5;g.lineWidth=7;g.strokeStyle='#fff';g.stroke();g.shadowBlur=0;g.fillStyle='#46b8ff';g.fill();
+  const t=new THREE.CanvasTexture(c);const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true,sizeAttenuation:false,fog:false}));
+  sp.scale.set(0.034,0.034,1);sp.renderOrder=22;sp.visible=false;scene.add(sp);return sp;})();
+const _gq=new THREE.Quaternion(),_gq2=new THREE.Quaternion(),_gn=new THREE.Vector3(),_gf=new THREE.Vector3(),_gR=new THREE.Vector3(),_gm=new THREE.Matrix4(),_ge=new THREE.Euler();
+function lerpA(a,b,u){return a+wrapA(b-a)*u;}
+/* place the ghost at run time tv (seconds on the clock) */
+function ghostFrame(tv,dt){
+  const G=GHOST;if(!G||(S.state!=='ride'&&S.state!=='finishing')||S.pre){ghostG.visible=ghostPin.visible=false;return;}
+  if(S.state==='finishing'){ghostTf+=dt;tv=S.t+ghostTf;}   /* your clock stopped at the base; the ghost keeps skiing */
+  const f=clamp(tv*GH_HZ,0,G.n-1),i=Math.min(G.n-2,Math.floor(f)),u=f-i;
+  const x=G.X[i]+(G.X[i+1]-G.X[i])*u,z=G.Z[i]+(G.Z[i+1]-G.Z[i])*u,th=lerpA(G.TH[i],G.TH[i+1],u),air=G.A[i]+(G.A[i+1]-G.A[i])*u;
+  const ln=G.LE[i]+(G.LE[i+1]-G.LE[i])*u,cr=G.CR[i]+(G.CR[i+1]-G.CR[i])*u,fl=lerpA(G.FL[i],G.FL[i+1],u),sp=lerpA(G.SP[i],G.SP[i+1],u);
+  const gy=H(x,z);ghostG.position.set(x,gy+air+0.02,z);
+  /* stand on the slope like the skier does (half as much in the air), then spin, flip and lean */
+  const g=grad(x,z),k=air>0.3?0.5:1;_gn.set(-g[0]*k,1,-g[1]*k).normalize();_gf.set(Math.sin(th),0,Math.cos(th));_gf.addScaledVector(_gn,-_gf.dot(_gn)).normalize();
+  _gR.crossVectors(_gn,_gf).normalize();_gm.makeBasis(_gR,_gn,_gf);_gq.setFromRotationMatrix(_gm);
+  _gq2.setFromAxisAngle(_yA,sp);_gq.multiply(_gq2);_gq2.setFromAxisAngle(_xA,fl);_gq.multiply(_gq2);_ge.set(0,0,ln);_gq2.setFromEuler(_ge);_gq.multiply(_gq2);
+  ghostG.quaternion.copy(_gq);ghostU.uTuck.value=sstep(0.45,1,cr);
+  /* fade: near the camera (don't fill the screen), when it's on top of you, and after it finishes */
+  const dc=camera.position.distanceTo(ghostG.position),dp=Math.hypot(x-S.x,z-S.z);
+  const a=0.62*sstep(2.2,6,dc)*(0.45+0.55*sstep(0.8,3,dp))*(1-sstep(G.dur,G.dur+1.2,tv));
+  ghostG.userData.mat.opacity=a;ghostG.visible=a>0.01;
+  const pa=sstep(6,12,dp)*(1-sstep(G.dur,G.dur+1.2,tv));ghostPin.material.opacity=pa;ghostPin.visible=pa>0.01;ghostPin.position.set(x,gy+air+2.35,z);}
+/* gap to the ghost: + behind, - ahead. Searches a window along its line near the last match, or the whole line after you've been off it. */
+function ghostGap(){const G=GHOST;if(!G)return null;
+  const lo=G.off?0:Math.max(0,G.gi-10),hi=G.off?G.n-1:Math.min(G.n-1,G.gi+80);let bj=lo,bd=1e18;
+  for(let j=lo;j<=hi;j++){const dx=G.X[j]-S.x,dz=G.Z[j]-S.z,d=dx*dx+dz*dz;if(d<bd){bd=d;bj=j;}}
+  if(bd>25*25){G.off=true;return null;}
+  G.off=false;G.gi=bj;let best=bj,bu=0,bd2=1e18;
+  for(const a of [bj-1,bj]){if(a<0||a>=G.n-1)continue;const ax=G.X[a],az=G.Z[a],sx=G.X[a+1]-ax,sz=G.Z[a+1]-az,l2=sx*sx+sz*sz;if(l2<1e-6)continue;
+    const u=clamp(((S.x-ax)*sx+(S.z-az)*sz)/l2,0,1),px=ax+sx*u-S.x,pz=az+sz*u-S.z,d=px*px+pz*pz;if(d<bd2){bd2=d;best=a;bu=u;}}
+  return S.t-(best+bu)/GH_HZ;}
+let _gapS='',_gapC='',_gapEl=null,_gapV=null;
+function ghostHud(dt){const el=_gapEl||(_gapEl=$('gap'));let s='',c='';
+  if(GHOST&&S.state==='ride'&&!S.pre){
+    if(S.t<2.5){s='Ghost '+fmt(GHOST.t);c='g0';}
+    else{ghostGapT-=dt;if(ghostGapT<=0){ghostGapT=0.2;_gapV=ghostGap();}
+      if(_gapV!==null){const v=_gapV;s=(v<0?'−':'+')+fmtGap(Math.abs(v));c=Math.abs(v)<0.05?'g0':(v<0?'ga':'gb');}}}
+  else _gapV=null;
+  if(s!==_gapS||c!==_gapC){_gapS=s;_gapC=c;el.textContent=s;el.className=s?c:'hidden';}}
+window.__kr.ghost={pin:ghostPin,rec:GREC,get g(){return GHOST},load:ghostLoad,decode:ghostDecode,gap:ghostGap,group:ghostG,clear:()=>{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.startsWith(GH_KEY))localStorage.removeItem(k);}GHOST=null;}};
 })();
 </script>
 </body>
