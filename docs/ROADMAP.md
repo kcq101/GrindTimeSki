@@ -129,6 +129,19 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 - `tileGen` (05-terrain.js) builds a tile as a generator that yields after every row of each heavy loop; `updateTiles` now spends a time budget per frame (`__tileMs`: 2.5 ms, 5 ms when more than 12 tiles are waiting) instead of a tile count, resuming the same tile next frame. A tile joins the scene only when it's complete. Calls with budget ≥ 999 (behind the fade when a run or lift ride starts) still build everything at once, and a missing tile within 190 m of the stream centre is finished immediately.
 - Result on the same runs: Great Eastern worst frame 64 → 9.5 ms, frames over 8 ms 127 → 1; Superstar, Outer Limits, Ovation worst 3–6 ms. No missing or low-detail ground under or ahead of the skier on any of them. Draw calls and triangles unchanged.
 
+## Colour grade, light presets, speed streaks, camera roll (Nov 26, 2026)
+- Colour grade with no extra pass: a `kGrade()` added to three's shader chunks (03-scene.js) runs at the end of every material's own fragment shader, after fog, so haze and sky grade the same way; the sky dome, ridgelines and cloud quads call it too. Exposure, saturation, an S-curve (more mid contrast, soft toe and shoulder), split toning (cool shadows, warm highlights) and lifted blacks: ~15 ALU ops a pixel, no texture reads. All materials share one 12-float uniform array by reference (three clones uniform values but keeps typed arrays), so a preset changes it everywhere with no recompile. All zeros = no grade.
+- Light presets (16-look.js), picked on the trail-map sheet ("Light" chips; the map re-lights as you tap; remembered in localStorage):
+  - Changing: the original late-morning light with the full weather cycle (default, so nothing changes unless you pick).
+  - Bluebird: higher sun, deeper blue sky, longer visibility (4.2 km), weather held to light haze.
+  - Golden hour: low sun from the south-west, peach haze, orange horizon glow, lavender shade on the snow and warm lit faces; weather held to haze.
+  - Flat light: weak high sun, strong sky fill, grey overcast sky and ridgelines, 2.1 km haze, flurries always on, the grade flattened and desaturated. Relief is harder to read on purpose, but the snow shader's cross-light keeps some.
+  Each is a handful of uniform and light writes: sun direction/colour/strength (and the skier's cast-shadow direction), hemisphere and fill light, haze colour and distance, sky zenith/horizon/sun-glow colours, a floor on how washed-out the sky and ridgelines are, the weather range, and the grade. Not updated: the environment map the skis reflect (still the morning sky).
+- Speed streaks: 220 thin snow-dust streaks in a 22 m box that wraps around the camera, each stretched along your motion over ~0.09 s, additive, one draw call (440 triangles), all motion in the vertex shader. Fade in from ~34 to ~63 mph; strength follows the skier's real speed. They read against trees, sky and shaded slopes; over bright snow there's nothing to add.
+- Camera roll: up to ~3° into the turn at full lean above ~55 mph, eased in over ~0.4 s, level in the air (`__camr`). Checked: a right turn drops the camera's right side, a left turn its left.
+- Also: falling banners fixed above; flakes still don't streak (the streaks are separate dust).
+- `npm run test:look`: each preset on the map and on the same Superstar spot (plus one ungraded), streaks at ~58 mph, roll direction in both turns. Cost: draw calls/triangles unchanged except +1 draw and 440 triangles while streaks show.
+
 ## Challenge links (Nov 26, 2026)
 - Finish card: "Challenge a friend" (blue, under the result) shares the run you just skied as a link to the public site, `https://kcq101.github.io/GrindTimeSki/#c1.…` (the root page passes the hash on to `dist/`). Phone share sheet where the browser has one; inside the claude.ai frame, or if sharing fails, it copies "Beat my 0:48.1 down Superstar at Killington: <link>"; if copying is blocked too, the link appears in a box to copy by hand.
 - Encoding (15-ghost.js): the 10 Hz recording cut to 5 Hz (3.3 Hz past 2.5 min, 2.5 Hz past 5 min), packed as 4-bit groups: position at 10 cm as the miss against a constant-velocity guess, heading change in 64ths of a turn (both zig-zag, variable length), then tuck (2 bits), air, trick, lean, and air height / flip / spin only while airborne. Header: trail, lift top, base, time, top speed, start point; a checksum byte catches links cut short. Base64url.
@@ -252,7 +265,6 @@ Kevin's notes from a Bonvo recording: hard to read elevation changes, no powder 
 Fixed-step physics (1/60 s) with render interpolation; trees cut from 182 to 18/11 tris and merged per tile; shadow map replaced by contact + decal shadows; chairs instanced; snow shader moved to noise-texture fetches; render-resolution scaling on phones; performance overlay toggle on the start card.
 
 ## Next up
-1. Cheap visual upgrades: filmic colour grade in the existing shaders (no extra pass), snow streaks + slight camera roll at speed, light presets (bluebird, golden hour, flat light)
-2. Fun: medals per trail (bronze/silver/gold times), a flow meter that chains carves, tree threading, air and clean landings into Boost, landing grades + a short freeze and buzz on big landings
-3. Re-measure on the phone after the triangle trim; if it still dips, far-tile tree density or a coarser whole-mountain mesh
-4. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too
+1. Fun: medals per trail (bronze/silver/gold times), a flow meter that chains carves, tree threading, air and clean landings into Boost, landing grades + a short freeze and buzz on big landings
+2. Re-measure on the phone after the triangle trim; if it still dips, far-tile tree density or a coarser whole-mountain mesh
+3. Base-area connectors (skate from the Deck to K-1, or the Skye Peak Quad as the link); Snowshed ↔ K-1 too

@@ -39,9 +39,9 @@ MAP.pins.forEach(p=>{const e=document.createElement('button');e.className='pin '
 function trailChip(t){return '<span class="chip">'+diffIcon(t.diff)+shortName(t.name)+'</span>';}
 function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont</div><h1>Where are you dropping in?</h1>'+
   '<p>Tap a peak to drop in, or a base to ride a lift. Drag to look around, pinch to zoom.</p>'+
-  '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+
+  '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+liteChips()+
   '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
-  $('mapList').onclick=$('mapHow').onclick=()=>{$('map').classList.add('hidden');$('start').classList.remove('hidden');};}
+  $('mapList').onclick=$('mapHow').onclick=()=>{$('map').classList.add('hidden');$('start').classList.remove('hidden');};wireLite();}
 /* paused mid-run: where you are, and the way back to the run */
 function sheetPaused(){const sh=$('sheet'),pre=S.pre;
   sh.innerHTML='<button class="x" id="sheetX" aria-label="Keep skiing">✕</button><div class="k">Paused · '+(pre?'top of '+pre.name:fmt(S.t)+' on the clock')+'</div><h1>'+(pre?pre.top:shortName(RUN.name))+'</h1>'+

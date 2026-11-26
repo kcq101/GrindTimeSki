@@ -109,6 +109,10 @@
   #sheet p{margin:6px 0;font-size:14px;line-height:1.45;color:#334354}
   #sheet p.attr{font-size:11px;color:#7a8896;margin:10px 0 0;text-align:center}
   #sheet .row{display:flex;gap:8px}#sheet .row .btn{flex:1}
+  .lite{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 2px}
+  .lite span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5b6b7c;font-weight:700;margin-right:2px}
+  .lite button{border:0;border-radius:15px;background:#eef2f6;color:#14202e;padding:7px 11px;font:600 13px 'Barlow',system-ui,sans-serif;cursor:pointer;min-height:32px}
+  .lite button.on{background:#14202e;color:#fff}
   #sheet .x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:#eef2f6;color:#14202e;font-size:15px;font-weight:800;cursor:pointer}
   #sheet{position:absolute}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
@@ -404,6 +408,17 @@ const BASE_DPR=Math.min(window.devicePixelRatio||1,1.75);
 const RES={max:IS_MOBILE?0.8:1,min:0.55,scale:IS_MOBILE?0.8:1,ema:16.7,t:0};
 renderer.setPixelRatio(BASE_DPR*RES.scale);
 renderer.shadowMap.enabled=false;   /* contact + decal shadows replace the real-time shadow map */
+/* film-style colour grade inside every material's own shader (no extra full-screen pass): exposure, saturation, an S-curve that
+   lifts mid contrast and rolls off the ends, split toning (cool shadows, warm highlights) and lifted blacks. It runs after fog, so
+   the haze and the sky grade the same way. GRADE is shared by reference by every material (three clones uniform values but keeps
+   typed arrays), so a light preset changes it everywhere at once. All zeros = no grade. Must be set up before anything compiles. */
+const GRADE=new Float32Array(12);
+THREE.ShaderChunk.encodings_pars_fragment+=`
+uniform vec4 uGr[3];
+vec3 kGrade(vec3 c){c*=1.+uGr[0].x;float l=dot(c,vec3(.2126,.7152,.0722));c=max(mix(vec3(l),c,1.+uGr[0].z),0.);
+  vec3 x=clamp(c,0.,1.);c+=uGr[0].y*x*(1.-x)*(2.*x-1.);float s=clamp(l,0.,1.);c+=uGr[1].rgb*(1.-s)*(1.-s)+uGr[2].rgb*s*s;return c*(1.-uGr[0].w)+uGr[0].w;}`;
+THREE.ShaderChunk.fog_fragment+='\ngl_FragColor.rgb=kGrade(gl_FragColor.rgb);';
+for(const k in THREE.ShaderLib)THREE.ShaderLib[k].uniforms.uGr={value:GRADE};
 /* shared tileable noise texture: R large patches, G lumps, B grain, A per-texel random (glitter). Replaces per-pixel ALU noise. */
 const noiseTex=(function(){const N=256,d=new Uint8Array(N*N*4);
   function layer(per,oct,seed,ch){const out=new Float32Array(N*N);let amp=.5,tot=0;
@@ -423,21 +438,21 @@ scene.fog=new THREE.Fog(0xcfe0f2,300,3800);
 /* late-morning winter sun, south-southeast (~155°), ~30° up: it lights the east-facing fall lines from the side */
 const SUN_DIR=new THREE.Vector3(0.37,0.52,0.8).normalize();
 /* sky dome: gradient, sun glow and drifting cumulus in one cheap fragment shader */
-const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,uniforms:{uSun:{value:SUN_DIR},uTime:{value:0},uNoise:{value:noiseTex},uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0}},
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,uniforms:{uSun:{value:SUN_DIR},uTime:{value:0},uNoise:{value:noiseTex},uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0},uZen:{value:new THREE.Color(.16,.40,.80)},uHor:{value:new THREE.Color(.81,.88,.95)},uGlow:{value:new THREE.Color(1,.88,.68)},uGr:{value:GRADE}},
   vertexShader:'varying vec3 vDir;void main(){vDir=position;vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=p.xyww;}',
-  fragmentShader:`uniform vec3 uSun;uniform float uTime;uniform sampler2D uNoise;uniform vec3 uFogC;uniform float uFogK;varying vec3 vDir;
+  fragmentShader:`uniform vec3 uSun;uniform float uTime;uniform sampler2D uNoise;uniform vec3 uFogC;uniform float uFogK;uniform vec3 uZen,uHor,uGlow;varying vec3 vDir;
   float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
   float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*vn(p);p=p*2.03+17.1;a*=.5;}return s;}
   void main(){vec3 d=normalize(vDir);float h=d.y;
-    vec3 zen=vec3(.16,.40,.80),hor=vec3(.81,.88,.95),gnd=vec3(.87,.91,.96);
+    vec3 zen=uZen,hor=uHor,gnd=mix(uHor,vec3(.87,.91,.96),.6);
     vec3 c=h>0.?mix(hor,zen,pow(clamp(h,0.,1.),.5)):gnd;
     float s=max(dot(d,uSun),0.);
     if(h>.01){vec2 uv=d.xz/(h+.18)*1.15+vec2(uTime*.004,uTime*.0015);float n=texture2D(uNoise,uv*.11).r*.62+texture2D(uNoise,uv*.37+.3).g*.38;
       float cl=smoothstep(.52,.82,n)*smoothstep(.01,.22,h);vec3 cc=mix(vec3(.80,.85,.92),vec3(1.),smoothstep(.5,.9,n))+vec3(1.,.9,.75)*pow(s,6.)*.25;c=mix(c,cc,cl*.85);}
-    c+=vec3(1.,.88,.68)*(pow(s,10.)*.28+pow(s,600.)*2.);
+    c+=uGlow*(pow(s,10.)*.28+pow(s,600.)*2.);
     c=mix(c,uFogC,uFogK*(1.-.35*smoothstep(.0,.6,h)));   /* weather: overcast sky, whitest at the horizon */
-    gl_FragColor=linearToOutputTexel(vec4(c,1.));}`});
+    gl_FragColor=linearToOutputTexel(vec4(kGrade(c),1.));}`});
 const skyDome=new THREE.Mesh(new THREE.SphereGeometry(4000,32,16),skyMat);skyDome.frustumCulled=false;skyDome.renderOrder=-1;scene.add(skyDome);
 /* environment map from the same sky, so glossy gear reflects the real sky and snow */
 let envTex=null;try{const pm=new THREE.PMREMGenerator(renderer);const es=new THREE.Scene();es.add(new THREE.Mesh(new THREE.SphereGeometry(50,32,16),skyMat));envTex=pm.fromScene(es,0.03).texture;pm.dispose();}catch(e){}
@@ -445,7 +460,7 @@ const camera=new THREE.PerspectiveCamera(64,1,0.5,6000);
 function resize(){const w=window.innerWidth,h=window.innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 window.addEventListener('resize',resize);resize();
 
-scene.add(new THREE.HemisphereLight(0xdcecff,0x8a93a3,0.56));
+const hemi=new THREE.HemisphereLight(0xdcecff,0x8a93a3,0.56);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff0d8,0.78);sun.position.copy(SUN_DIR).multiplyScalar(60);scene.add(sun);scene.add(sun.target);
 sun.castShadow=false;sun.shadow.mapSize.set(1024,1024);{const sc=sun.shadow.camera;sc.left=-7;sc.right=7;sc.top=7;sc.bottom=-7;sc.near=1;sc.far=140;}sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.03;sun.shadow.radius=3;
 const fill=new THREE.DirectionalLight(0xdfeaff,0.22);fill.position.set(-0.3,0.8,-1);scene.add(fill);
@@ -468,7 +483,7 @@ const RIDGE_U={uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0}};
     {r:5400,h:[330,640],snow:0xeef2f7,low:0x9db2c6,haze:.75,lob:5,sd:7.7}];
   const mat=new THREE.MeshBasicMaterial({vertexColors:true,fog:false,side:THREE.DoubleSide});
   /* weather (13-weather.js) washes the ridgelines out toward the fog colour */
-  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,RIDGE_U);sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 uFogC;uniform float uFogK;').replace('#include <fog_fragment>','gl_FragColor.rgb=mix(gl_FragColor.rgb,uFogC,uFogK);');};
+  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,RIDGE_U);sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 uFogC;uniform float uFogK;').replace('#include <fog_fragment>','gl_FragColor.rgb=kGrade(mix(gl_FragColor.rgb,uFogC,uFogK));');};
   LAYERS.forEach(L=>{const seg=144,P=new Float32Array((seg+1)*3*3),C=new Float32Array((seg+1)*3*3),I=[];
     sn.set(L.snow).lerp(hz,L.haze*.6);lo.set(L.low).lerp(hz,L.haze);
     for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;
@@ -1703,6 +1718,8 @@ const CAMF={yaw:1.8,lat:6,h:2.1,look:21,lookH:1.0};   /* h was 2.55: lower, flat
    turn (the camera follows as before) and large when the heading swings back and forth (short turns, moguls), where the camera
    follows the heading more slowly and only drifts sideways with the skier instead of tracking every swing. */
 const CAMW={off:false,w:0,ya:0,ym:0,th:0,ax:0,az:0};window.__camw=CAMW;
+/* a slight roll into the turn at speed (up to ~3° at full lean above ~55 mph); level in the air */
+const CAMR={k:0.075,r:0};window.__camr=CAMR;
 function placeCam(snap,dt){
   if(snap){camTh=S.th;CAMW.th=S.th;CAMW.ya=CAMW.ym=CAMW.w=0;CAMW.ax=S.x;CAMW.az=S.z;}
   else{let d=S.th-CAMW.th;d=Math.atan2(Math.sin(d),Math.cos(d));CAMW.th=S.th;const yr=dt>0?d/dt:0,k1=1-Math.exp(-dt*1.5);
@@ -1722,6 +1739,7 @@ function placeCam(snap,dt){
   camera.position.copy(camPos);
   if(S.shake>0){camera.position.x+=(rnd()-0.5)*S.shake*0.8;camera.position.y+=(rnd()-0.5)*S.shake*0.8;}
   camera.lookAt(camLook);
+  {const rT=snap||S.air?0:-clamp(lean,-0.7,0.7)*CAMR.k*sstep(8,24,S.v);CAMR.r=snap?0:CAMR.r+(rT-CAMR.r)*(1-Math.exp(-dt*2.5));if(CAMR.r)camera.rotateZ(CAMR.r);}
 }
 
 /* ---------- loop ---------- */
@@ -1803,7 +1821,7 @@ function endFrame(now,dt){
   if(window.__close&&BN.head){BN.head.getWorldPosition(_hp);const a=window.__close;camera.position.set(_hp.x+Math.sin(S.th+a)*1.3,_hp.y+0.15,_hp.z+Math.cos(S.th+a)*1.3);camera.lookAt(_hp.x,_hp.y+0.05,_hp.z);}
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.style.opacity=0;}
   if(S.state!=='ride'&&S.state!=='finishing')ghostG.visible=ghostPin.visible=false;ghostHud(dt);
-  weatherFrame(dt,now);sfxFrame(dt);
+  weatherFrame(dt,now);sfxFrame(dt);lookFrame(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
 }
@@ -1875,9 +1893,9 @@ MAP.pins.forEach(p=>{const e=document.createElement('button');e.className='pin '
 function trailChip(t){return '<span class="chip">'+diffIcon(t.diff)+shortName(t.name)+'</span>';}
 function sheetIdle(){if(S.state==='paused'){sheetPaused();return;}$('sheet').innerHTML='<div class="k">Killington, Vermont</div><h1>Where are you dropping in?</h1>'+
   '<p>Tap a peak to drop in, or a base to ride a lift. Drag to look around, pinch to zoom.</p>'+
-  '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+
+  '<div class="row"><button class="btn alt" id="mapList">☰ All peaks</button><button class="btn alt" id="mapHow">How to play</button></div>'+liteChips()+
   '<p class="attr">Terrain: USGS 3DEP. Trails &amp; lifts: © OpenStreetMap contributors (ODbL).</p>';
-  $('mapList').onclick=$('mapHow').onclick=()=>{$('map').classList.add('hidden');$('start').classList.remove('hidden');};}
+  $('mapList').onclick=$('mapHow').onclick=()=>{$('map').classList.add('hidden');$('start').classList.remove('hidden');};wireLite();}
 /* paused mid-run: where you are, and the way back to the run */
 function sheetPaused(){const sh=$('sheet'),pre=S.pre;
   sh.innerHTML='<button class="x" id="sheetX" aria-label="Keep skiing">✕</button><div class="k">Paused · '+(pre?'top of '+pre.name:fmt(S.t)+' on the clock')+'</div><h1>'+(pre?pre.top:shortName(RUN.name))+'</h1>'+
@@ -2162,10 +2180,10 @@ Object.assign(window.__kr,{jump,topSpot,topStart,JN,liftSigns,pauseGame,resumeGa
    jumps between them. Altitude scales it: the summits fog in, the
    base mostly stays clear. Cost: a few uniforms per frame, plus two draw calls (snow points, wisp quads) that are skipped when invisible.
    Guardrail: visibility never drops below ~200 m, so signs and the next pitch stay readable at speed. */
-const WX={alt0:780,alt1:1180,farMin:200,nearMin:6,cycle:0.7,force:null};window.__wx=WX;
+const WX={alt0:780,alt1:1180,farMin:200,nearMin:6,cycle:0.7,force:null,lo:0,hi:1,far0:3800,near0:300,skyK:0,ridgeK:0};   /* lo..hi, far0/near0, skyK/ridgeK: set by the light preset (16-look.js) */window.__wx=WX;
 const WXS={cloud:0,k:0,snow:0,wisp:0,t0:performance.now()/1000};   /* smoothed state */
 const FOG_CLEAR=new THREE.Color(0xcfe0f2),FOG_THICK=new THREE.Color(0xdde3ea),_fogC=new THREE.Color();
-const SUN_I=sun.intensity;
+let SUN_I=sun.intensity;
 function hashStr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return ((h>>>0)%10000)/10000;}
 /* 0 clear … 1 socked in. Two slow sines (≈82 s and ≈190 s at cycle 0.7): roughly half the time clear, the rest flurries building to thick cloud */
 function cloudAt(t,seed){const p=seed*TAU;const c=0.5+0.32*Math.sin(t*0.11+p)+0.18*Math.sin(t*0.047+p*2.7+1.3);return sstep(0.36,0.86,c);}
@@ -2192,11 +2210,11 @@ const WISP_N=18;
 const wispTex=canvasTex(128,64,(g,w,h)=>{for(let i=0;i<26;i++){const x=w*(0.18+0.64*Math.random()),y=h*(0.35+0.3*Math.random()),r=h*(0.14+0.2*Math.random());
   const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(255,255,255,.22)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);}});
 const wispMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:false,
-  uniforms:{uTex:{value:wispTex},uCol:{value:new THREE.Color(0xf1f4f8)},uFar:{value:3800}},
+  uniforms:{uTex:{value:wispTex},uCol:{value:new THREE.Color(0xf1f4f8)},uFar:{value:3800},uGr:{value:GRADE}},
   vertexShader:`attribute vec3 aC;attribute vec3 aS;varying vec2 vUv;varying float vA;uniform float uFar;
   void main(){vec4 c=modelViewMatrix*vec4(aC,1.);vec2 o=position.xy*aS.xy;c.xy+=o;gl_Position=projectionMatrix*c;vUv=uv;
     float d=-c.z;vA=aS.z*smoothstep(14.,45.,d)*(1.-smoothstep(uFar*.7,uFar,d));}`,
-  fragmentShader:`uniform sampler2D uTex;uniform vec3 uCol;varying vec2 vUv;varying float vA;void main(){float a=min(.85,texture2D(uTex,vUv).a*1.7)*vA;if(a<.01)discard;gl_FragColor=vec4(uCol,a);}`});
+  fragmentShader:`uniform sampler2D uTex;uniform vec3 uCol;varying vec2 vUv;varying float vA;void main(){float a=min(.85,texture2D(uTex,vUv).a*1.7)*vA;if(a<.01)discard;gl_FragColor=vec4(kGrade(uCol),a);}`});
 const wisp=(function(){const g=new THREE.BufferGeometry(),P=[],U=[],I=[];
   for(let i=0;i<WISP_N;i++){const b=i*4;P.push(-.5,-.5,0,.5,-.5,0,.5,.5,0,-.5,.5,0);U.push(0,0,1,0,1,1,0,1);I.push(b,b+1,b+2,b,b+2,b+3);}
   g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);
@@ -2223,12 +2241,12 @@ const BANK_N=10;
 const bankTex=canvasTex(256,96,(g,w,h)=>{for(let i=0;i<70;i++){const x=w*(0.1+0.8*Math.random()),y=h*(0.42+0.22*Math.random()-0.1*Math.abs(x/w-0.5)),r=h*(0.12+0.22*Math.random());
   const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(255,255,255,.16)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,w,h);}});
 const bankMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:false,
-  uniforms:{uTex:{value:bankTex},uCol:{value:new THREE.Color(0xf4f6f9)},uShade:{value:new THREE.Color(0xc9d2dd)}},
+  uniforms:{uTex:{value:bankTex},uCol:{value:new THREE.Color(0xf4f6f9)},uShade:{value:new THREE.Color(0xc9d2dd)},uGr:{value:GRADE}},
   vertexShader:`attribute vec3 aC;attribute vec3 aS;varying vec2 vUv;varying float vA;
   void main(){vec4 c=modelViewMatrix*vec4(aC,1.);c.xy+=position.xy*aS.xy;gl_Position=projectionMatrix*c;vUv=uv;
     float d=-c.z;vA=aS.z*smoothstep(150.,380.,d)*(1.-smoothstep(1900.,2400.,d));}`,
   fragmentShader:`uniform sampler2D uTex;uniform vec3 uCol,uShade;varying vec2 vUv;varying float vA;
-  void main(){float a=min(.8,texture2D(uTex,vUv).a*1.9)*vA;if(a<.01)discard;gl_FragColor=vec4(mix(uShade,uCol,smoothstep(.15,.75,vUv.y)),a);}`});
+  void main(){float a=min(.8,texture2D(uTex,vUv).a*1.9)*vA;if(a<.01)discard;gl_FragColor=vec4(kGrade(mix(uShade,uCol,smoothstep(.15,.75,vUv.y))),a);}`});
 const banks=(function(){const g=new THREE.BufferGeometry(),P=[],U=[],I=[];
   for(let i=0;i<BANK_N;i++){const b=i*4;P.push(-.5,-.5,0,.5,-.5,0,.5,.5,0,-.5,.5,0);U.push(0,0,1,0,1,1,0,1);I.push(b,b+1,b+2,b,b+2,b+3);}
   g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(U,2));g.setIndex(I);
@@ -2253,19 +2271,19 @@ function weatherFrame(dt,now){
   const riding=S.state==='ride'||S.state==='finishing'||S.state==='paused';
   /* one continuous weather clock for lifts, lift tops and runs, so nothing jumps when you pick a trail */
   const t=now/1000-WXS.t0,seed=0.37;
-  const cl=WX.force!=null?WX.force:cloudAt(t*WX.cycle,seed);
+  const cl=WX.force!=null?WX.force:clamp(cloudAt(t*WX.cycle,seed),WX.lo,WX.hi);
   const camY=camera.position.y,alt=sstep(WX.alt0,WX.alt1,camY);
   /* fog: a light haze down low even in cloud, socked in up top */
   /* at a lift top while choosing a trail: moderate fog at most, so you can see the signs and where the trails go */
   const kT=Math.min(S.pre&&riding?0.55:1,clamp(cl*(0.18+0.82*alt),0,1)),sT=clamp(cl*(0.25+0.75*alt)*1.15-0.08,0,1),wT=cl*alt;
   const f=WX.snap?1:1-Math.exp(-dt*0.3);   /* ~3 s ease: fog closes in gradually as you ski off the top */   /* WX.snap: tests jump straight to the target */WXS.k+=(kT-WXS.k)*f;WXS.snow+=(sT-WXS.snow)*f;WXS.wisp+=(wT-WXS.wisp)*f;
   const k=map?0:WXS.k;
-  if(!map){const e=k*k*(3-2*k);scene.fog.far=3800+(WX.farMin-3800)*Math.pow(e,0.6);scene.fog.near=300+(WX.nearMin-300)*Math.pow(e,0.5);
+  if(!map){const e=k*k*(3-2*k);scene.fog.far=WX.far0+(WX.farMin-WX.far0)*Math.pow(e,0.6);scene.fog.near=WX.near0+(WX.nearMin-WX.near0)*Math.pow(e,0.5);
     _fogC.copy(FOG_CLEAR).lerp(FOG_THICK,e);scene.fog.color.copy(_fogC);scene.background.copy(_fogC);
-    skyMat.uniforms.uFogC.value.copy(_fogC);skyMat.uniforms.uFogK.value=Math.min(1,e*1.15);
-    RIDGE_U.uFogC.value.copy(_fogC);RIDGE_U.uFogK.value=Math.min(1,e*1.6);
+    skyMat.uniforms.uFogC.value.copy(_fogC);skyMat.uniforms.uFogK.value=Math.min(1,Math.max(WX.skyK,e*1.15));
+    RIDGE_U.uFogC.value.copy(_fogC);RIDGE_U.uFogK.value=Math.min(1,Math.max(WX.ridgeK,e*1.6));
     sun.intensity=SUN_I*(1-0.35*e);wispMat.uniforms.uFar.value=scene.fog.far;}
-  else{skyMat.uniforms.uFogK.value=0;RIDGE_U.uFogK.value=0;sun.intensity=SUN_I;scene.fog.color.copy(FOG_CLEAR);scene.background.copy(FOG_CLEAR);}
+  else{skyMat.uniforms.uFogK.value=WX.skyK;RIDGE_U.uFogK.value=WX.ridgeK;skyMat.uniforms.uFogC.value.copy(FOG_CLEAR);RIDGE_U.uFogC.value.copy(FOG_CLEAR);sun.intensity=SUN_I;scene.fog.color.copy(FOG_CLEAR);scene.background.copy(FOG_CLEAR);}
   /* snow */
   const sn=map?0:WXS.snow;snowPts.visible=sn>0.02;
   if(snowPts.visible){const u=snowMat.uniforms;u.uT.value=now/1000;u.uCam.value.copy(camera.position);u.uAmt.value=sn;u.uPx.value=renderer.getPixelRatio()*window.innerHeight/844;}
@@ -2577,6 +2595,63 @@ $('share').onclick=shareRun;
 PEND_CHAL=chalFromHash(location.hash);
 window.addEventListener('hashchange',()=>{const C=chalFromHash(location.hash);if(C&&S.state!=='ride'){PEND_CHAL=C;chalOffer();}});
 window.__kr.chal={encode:chalEncode,decode:chalDecode,fromHash:chalFromHash,start:startChallenge,offer:()=>chalOffer(),set pend(v){PEND_CHAL=v},grec:grecGhost,share:shareRun};
+/* ---------- light presets, speed streaks ----------
+   A preset sets the sun (direction, colour, strength), sky and ground fill, the haze colour and distance, the sky dome's colours,
+   how far the weather may go, and the colour grade (GRADE, 03-scene.js). Changing one is a handful of uniform writes: no shader
+   recompiles, nothing rebuilt. "Changing" is the original light with the full weather cycle; the others hold the weather to suit.
+   grade: exposure, contrast (S-curve), saturation, black lift, shadow tint rgb, highlight tint rgb (offsets; 0 = none). */
+const LIGHTS={
+  changing:{label:'Changing',sun:[0.37,0.52,0.8],sunC:0xfff0d8,sunI:0.78,hemi:[0xdcecff,0x8a93a3,0.56],fill:0.22,fog:0xcfe0f2,thick:0xdde3ea,far0:3800,near0:300,
+    zen:[.16,.40,.80],hor:[.81,.88,.95],glow:[1,.88,.68],skyK:0,ridgeK:0,wx:[0,1],grade:[0,.35,.08,.012,-.018,-.004,.028,.006,.003,-.004]},
+  bluebird:{label:'Bluebird',sun:[0.37,0.58,0.78],sunC:0xfff3e0,sunI:0.82,hemi:[0xd6e8ff,0x8a93a3,0.54],fill:0.22,fog:0xc9ddf3,thick:0xd6dfe9,far0:4200,near0:400,
+    zen:[.10,.33,.78],hor:[.74,.85,.96],glow:[1,.9,.72],skyK:0,ridgeK:0,wx:[0,0.3],grade:[0,.4,.14,.01,-.02,-.004,.032,.006,.003,-.004]},
+  golden:{label:'Golden hour',sun:[-0.6,0.38,0.7],sunC:0xffb468,sunI:0.98,hemi:[0xd8cfe8,0x7a7280,0.62],fill:0.16,fog:0xe9cdb8,thick:0xddc9c2,far0:3400,near0:250,
+    zen:[.21,.33,.66],hor:[1,.79,.58],glow:[1,.6,.3],skyK:0,ridgeK:0.3,wx:[0,0.25],grade:[0,.4,.1,.014,-.016,0,.026,.04,.012,-.04]},
+  flat:{label:'Flat light',sun:[0.2,0.85,0.45],sunC:0xf1f4f9,sunI:0.3,hemi:[0xeef2f7,0xa6aeb9,0.92],fill:0.1,fog:0xd5dae0,thick:0xdde1e6,far0:2100,near0:120,
+    zen:[.70,.74,.80],hor:[.86,.88,.91],glow:[.22,.22,.22],skyK:0.8,ridgeK:0.55,wx:[0.45,1],grade:[0,-.04,-.18,.02,0,0,.008,0,0,0]}};
+let lightId='changing';
+function applyLight(id){const P=LIGHTS[id]||LIGHTS.changing;lightId=LIGHTS[id]?id:'changing';
+  SUN_DIR.set(...P.sun).normalize();sun.position.copy(SUN_DIR).multiplyScalar(60);_sunAway.set(-SUN_DIR.x,0,-SUN_DIR.z).normalize();
+  sun.color.setHex(P.sunC);SUN_I=P.sunI;sun.intensity=P.sunI;hemi.color.setHex(P.hemi[0]);hemi.groundColor.setHex(P.hemi[1]);hemi.intensity=P.hemi[2];fill.intensity=P.fill;
+  FOG_CLEAR.setHex(P.fog);FOG_THICK.setHex(P.thick);Object.assign(WX,{far0:P.far0,near0:P.near0,skyK:P.skyK,ridgeK:P.ridgeK,lo:P.wx[0],hi:P.wx[1]});
+  const u=skyMat.uniforms;u.uZen.value.setRGB(...P.zen);u.uHor.value.setRGB(...P.hor);u.uGlow.value.setRGB(...P.glow);
+  const g=P.grade;GRADE.set([g[0],g[1],g[2],g[3],g[4],g[5],g[6],0,g[7],g[8],g[9],0]);
+  try{localStorage.setItem('kr_light',lightId);}catch(e){}
+  document.querySelectorAll('.lite button').forEach(b=>b.classList.toggle('on',b.dataset.l===lightId));}
+/* the light picker on the trail-map sheet: the map re-lights as you tap, so you see it before you drop in */
+function liteChips(){return '<div class="lite"><span>Light</span>'+Object.keys(LIGHTS).map(k=>'<button data-l="'+k+'"'+(k===lightId?' class="on"':'')+'>'+LIGHTS[k].label+'</button>').join('')+'</div>';}
+function wireLite(){document.querySelectorAll('.lite button').forEach(b=>b.onclick=()=>applyLight(b.dataset.l));}
+{let s=null;try{s=localStorage.getItem('kr_light');}catch(e){}applyLight(s||'changing');}
+
+/* speed streaks: 220 thin snow-dust streaks in a 22 m box that wraps around the camera, each stretched along your motion over the
+   last ~0.075 s, so they read as speed. All in the vertex shader (one draw call, 440 triangles), only above ~35 mph. */
+const STREAK_N=220,STREAK_B=22;
+const streakMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
+  uniforms:{uCam:{value:new THREE.Vector3()},uVel:{value:new THREE.Vector3()},uAmt:{value:0},uW:{value:1.5},uRes:{value:new THREE.Vector2(1,1)}},
+  vertexShader:`attribute vec4 aSeed;attribute vec2 aEnd;uniform vec3 uCam,uVel;uniform float uAmt,uW;uniform vec2 uRes;varying float vA,vS;
+  void main(){float B=${STREAK_B.toFixed(1)};
+    vec3 p=vec3(aSeed.x*B,aSeed.y*6.,aSeed.z*B);p=mod(p-uCam+vec3(B*.5,2.,B*.5),vec3(B,6.,B))-vec3(B*.5,2.,B*.5)+uCam;
+    vec3 t=p-uVel*.09;mat4 pv=projectionMatrix*viewMatrix;vec4 h=pv*vec4(p,1.),q=pv*vec4(t,1.);
+    float d=distance(p,uCam);vA=uAmt*aSeed.w*smoothstep(1.,3.,d)*(1.-smoothstep(7.,11.,d));
+    if(vA<.004||h.w<.3||q.w<.3){gl_Position=vec4(0.,0.,2.,1.);vA=0.;vS=0.;return;}
+    vec2 a=h.xy/h.w,b=q.xy/q.w,dd=(a-b)*uRes;vec2 n=normalize(vec2(-dd.y,dd.x)+1e-4)/uRes;
+    vec4 c=mix(h,q,aEnd.x);c.xy+=n*aEnd.y*uW*2.*c.w;vS=aEnd.y;gl_Position=c;}`,
+  fragmentShader:`varying float vA,vS;void main(){gl_FragColor=vec4(vec3(.9,.95,1.)*vA*(1.-vS*vS)*.5,1.);}`});
+const streaks=(function(){const N=STREAK_N,S4=new Float32Array(N*4*4),E=new Float32Array(N*4*2),I=[];
+  for(let i=0;i<N;i++){const sd=[hash2(i,1,701),hash2(i,2,702),hash2(i,3,703),0.45+0.55*hash2(i,4,704)];
+    [[0,-1],[0,1],[1,-1],[1,1]].forEach(([e,s],v)=>{const o=i*4+v;S4.set(sd,o*4);E[o*2]=e;E[o*2+1]=s;});const b=i*4;I.push(b,b+2,b+1,b+1,b+2,b+3);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array(N*4*3),3));g.setAttribute('aSeed',new THREE.BufferAttribute(S4,4));g.setAttribute('aEnd',new THREE.BufferAttribute(E,2));g.setIndex(I);
+  const m=new THREE.Mesh(g,streakMat);m.frustumCulled=false;m.renderOrder=6;m.visible=false;scene.add(m);return m;})();
+const STREAK={on:true,amt:0,force:null,vel:null},_lkP=new THREE.Vector3(),_lkV=new THREE.Vector3(),_lkT=new THREE.Vector3();let _lkInit=false;window.__streak=STREAK;
+function lookFrame(dt){const cp=camera.position,u=streakMat.uniforms;
+  if(!_lkInit||dt<=0||cp.distanceToSquared(_lkP)>400){_lkP.copy(cp);_lkV.set(0,0,0);_lkInit=true;}
+  else{_lkV.lerp(_lkT.copy(cp).sub(_lkP).divideScalar(dt),1-Math.exp(-dt*12));_lkP.copy(cp);}
+  if(STREAK.vel)_lkV.copy(STREAK.vel);   /* tests: a fixed motion */
+  /* strength and length follow the skier's real speed (the camera can lurch when it catches up); the camera gives the direction */
+  const ride=S.state==='ride'||S.state==='finishing',sp=ride?S.v:0,tgt=STREAK.force!=null?STREAK.force:(STREAK.on&&ride?sstep(15,28,sp):0);
+  STREAK.amt+=(tgt-STREAK.amt)*(1-Math.exp(-dt*4));streaks.visible=STREAK.amt>0.01;
+  if(streaks.visible){u.uCam.value.copy(cp);u.uVel.value.copy(_lkV);if(!STREAK.vel&&ride){const l=_lkV.length();if(l>0.5)u.uVel.value.multiplyScalar(Math.max(sp,5)/l);}u.uAmt.value=STREAK.amt;const db=renderer.domElement;u.uRes.value.set(db.width,db.height);u.uW.value=Math.max(1.2,renderer.getPixelRatio()*1.1);}}
+window.__kr.light={apply:applyLight,get id(){return lightId},LIGHTS,GRADE,streaks};
 })();
 </script>
 </body>

@@ -15,6 +15,8 @@ const CAMF={yaw:1.8,lat:6,h:2.1,look:21,lookH:1.0};   /* h was 2.55: lower, flat
    turn (the camera follows as before) and large when the heading swings back and forth (short turns, moguls), where the camera
    follows the heading more slowly and only drifts sideways with the skier instead of tracking every swing. */
 const CAMW={off:false,w:0,ya:0,ym:0,th:0,ax:0,az:0};window.__camw=CAMW;
+/* a slight roll into the turn at speed (up to ~3° at full lean above ~55 mph); level in the air */
+const CAMR={k:0.075,r:0};window.__camr=CAMR;
 function placeCam(snap,dt){
   if(snap){camTh=S.th;CAMW.th=S.th;CAMW.ya=CAMW.ym=CAMW.w=0;CAMW.ax=S.x;CAMW.az=S.z;}
   else{let d=S.th-CAMW.th;d=Math.atan2(Math.sin(d),Math.cos(d));CAMW.th=S.th;const yr=dt>0?d/dt:0,k1=1-Math.exp(-dt*1.5);
@@ -34,6 +36,7 @@ function placeCam(snap,dt){
   camera.position.copy(camPos);
   if(S.shake>0){camera.position.x+=(rnd()-0.5)*S.shake*0.8;camera.position.y+=(rnd()-0.5)*S.shake*0.8;}
   camera.lookAt(camLook);
+  {const rT=snap||S.air?0:-clamp(lean,-0.7,0.7)*CAMR.k*sstep(8,24,S.v);CAMR.r=snap?0:CAMR.r+(rT-CAMR.r)*(1-Math.exp(-dt*2.5));if(CAMR.r)camera.rotateZ(CAMR.r);}
 }
 
 /* ---------- loop ---------- */
@@ -115,7 +118,7 @@ function endFrame(now,dt){
   if(window.__close&&BN.head){BN.head.getWorldPosition(_hp);const a=window.__close;camera.position.set(_hp.x+Math.sin(S.th+a)*1.3,_hp.y+0.15,_hp.z+Math.cos(S.th+a)*1.3);camera.lookAt(_hp.x,_hp.y+0.05,_hp.z);}
   if(toastT>0){toastT-=dt;if(toastT<=0)toastEl.style.opacity=0;}
   if(S.state!=='ride'&&S.state!=='finishing')ghostG.visible=ghostPin.visible=false;ghostHud(dt);
-  weatherFrame(dt,now);sfxFrame(dt);
+  weatherFrame(dt,now);sfxFrame(dt);lookFrame(dt);
   renderer.render(scene,camera);
   requestAnimationFrame(frame);
 }

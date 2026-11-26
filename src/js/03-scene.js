@@ -8,6 +8,17 @@ const BASE_DPR=Math.min(window.devicePixelRatio||1,1.75);
 const RES={max:IS_MOBILE?0.8:1,min:0.55,scale:IS_MOBILE?0.8:1,ema:16.7,t:0};
 renderer.setPixelRatio(BASE_DPR*RES.scale);
 renderer.shadowMap.enabled=false;   /* contact + decal shadows replace the real-time shadow map */
+/* film-style colour grade inside every material's own shader (no extra full-screen pass): exposure, saturation, an S-curve that
+   lifts mid contrast and rolls off the ends, split toning (cool shadows, warm highlights) and lifted blacks. It runs after fog, so
+   the haze and the sky grade the same way. GRADE is shared by reference by every material (three clones uniform values but keeps
+   typed arrays), so a light preset changes it everywhere at once. All zeros = no grade. Must be set up before anything compiles. */
+const GRADE=new Float32Array(12);
+THREE.ShaderChunk.encodings_pars_fragment+=`
+uniform vec4 uGr[3];
+vec3 kGrade(vec3 c){c*=1.+uGr[0].x;float l=dot(c,vec3(.2126,.7152,.0722));c=max(mix(vec3(l),c,1.+uGr[0].z),0.);
+  vec3 x=clamp(c,0.,1.);c+=uGr[0].y*x*(1.-x)*(2.*x-1.);float s=clamp(l,0.,1.);c+=uGr[1].rgb*(1.-s)*(1.-s)+uGr[2].rgb*s*s;return c*(1.-uGr[0].w)+uGr[0].w;}`;
+THREE.ShaderChunk.fog_fragment+='\ngl_FragColor.rgb=kGrade(gl_FragColor.rgb);';
+for(const k in THREE.ShaderLib)THREE.ShaderLib[k].uniforms.uGr={value:GRADE};
 /* shared tileable noise texture: R large patches, G lumps, B grain, A per-texel random (glitter). Replaces per-pixel ALU noise. */
 const noiseTex=(function(){const N=256,d=new Uint8Array(N*N*4);
   function layer(per,oct,seed,ch){const out=new Float32Array(N*N);let amp=.5,tot=0;
@@ -27,21 +38,21 @@ scene.fog=new THREE.Fog(0xcfe0f2,300,3800);
 /* late-morning winter sun, south-southeast (~155°), ~30° up: it lights the east-facing fall lines from the side */
 const SUN_DIR=new THREE.Vector3(0.37,0.52,0.8).normalize();
 /* sky dome: gradient, sun glow and drifting cumulus in one cheap fragment shader */
-const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,uniforms:{uSun:{value:SUN_DIR},uTime:{value:0},uNoise:{value:noiseTex},uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0}},
+const skyMat=new THREE.ShaderMaterial({side:THREE.BackSide,depthWrite:false,depthTest:false,fog:false,uniforms:{uSun:{value:SUN_DIR},uTime:{value:0},uNoise:{value:noiseTex},uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0},uZen:{value:new THREE.Color(.16,.40,.80)},uHor:{value:new THREE.Color(.81,.88,.95)},uGlow:{value:new THREE.Color(1,.88,.68)},uGr:{value:GRADE}},
   vertexShader:'varying vec3 vDir;void main(){vDir=position;vec4 p=projectionMatrix*modelViewMatrix*vec4(position,1.);gl_Position=p.xyww;}',
-  fragmentShader:`uniform vec3 uSun;uniform float uTime;uniform sampler2D uNoise;uniform vec3 uFogC;uniform float uFogK;varying vec3 vDir;
+  fragmentShader:`uniform vec3 uSun;uniform float uTime;uniform sampler2D uNoise;uniform vec3 uFogC;uniform float uFogK;uniform vec3 uZen,uHor,uGlow;varying vec3 vDir;
   float h21(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
   float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
   float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*vn(p);p=p*2.03+17.1;a*=.5;}return s;}
   void main(){vec3 d=normalize(vDir);float h=d.y;
-    vec3 zen=vec3(.16,.40,.80),hor=vec3(.81,.88,.95),gnd=vec3(.87,.91,.96);
+    vec3 zen=uZen,hor=uHor,gnd=mix(uHor,vec3(.87,.91,.96),.6);
     vec3 c=h>0.?mix(hor,zen,pow(clamp(h,0.,1.),.5)):gnd;
     float s=max(dot(d,uSun),0.);
     if(h>.01){vec2 uv=d.xz/(h+.18)*1.15+vec2(uTime*.004,uTime*.0015);float n=texture2D(uNoise,uv*.11).r*.62+texture2D(uNoise,uv*.37+.3).g*.38;
       float cl=smoothstep(.52,.82,n)*smoothstep(.01,.22,h);vec3 cc=mix(vec3(.80,.85,.92),vec3(1.),smoothstep(.5,.9,n))+vec3(1.,.9,.75)*pow(s,6.)*.25;c=mix(c,cc,cl*.85);}
-    c+=vec3(1.,.88,.68)*(pow(s,10.)*.28+pow(s,600.)*2.);
+    c+=uGlow*(pow(s,10.)*.28+pow(s,600.)*2.);
     c=mix(c,uFogC,uFogK*(1.-.35*smoothstep(.0,.6,h)));   /* weather: overcast sky, whitest at the horizon */
-    gl_FragColor=linearToOutputTexel(vec4(c,1.));}`});
+    gl_FragColor=linearToOutputTexel(vec4(kGrade(c),1.));}`});
 const skyDome=new THREE.Mesh(new THREE.SphereGeometry(4000,32,16),skyMat);skyDome.frustumCulled=false;skyDome.renderOrder=-1;scene.add(skyDome);
 /* environment map from the same sky, so glossy gear reflects the real sky and snow */
 let envTex=null;try{const pm=new THREE.PMREMGenerator(renderer);const es=new THREE.Scene();es.add(new THREE.Mesh(new THREE.SphereGeometry(50,32,16),skyMat));envTex=pm.fromScene(es,0.03).texture;pm.dispose();}catch(e){}
@@ -49,7 +60,7 @@ const camera=new THREE.PerspectiveCamera(64,1,0.5,6000);
 function resize(){const w=window.innerWidth,h=window.innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 window.addEventListener('resize',resize);resize();
 
-scene.add(new THREE.HemisphereLight(0xdcecff,0x8a93a3,0.56));
+const hemi=new THREE.HemisphereLight(0xdcecff,0x8a93a3,0.56);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff0d8,0.78);sun.position.copy(SUN_DIR).multiplyScalar(60);scene.add(sun);scene.add(sun.target);
 sun.castShadow=false;sun.shadow.mapSize.set(1024,1024);{const sc=sun.shadow.camera;sc.left=-7;sc.right=7;sc.top=7;sc.bottom=-7;sc.near=1;sc.far=140;}sun.shadow.bias=-0.0004;sun.shadow.normalBias=0.03;sun.shadow.radius=3;
 const fill=new THREE.DirectionalLight(0xdfeaff,0.22);fill.position.set(-0.3,0.8,-1);scene.add(fill);
@@ -72,7 +83,7 @@ const RIDGE_U={uFogC:{value:new THREE.Color(0xcfe0f2)},uFogK:{value:0}};
     {r:5400,h:[330,640],snow:0xeef2f7,low:0x9db2c6,haze:.75,lob:5,sd:7.7}];
   const mat=new THREE.MeshBasicMaterial({vertexColors:true,fog:false,side:THREE.DoubleSide});
   /* weather (13-weather.js) washes the ridgelines out toward the fog colour */
-  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,RIDGE_U);sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 uFogC;uniform float uFogK;').replace('#include <fog_fragment>','gl_FragColor.rgb=mix(gl_FragColor.rgb,uFogC,uFogK);');};
+  mat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,RIDGE_U);sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 uFogC;uniform float uFogK;').replace('#include <fog_fragment>','gl_FragColor.rgb=kGrade(mix(gl_FragColor.rgb,uFogC,uFogK));');};
   LAYERS.forEach(L=>{const seg=144,P=new Float32Array((seg+1)*3*3),C=new Float32Array((seg+1)*3*3),I=[];
     sn.set(L.snow).lerp(hz,L.haze*.6);lo.set(L.low).lerp(hz,L.haze);
     for(let i=0;i<=seg;i++){const a=i/seg*Math.PI*2;

@@ -20,7 +20,7 @@ src/index.html        page markup + CSS (markers: <!--@ASSETS-->, <!--@GAME-->)
 src/js/NN-*.js        the game: one closure split into ordered files that share scope (order matters)
   01-util             seeded random, clamp, smoothstep
   02-mountain         terrain (bicubic DEM), trail network, trail blending/grooming, height function H(x,z)
-  03-scene            renderer, sky, fog, lights, distant ridgelines, geometry helpers
+  03-scene            renderer, colour grade (in every material's shader), sky, fog, lights, distant ridgelines, geometry helpers
   04-lifts            lifts, towers, cables, chairs/gondola cabins, bases, where each trail leads
   05-terrain          snow shader, trees, streamed terrain tiles, whole-mountain overview mesh
   06-dressing         boundary poles, snowguns, trail-sign atlas, banners, K-1 Lodge, the Deck
@@ -34,6 +34,7 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   14-sfx              sound: glide + edge loops shaped by speed and lean, landings, falls, tree hits, pole plants, lift towers
   15-ghost            ghost of your best run from each trail top: 10 Hz recording, see-through replay + marker, HUD gap, finish-card line;
                       challenge links (5 Hz nibble-packed run in the URL hash) and the challenge card
+  16-look             light presets (Changing, Bluebird, Golden hour, Flat light) + the picker on the map sheet, speed streaks
 assets/               skier.glb, helmet.glb, fonts/ (Barlow, OFL), sfx/ (sounds + SOURCES.md credits), all embedded into the page at build time
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json
 tools/build.py        bundles everything into dist/index.html
@@ -68,6 +69,7 @@ npm run test:tiles              # terrain streaming cost per frame on long runs,
 npm run test:ghost              # ski a run, race its ghost slower and level: gap readout, finish card, screenshots -> test-output/ghost-*.png
 npm run test:challenge          # run -> link (size, decode error), open the link fresh, race it: card, gold ghost, gap, result -> test-output/challenge-*.png
 npm run test:tris               # where the triangles go on a run: trees, terrain tiles, whole-mountain mesh, lifts, everything else
+npm run test:look               # each light preset on the map and on Superstar (and once ungraded), speed streaks, camera roll -> test-output/look/
 ```
 
 Tests use a software renderer, so frame rates are relative, not phone numbers. Use the Performance overlay toggle on the start card on a real phone.
