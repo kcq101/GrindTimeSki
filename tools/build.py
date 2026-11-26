@@ -48,3 +48,6 @@ if __name__ == '__main__':
     os.makedirs(os.path.dirname(out), exist_ok=True)
     open(out, 'w', encoding='utf-8').write(html)
     print(f'wrote {out} ({len(html.encode()) / 1e6:.2f} MB)')
+    # share image for link previews (og:image) and the claude.ai artifact thumbnail
+    import shutil
+    shutil.copyfile(os.path.join(ROOT, 'assets/og.jpg'), os.path.join(os.path.dirname(out), 'og.jpg'))
