@@ -19,12 +19,26 @@ let steerIn=0,steer=0,postIn=0,postS=0,touchId=null,x0=0,y0=0;const thumb=docume
 let invert=false;   /* push up = tuck (the on-screen toggle was removed) */
 let tDown=0,lastSw=null,pendSpin=null;
 function registerSwipe(d){const now=performance.now();if(lastSw&&lastSw.d===d&&now-lastSw.t<520){spinTrick(d);lastSw=null;}else lastSw={d,t:now};}
-canvas.addEventListener('pointerdown',e=>{if(touchId!==null)return;touchId=e.pointerId;x0=e.clientX;y0=e.clientY;tDown=performance.now();thumb.style.display='block';thumb.style.left=x0+'px';thumb.style.top=y0+'px';});
-canvas.addEventListener('pointermove',e=>{if(e.pointerId!==touchId)return;const dx=e.clientX-x0,dy=y0-e.clientY;
-  {const sx=clamp(dx/88,-1,1);steerIn=Math.sign(sx)*Math.pow(Math.abs(sx),1.3);}   /* longer drag for full lock (70 → 88 px) and a softer centre: small drags turn gently */const pv=Math.abs(dy)<10?0:clamp((dy-Math.sign(dy)*10)/50,-1,1);postIn=invert?-pv:pv;
-  thumb.style.left=(x0+clamp(dx,-70,70))+'px';thumb.style.top=(y0-clamp(dy,-60,60))+'px';});
-function endTouch(e){if(e.pointerId!==touchId)return;{const dx=e.clientX-x0,dy=e.clientY-y0;if(performance.now()-tDown<300&&Math.abs(dx)>35&&Math.abs(dx)>1.4*Math.abs(dy))registerSwipe(Math.sign(dx));
-    else if(performance.now()-tDown<280&&dy<-28&&-dy>1.4*Math.abs(dx))skate();}   /* quick flick up = one skate stroke */touchId=null;steerIn=0;postIn=0;thumb.style.display='none';}
+/* The steering thumb heading for JUMP / BOOST (Nov 27: "leans left after a jump or flow boost"). Steering is measured from where the touch
+   started and the canvas keeps the touch even over a button, so sliding over to the bottom-left buttons read as a hard left turn (and the
+   button never saw the press). Now: a drag that reaches either button (16 px margin) stops steering for the rest of that touch, and letting
+   go on the button presses it and snaps the steering itself back to centre (it used to ease back over ~0.4 s, the lean that lingered after
+   the jump); and the first 4 px either side are dead, so a resting thumb doesn't drift you at flow-boost speeds. */
+let parked=false;const STEER={dead:4,lock:88};window.__steer=STEER;
+function btnAt(x,y){for(const b of [jumpBtn,boostBtn]){if(b.classList.contains('hidden'))continue;const r=b.getBoundingClientRect();if(x>r.left-16&&x<r.right+16&&y>r.top-16&&y<r.bottom+16)return b;}return null;}
+function applySteer(cx,cy){const dx=cx-x0,dy=y0-cy;
+  {const sx=Math.sign(dx)*clamp((Math.abs(dx)-STEER.dead)/(STEER.lock-STEER.dead),0,1);steerIn=Math.sign(sx)*Math.pow(Math.abs(sx),1.3);}   /* full lock at 88 px and a softer centre: small drags turn gently */
+  const pv=Math.abs(dy)<10?0:clamp((dy-Math.sign(dy)*10)/50,-1,1);postIn=invert?-pv:pv;
+  thumb.style.left=(x0+clamp(dx,-70,70))+'px';thumb.style.top=(y0-clamp(dy,-60,60))+'px';}
+canvas.addEventListener('pointerdown',e=>{if(touchId!==null)return;touchId=e.pointerId;parked=false;x0=e.clientX;y0=e.clientY;tDown=performance.now();thumb.style.display='block';thumb.style.left=x0+'px';thumb.style.top=y0+'px';});
+canvas.addEventListener('pointermove',e=>{if(e.pointerId!==touchId||parked)return;
+  if(btnAt(e.clientX,e.clientY)){parked=true;steerIn=0;postIn=0;steer=0;thumb.style.display='none';return;}
+  applySteer(e.clientX,e.clientY);});
+function endTouch(e){if(e.pointerId!==touchId)return;
+  if(parked){const b=btnAt(e.clientX,e.clientY);if(b===jumpBtn)jump();else if(b===boostBtn)boost();}
+  else{const dx=e.clientX-x0,dy=e.clientY-y0;if(performance.now()-tDown<300&&Math.abs(dx)>35&&Math.abs(dx)>1.4*Math.abs(dy))registerSwipe(Math.sign(dx));
+    else if(performance.now()-tDown<280&&dy<-28&&-dy>1.4*Math.abs(dx))skate();}   /* quick flick up = one skate stroke */
+  touchId=null;parked=false;steerIn=0;postIn=0;thumb.style.display='none';}
 canvas.addEventListener('pointerup',endTouch);canvas.addEventListener('pointercancel',endTouch);
 const keys={};window.addEventListener('keydown',e=>{keys[e.key]=true;if(!e.repeat&&(e.key==='ArrowLeft'||e.key==='ArrowRight'))registerSwipe(e.key==='ArrowRight'?1:-1);if(e.code==='Space'){e.preventDefault();if(!e.repeat)jump();}if((e.key==='e'||e.key==='E')&&!e.repeat)skate();if((e.key==='b'||e.key==='B'||e.key==='Shift')&&!e.repeat)boost();});window.addEventListener('keyup',e=>{keys[e.key]=false;});
 const jumpBtn=document.getElementById('jumpBtn');

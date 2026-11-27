@@ -145,7 +145,7 @@ window.__kr={get plantT(){return plantT},simTest(fps,secs,steerFn,sc){reset();S.
   /* test hook: advance physics + skier visuals in lock-step at 60 Hz without rendering (headless renders are too slow for real-time pose checks) */
   stepVis(n,inp){for(let i=0;i<n&&(S.state==='ride'||S.state==='finishing');i++){const o=inp?inp(i/60,S):{};if(o.stop)break;steerIn=o.s||0;postIn=o.p||0;if(o.jump)jump();if(o.skate)skate();snapPrev();simStep(STEP);
     const y=S.air?S.y:H(S.x,S.z)+0.02,g=grad(S.x,S.z);placeShadows(g[0],g[1],Math.max(0,y-H(S.x,S.z)));alignToSlope(S.air?g[0]*0.5:g[0],S.air?g[1]*0.5:g[1],STEP);poseSkier(y);updModel(STEP,false);
-    if(window.__probe&&o.log)o.log.push(window.__probe());}return S.state;},set steerIn(v){steerIn=v},get postIn(){return postIn},set postIn(v){postIn=v}};
+    if(window.__probe&&o.log)o.log.push(window.__probe());}return S.state;},set steerIn(v){steerIn=v},get steerIn(){return steerIn},get steer(){return steer},get touchId(){return touchId},get parked(){return parked},get postIn(){return postIn},set postIn(v){postIn=v}};
 runFromTrail(TRAILS.filter(t=>t.name==='Superstar').sort((a,b)=>b.L-a.L)[0],'Skye Peak');reset();S.state='menu';
 requestAnimationFrame(frame);
 updateTiles(MENU.tx,MENU.tz,999);

@@ -20,6 +20,7 @@
     "test:challenge": "node tools/test/challenge.js",
     "test:look": "node tools/test/look.js",
     "test:fun": "node tools/test/fun.js",
+    "test:touch": "node tools/test/touch.js",
     "medals": "node tools/medals.js"
   },
   "devDependencies": {
