@@ -25,7 +25,9 @@ function applyLight(id){const P=LIGHTS[id]||LIGHTS.changing;lightId=LIGHTS[id]?i
 /* Math.random, not rnd(): rnd is the seeded world generator and must not shift */
 function pickLight(){const k=Object.keys(LIGHTS).filter(k=>k!==lightId);return k[Math.floor(Math.random()*k.length)];}
 /* a new run: in Random mode, roll the light and let the weather jump straight to it (we're behind the fade) */
-function runLight(){if(lightMode!=='random')return;applyLight(pickLight());WX.once=2;}
+/* liftLit: the light was rolled when you boarded a lift; picking a trail off that lift's top keeps it (Nov 27: they didn't match) */
+let liftLit=false;
+function runLight(){liftLit=false;if(lightMode!=='random')return;applyLight(pickLight());WX.once=2;}
 function setLightMode(m){lightMode=LIGHTS[m]?m:'random';try{localStorage.setItem('kr_light2',lightMode);}catch(e){}
   if(lightMode==='random')applyLight(pickLight());else applyLight(lightMode);}
 /* the light picker on the trail-map sheet: Random (filled) shows the current roll outlined; a preset pins it. The map re-lights as you tap */
