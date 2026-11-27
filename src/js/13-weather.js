@@ -3,7 +3,8 @@
    jumps between them. Altitude scales it: the summits fog in, the
    base mostly stays clear. Cost: a few uniforms per frame, plus two draw calls (snow points, wisp quads) that are skipped when invisible.
    Guardrail: visibility never drops below ~200 m, so signs and the next pitch stay readable at speed. */
-const WX={alt0:780,alt1:1180,farMin:200,nearMin:6,cycle:0.7,force:null,lo:0,hi:1,far0:3800,near0:300,skyK:0,ridgeK:0};   /* lo..hi, far0/near0, skyK/ridgeK: set by the light preset (16-look.js) */window.__wx=WX;
+let wxSnap=false;   /* WX.snap (tests) or WX.once frames left (a new run's light, behind the fade): jump straight to the target */
+const WX={once:0,alt0:780,alt1:1180,farMin:200,nearMin:6,cycle:0.7,force:null,lo:0,hi:1,far0:3800,near0:300,skyK:0,ridgeK:0};   /* lo..hi, far0/near0, skyK/ridgeK: set by the light preset (16-look.js) */window.__wx=WX;
 const WXS={cloud:0,k:0,snow:0,wisp:0,t0:performance.now()/1000};   /* smoothed state */
 const FOG_CLEAR=new THREE.Color(0xcfe0f2),FOG_THICK=new THREE.Color(0xdde3ea),_fogC=new THREE.Color();
 let SUN_I=sun.intensity;
@@ -53,7 +54,7 @@ function wispSpawn(o,cx,cz,dir,first){
 function updWisps(dt,amt){const W=wisp,cx=camera.position.x,cz=camera.position.z,dir=S.th;let any=false;
   for(let i=0;i<WISP_N;i++){const o=W.w[i];
     if(!o.live||Math.hypot(o.x-cx,o.z-cz)>380){wispSpawn(o,cx,cz,dir,!o.live);if(!o.live)continue;}
-    o.x+=WIND.x*dt;o.z+=WIND.z*dt;o.y=H(o.x,o.z)+o.h;o.a=WX.snap?1:Math.min(1,o.a+dt*0.4);   /* fade in after (re)spawning */
+    o.x+=WIND.x*dt;o.z+=WIND.z*dt;o.y=H(o.x,o.z)+o.h;o.a=wxSnap?1:Math.min(1,o.a+dt*0.4);   /* fade in after (re)spawning */
     const al=Math.min(1,amt*o.a*o.k*1.6);if(al>0.01)any=true;
     for(let v=0;v<4;v++){const j=(i*4+v)*3;W.C.array[j]=o.x;W.C.array[j+1]=o.y;W.C.array[j+2]=o.z;W.Sz.array[j]=o.s;W.Sz.array[j+1]=o.s*0.42;W.Sz.array[j+2]=al;}}
   W.C.needsUpdate=true;W.Sz.needsUpdate=true;return any;}
@@ -84,12 +85,12 @@ function bankSpawn(o,cx,cy,cz,dir,first){
 function updBanks(dt,amt,t){const B=banks,cx=camera.position.x,cy=camera.position.y,cz=camera.position.z,dir=S.th;let any=false;
   for(let i=0;i<BANK_N;i++){const o=B.b[i];
     if(!o.live||Math.hypot(o.x-cx,o.z-cz)>2300||o.y>cy-60){bankSpawn(o,cx,cy,cz,dir,!o.live);if(!o.live){for(let v=0;v<4;v++)B.Sz.array[(i*4+v)*3+2]=0;continue;}}
-    o.x+=WIND.x*0.8*dt;o.z+=WIND.z*0.8*dt;o.a=WX.snap?1:Math.min(1,o.a+dt*0.08);
+    o.x+=WIND.x*0.8*dt;o.z+=WIND.z*0.8*dt;o.a=wxSnap?1:Math.min(1,o.a+dt*0.08);
     const br=1+0.07*Math.sin(t*0.09+o.ph),al=amt*o.a*0.9;if(al>0.01)any=true;
     for(let v=0;v<4;v++){const j=(i*4+v)*3;B.C.array[j]=o.x;B.C.array[j+1]=o.y;B.C.array[j+2]=o.z;B.Sz.array[j]=o.w*br;B.Sz.array[j+1]=o.w*0.3*br;B.Sz.array[j+2]=al;}}
   B.C.needsUpdate=true;B.Sz.needsUpdate=true;return any;}
 
-function weatherFrame(dt,now){
+function weatherFrame(dt,now){wxSnap=WX.snap||WX.once>0;if(WX.once>0)WX.once--;
   const map=typeof MAP!=='undefined'&&MAP.on;
   const riding=S.state==='ride'||S.state==='finishing'||S.state==='paused';
   /* one continuous weather clock for lifts, lift tops and runs, so nothing jumps when you pick a trail */
@@ -99,7 +100,7 @@ function weatherFrame(dt,now){
   /* fog: a light haze down low even in cloud, socked in up top */
   /* at a lift top while choosing a trail: moderate fog at most, so you can see the signs and where the trails go */
   const kT=Math.min(S.pre&&riding?0.55:1,clamp(cl*(0.18+0.82*alt),0,1)),sT=clamp(cl*(0.25+0.75*alt)*1.15-0.08,0,1),wT=cl*alt;
-  const f=WX.snap?1:1-Math.exp(-dt*0.3);   /* ~3 s ease: fog closes in gradually as you ski off the top */   /* WX.snap: tests jump straight to the target */WXS.k+=(kT-WXS.k)*f;WXS.snow+=(sT-WXS.snow)*f;WXS.wisp+=(wT-WXS.wisp)*f;
+  const f=wxSnap?1:1-Math.exp(-dt*0.3);   /* ~3 s ease: fog closes in gradually as you ski off the top */   /* WX.snap: tests jump straight to the target */WXS.k+=(kT-WXS.k)*f;WXS.snow+=(sT-WXS.snow)*f;WXS.wisp+=(wT-WXS.wisp)*f;
   const k=map?0:WXS.k;
   if(!map){const e=k*k*(3-2*k);scene.fog.far=WX.far0+(WX.farMin-WX.far0)*Math.pow(e,0.6);scene.fog.near=WX.near0+(WX.nearMin-WX.near0)*Math.pow(e,0.5);
     _fogC.copy(FOG_CLEAR).lerp(FOG_THICK,e);scene.fog.color.copy(_fogC);scene.background.copy(_fogC);
@@ -114,6 +115,6 @@ function weatherFrame(dt,now){
   const wa=map?0:WXS.wisp;wisp.m.visible=wa>0.02&&updWisps(dt,wa);
   /* valley cloud: its own slow cycle (~5 min), strongest when it's clear where you are */
   {const inv=WX.forceBank!=null?WX.forceBank:sstep(0.45,0.85,0.5+0.35*Math.sin(t*0.021+1.7)+0.15*Math.sin(t*0.0083+0.4));const bT=inv*(1-0.85*WXS.k);
-   WXS.bank=(WXS.bank||0)+(bT-(WXS.bank||0))*(WX.snap?1:1-Math.exp(-dt*0.15));const ba=map?0:WXS.bank;banks.m.visible=ba>0.02&&updBanks(dt,ba,t);}
+   WXS.bank=(WXS.bank||0)+(bT-(WXS.bank||0))*(wxSnap?1:1-Math.exp(-dt*0.15));const ba=map?0:WXS.bank;banks.m.visible=ba>0.02&&updBanks(dt,ba,t);}
 }
 window.__kr.weather=()=>({bank:+(WXS.bank||0).toFixed(2),bankVis:banks.m.visible,cloud:WX.force!=null?WX.force:null,k:+WXS.k.toFixed(3),snow:+WXS.snow.toFixed(3),wisp:+WXS.wisp.toFixed(3),near:Math.round(scene.fog.near),far:Math.round(scene.fog.far),camY:Math.round(camera.position.y),wispVis:wisp.m.visible,wispLive:wisp.w.filter(o=>o.live).length,wispD:wisp.w.filter(o=>o.live).map(o=>Math.round(Math.hypot(o.x-camera.position.x,o.z-camera.position.z))).sort((a,b)=>a-b).slice(0,4)});

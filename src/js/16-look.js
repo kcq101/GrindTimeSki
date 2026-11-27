@@ -2,29 +2,38 @@
    A preset sets the sun (direction, colour, strength), sky and ground fill, the haze colour and distance, the sky dome's colours,
    how far the weather may go, and the colour grade (GRADE, 03-scene.js). Changing one is a handful of uniform writes: no shader
    recompiles, nothing rebuilt. "Changing" is the original light with the full weather cycle; the others hold the weather to suit.
+   Default mode is Random: every run gets one of the four (never the same twice in a row), picked behind the fade when you drop in,
+   board a lift (the ride up and the run off the top share it), ride again or start a challenge. Tapping a preset pins it.
    grade: exposure, contrast (S-curve), saturation, black lift, shadow tint rgb, highlight tint rgb (offsets; 0 = none). */
 const LIGHTS={
   changing:{label:'Changing',sun:[0.37,0.52,0.8],sunC:0xfff0d8,sunI:0.78,hemi:[0xdcecff,0x8a93a3,0.56],fill:0.22,fog:0xcfe0f2,thick:0xdde3ea,far0:3800,near0:300,
     zen:[.16,.40,.80],hor:[.81,.88,.95],glow:[1,.88,.68],skyK:0,ridgeK:0,wx:[0,1],grade:[0,.35,.08,.012,-.018,-.004,.028,.006,.003,-.004]},
   bluebird:{label:'Bluebird',sun:[0.37,0.58,0.78],sunC:0xfff3e0,sunI:0.82,hemi:[0xd6e8ff,0x8a93a3,0.54],fill:0.22,fog:0xc9ddf3,thick:0xd6dfe9,far0:4200,near0:400,
     zen:[.10,.33,.78],hor:[.74,.85,.96],glow:[1,.9,.72],skyK:0,ridgeK:0,wx:[0,0.3],grade:[0,.4,.14,.01,-.02,-.004,.032,.006,.003,-.004]},
-  golden:{label:'Golden hour',sun:[-0.6,0.38,0.7],sunC:0xffb468,sunI:0.98,hemi:[0xd8cfe8,0x7a7280,0.62],fill:0.16,fog:0xe9cdb8,thick:0xddc9c2,far0:3400,near0:250,
-    zen:[.21,.33,.66],hor:[1,.79,.58],glow:[1,.6,.3],skyK:0,ridgeK:0.3,wx:[0,0.25],grade:[0,.4,.1,.014,-.016,0,.026,.04,.012,-.04]},
+  golden:{label:'Golden hour',sun:[-0.6,0.38,0.7],sunC:0xffb468,sunI:0.95,hemi:[0xe2d8ef,0x8f8794,0.86],fill:0.22,fog:0xe9cdb8,thick:0xddc9c2,far0:3400,near0:250,
+    zen:[.21,.33,.66],hor:[1,.79,.58],glow:[1,.6,.3],skyK:0,ridgeK:0.3,wx:[0,0.25],grade:[.03,.38,.1,.016,-.012,0,.02,.04,.012,-.04]},
   flat:{label:'Flat light',sun:[0.2,0.85,0.45],sunC:0xf1f4f9,sunI:0.3,hemi:[0xeef2f7,0xa6aeb9,0.92],fill:0.1,fog:0xd5dae0,thick:0xdde1e6,far0:2100,near0:120,
     zen:[.70,.74,.80],hor:[.86,.88,.91],glow:[.22,.22,.22],skyK:0.8,ridgeK:0.55,wx:[0.45,1],grade:[0,-.04,-.18,.02,0,0,.008,0,0,0]}};
-let lightId='changing';
+let lightId='changing',lightMode='random';
 function applyLight(id){const P=LIGHTS[id]||LIGHTS.changing;lightId=LIGHTS[id]?id:'changing';
   SUN_DIR.set(...P.sun).normalize();sun.position.copy(SUN_DIR).multiplyScalar(60);_sunAway.set(-SUN_DIR.x,0,-SUN_DIR.z).normalize();
   sun.color.setHex(P.sunC);SUN_I=P.sunI;sun.intensity=P.sunI;hemi.color.setHex(P.hemi[0]);hemi.groundColor.setHex(P.hemi[1]);hemi.intensity=P.hemi[2];fill.intensity=P.fill;
   FOG_CLEAR.setHex(P.fog);FOG_THICK.setHex(P.thick);Object.assign(WX,{far0:P.far0,near0:P.near0,skyK:P.skyK,ridgeK:P.ridgeK,lo:P.wx[0],hi:P.wx[1]});
   const u=skyMat.uniforms;u.uZen.value.setRGB(...P.zen);u.uHor.value.setRGB(...P.hor);u.uGlow.value.setRGB(...P.glow);
   const g=P.grade;GRADE.set([g[0],g[1],g[2],g[3],g[4],g[5],g[6],0,g[7],g[8],g[9],0]);
-  try{localStorage.setItem('kr_light',lightId);}catch(e){}
-  document.querySelectorAll('.lite button').forEach(b=>b.classList.toggle('on',b.dataset.l===lightId));}
-/* the light picker on the trail-map sheet: the map re-lights as you tap, so you see it before you drop in */
-function liteChips(){return '<div class="lite"><span>Light</span>'+Object.keys(LIGHTS).map(k=>'<button data-l="'+k+'"'+(k===lightId?' class="on"':'')+'>'+LIGHTS[k].label+'</button>').join('')+'</div>';}
-function wireLite(){document.querySelectorAll('.lite button').forEach(b=>b.onclick=()=>applyLight(b.dataset.l));}
-{let s=null;try{s=localStorage.getItem('kr_light');}catch(e){}applyLight(s||'changing');}
+  updLiteChips();}
+/* Math.random, not rnd(): rnd is the seeded world generator and must not shift */
+function pickLight(){const k=Object.keys(LIGHTS).filter(k=>k!==lightId);return k[Math.floor(Math.random()*k.length)];}
+/* a new run: in Random mode, roll the light and let the weather jump straight to it (we're behind the fade) */
+function runLight(){if(lightMode!=='random')return;applyLight(pickLight());WX.once=2;}
+function setLightMode(m){lightMode=LIGHTS[m]?m:'random';try{localStorage.setItem('kr_light2',lightMode);}catch(e){}
+  if(lightMode==='random')applyLight(pickLight());else applyLight(lightMode);}
+/* the light picker on the trail-map sheet: Random (filled) shows the current roll outlined; a preset pins it. The map re-lights as you tap */
+function updLiteChips(){document.querySelectorAll('.lite button').forEach(b=>{b.classList.toggle('on',b.dataset.l===lightMode);b.classList.toggle('cur',lightMode==='random'&&b.dataset.l===lightId);});}
+function liteChips(){return '<div class="lite"><span>Light</span>'+['random',...Object.keys(LIGHTS)].map(k=>'<button data-l="'+k+'">'+(k==='random'?'Random':LIGHTS[k].label)+'</button>').join('')+'</div>';}
+function wireLite(){document.querySelectorAll('.lite button').forEach(b=>b.onclick=()=>setLightMode(b.dataset.l));updLiteChips();}
+/* kr_light2: a new key, so a preset tapped before Random existed doesn't pin anyone */
+{let s=null;try{s=localStorage.getItem('kr_light2');}catch(e){}lightMode=LIGHTS[s]?s:'random';applyLight(lightMode==='random'?pickLight():lightMode);}
 
 /* speed streaks: 220 thin snow-dust streaks in a 22 m box that wraps around the camera, each stretched along your motion over the
    last ~0.075 s, so they read as speed. All in the vertex shader (one draw call, 440 triangles), only above ~35 mph. */
@@ -54,4 +63,4 @@ function lookFrame(dt){const cp=camera.position,u=streakMat.uniforms;
   const ride=S.state==='ride'||S.state==='finishing',sp=ride?S.v:0,tgt=STREAK.force!=null?STREAK.force:(STREAK.on&&ride?sstep(15,28,sp):0);
   STREAK.amt+=(tgt-STREAK.amt)*(1-Math.exp(-dt*4));streaks.visible=STREAK.amt>0.01;
   if(streaks.visible){u.uCam.value.copy(cp);u.uVel.value.copy(_lkV);if(!STREAK.vel&&ride){const l=_lkV.length();if(l>0.5)u.uVel.value.multiplyScalar(Math.max(sp,5)/l);}u.uAmt.value=STREAK.amt;const db=renderer.domElement;u.uRes.value.set(db.width,db.height);u.uW.value=Math.max(1.2,renderer.getPixelRatio()*1.1);}}
-window.__kr.light={apply:applyLight,get id(){return lightId},LIGHTS,GRADE,streaks};
+window.__kr.light={apply:applyLight,setMode:setLightMode,runLight,get id(){return lightId},get mode(){return lightMode},LIGHTS,GRADE,streaks};

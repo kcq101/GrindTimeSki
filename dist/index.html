@@ -113,6 +113,7 @@
   .lite span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#5b6b7c;font-weight:700;margin-right:2px}
   .lite button{border:0;border-radius:15px;background:#eef2f6;color:#14202e;padding:7px 11px;font:600 13px 'Barlow',system-ui,sans-serif;cursor:pointer;min-height:32px}
   .lite button.on{background:#14202e;color:#fff}
+  .lite button.cur{box-shadow:inset 0 0 0 2px #14202e}
   #sheet .x{position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;border:0;background:#eef2f6;color:#14202e;font-size:15px;font-weight:800;cursor:pointer}
   #sheet{position:absolute}
   .chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 12px}
@@ -1472,7 +1473,7 @@ function runFromTrail(tr,top){let i=0,hm=-1e9,im=0;for(let q=0;q<tr.s.length-2&&
   i=im;while(i<tr.s.length-2&&tr.cs[i]-tr.cs[im]<Math.min(10,tr.L*0.08))i++;let j=i;while(j<tr.s.length-1&&tr.cs[j]-tr.cs[i]<30)j++;const p=tr.s[i],q=tr.s[j];
   RUN={x:p[0],z:p[1],th:Math.atan2(q[0]-p[0],q[1]-p[1]),top:top||shortName(tr.name),name:tr.name,dest:tr.dest,tr};RUN.h0=H(RUN.x,RUN.z);RUN.h1=RUN.dest?Math.min(RUN.dest.h,RUN.h0-30):RUN.h0-200;}
 function dropIn(tr,top){$('map').classList.add('hidden');$('pick').classList.add('hidden');$('start').classList.add('hidden');$('finish').classList.add('hidden');startAudio();
-  fade(()=>{runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.curTr=tr;S.path=[tr.name];toast(shortName(tr.name));});}
+  fade(()=>{runLight();runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.curTr=tr;S.path=[tr.name];toast(shortName(tr.name));});}
 /* the card at the top of a lift (or from the menu): every trail off this top, with its real length and drop */
 let pickFrom=null;
 function showPicker(L,fromMenu){pickFrom=fromMenu?'menu':'lift';
@@ -1497,7 +1498,7 @@ let camSnapLift=false,lookYaw=0;
 function startLift(L){
   $('map').classList.add('hidden');$('finish').classList.add('hidden');$('start').classList.add('hidden');$('pick').classList.add('hidden');startAudio();
   fade(()=>{
-    S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
+    runLight();S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
     myChair.visible=false;myCab.visible=false;myRide=L.gond?myCab:myChair;
     gapChairs(L,S.ls);if(L.gond)myCab.userData.mat.color.setHex(L.col);else myChair.children[1].material.color.setHex(L.col);myRide.visible=true;blob.visible=false;castSh.visible=false;clearTracks();
     updateTiles(L.bx+L.dx*60,L.bz+L.dz*60,999);
@@ -1544,7 +1545,7 @@ $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!pe
   b.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.top+'</b><small>'+L.trails.slice(0,4).map(t=>shortName(t.name)+' '+DSYM[t.diff]).join(' · ')+'</small><small>Top of '+L.name+' · '+L.trails.length+' trails</small></div><div class="go">›</div>';
   b.onclick=()=>{$('start').classList.add('hidden');showPicker(L,true);};box.appendChild(b);});})();
 let best=null;
-$('again').onclick=()=>{if(RUN.chal){startChallenge(RUN.chal);return;}$('finish').classList.add('hidden');fade(()=>{runFromTrail(RUN.tr,RUN.top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);toast('Drop in!');});};
+$('again').onclick=()=>{if(RUN.chal){startChallenge(RUN.chal);return;}$('finish').classList.add('hidden');fade(()=>{runLight();runFromTrail(RUN.tr,RUN.top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);toast('Drop in!');});};
 /* has the skier reached a base (or skied off the edge of the map)? */
 function baseHit(){if(S.t<2)return null;const h=H(S.x,S.z);if(RUN.h0-h<25)return null;
   for(const b of BASES){let hit=Math.hypot(S.x-b.x,S.z-b.z)<b.trig;if(!hit)for(const L of b.L)if(Math.hypot(S.x-L.bx,S.z-L.bz)<45){hit=true;break;}if(hit&&(!b.mid||S.v<5))return b;}return null;}
@@ -2205,7 +2206,8 @@ Object.assign(window.__kr,{jump,topSpot,topStart,JN,liftSigns,pauseGame,resumeGa
    jumps between them. Altitude scales it: the summits fog in, the
    base mostly stays clear. Cost: a few uniforms per frame, plus two draw calls (snow points, wisp quads) that are skipped when invisible.
    Guardrail: visibility never drops below ~200 m, so signs and the next pitch stay readable at speed. */
-const WX={alt0:780,alt1:1180,farMin:200,nearMin:6,cycle:0.7,force:null,lo:0,hi:1,far0:3800,near0:300,skyK:0,ridgeK:0};   /* lo..hi, far0/near0, skyK/ridgeK: set by the light preset (16-look.js) */window.__wx=WX;
+let wxSnap=false;   /* WX.snap (tests) or WX.once frames left (a new run's light, behind the fade): jump straight to the target */
+const WX={once:0,alt0:780,alt1:1180,farMin:200,nearMin:6,cycle:0.7,force:null,lo:0,hi:1,far0:3800,near0:300,skyK:0,ridgeK:0};   /* lo..hi, far0/near0, skyK/ridgeK: set by the light preset (16-look.js) */window.__wx=WX;
 const WXS={cloud:0,k:0,snow:0,wisp:0,t0:performance.now()/1000};   /* smoothed state */
 const FOG_CLEAR=new THREE.Color(0xcfe0f2),FOG_THICK=new THREE.Color(0xdde3ea),_fogC=new THREE.Color();
 let SUN_I=sun.intensity;
@@ -2255,7 +2257,7 @@ function wispSpawn(o,cx,cz,dir,first){
 function updWisps(dt,amt){const W=wisp,cx=camera.position.x,cz=camera.position.z,dir=S.th;let any=false;
   for(let i=0;i<WISP_N;i++){const o=W.w[i];
     if(!o.live||Math.hypot(o.x-cx,o.z-cz)>380){wispSpawn(o,cx,cz,dir,!o.live);if(!o.live)continue;}
-    o.x+=WIND.x*dt;o.z+=WIND.z*dt;o.y=H(o.x,o.z)+o.h;o.a=WX.snap?1:Math.min(1,o.a+dt*0.4);   /* fade in after (re)spawning */
+    o.x+=WIND.x*dt;o.z+=WIND.z*dt;o.y=H(o.x,o.z)+o.h;o.a=wxSnap?1:Math.min(1,o.a+dt*0.4);   /* fade in after (re)spawning */
     const al=Math.min(1,amt*o.a*o.k*1.6);if(al>0.01)any=true;
     for(let v=0;v<4;v++){const j=(i*4+v)*3;W.C.array[j]=o.x;W.C.array[j+1]=o.y;W.C.array[j+2]=o.z;W.Sz.array[j]=o.s;W.Sz.array[j+1]=o.s*0.42;W.Sz.array[j+2]=al;}}
   W.C.needsUpdate=true;W.Sz.needsUpdate=true;return any;}
@@ -2286,12 +2288,12 @@ function bankSpawn(o,cx,cy,cz,dir,first){
 function updBanks(dt,amt,t){const B=banks,cx=camera.position.x,cy=camera.position.y,cz=camera.position.z,dir=S.th;let any=false;
   for(let i=0;i<BANK_N;i++){const o=B.b[i];
     if(!o.live||Math.hypot(o.x-cx,o.z-cz)>2300||o.y>cy-60){bankSpawn(o,cx,cy,cz,dir,!o.live);if(!o.live){for(let v=0;v<4;v++)B.Sz.array[(i*4+v)*3+2]=0;continue;}}
-    o.x+=WIND.x*0.8*dt;o.z+=WIND.z*0.8*dt;o.a=WX.snap?1:Math.min(1,o.a+dt*0.08);
+    o.x+=WIND.x*0.8*dt;o.z+=WIND.z*0.8*dt;o.a=wxSnap?1:Math.min(1,o.a+dt*0.08);
     const br=1+0.07*Math.sin(t*0.09+o.ph),al=amt*o.a*0.9;if(al>0.01)any=true;
     for(let v=0;v<4;v++){const j=(i*4+v)*3;B.C.array[j]=o.x;B.C.array[j+1]=o.y;B.C.array[j+2]=o.z;B.Sz.array[j]=o.w*br;B.Sz.array[j+1]=o.w*0.3*br;B.Sz.array[j+2]=al;}}
   B.C.needsUpdate=true;B.Sz.needsUpdate=true;return any;}
 
-function weatherFrame(dt,now){
+function weatherFrame(dt,now){wxSnap=WX.snap||WX.once>0;if(WX.once>0)WX.once--;
   const map=typeof MAP!=='undefined'&&MAP.on;
   const riding=S.state==='ride'||S.state==='finishing'||S.state==='paused';
   /* one continuous weather clock for lifts, lift tops and runs, so nothing jumps when you pick a trail */
@@ -2301,7 +2303,7 @@ function weatherFrame(dt,now){
   /* fog: a light haze down low even in cloud, socked in up top */
   /* at a lift top while choosing a trail: moderate fog at most, so you can see the signs and where the trails go */
   const kT=Math.min(S.pre&&riding?0.55:1,clamp(cl*(0.18+0.82*alt),0,1)),sT=clamp(cl*(0.25+0.75*alt)*1.15-0.08,0,1),wT=cl*alt;
-  const f=WX.snap?1:1-Math.exp(-dt*0.3);   /* ~3 s ease: fog closes in gradually as you ski off the top */   /* WX.snap: tests jump straight to the target */WXS.k+=(kT-WXS.k)*f;WXS.snow+=(sT-WXS.snow)*f;WXS.wisp+=(wT-WXS.wisp)*f;
+  const f=wxSnap?1:1-Math.exp(-dt*0.3);   /* ~3 s ease: fog closes in gradually as you ski off the top */   /* WX.snap: tests jump straight to the target */WXS.k+=(kT-WXS.k)*f;WXS.snow+=(sT-WXS.snow)*f;WXS.wisp+=(wT-WXS.wisp)*f;
   const k=map?0:WXS.k;
   if(!map){const e=k*k*(3-2*k);scene.fog.far=WX.far0+(WX.farMin-WX.far0)*Math.pow(e,0.6);scene.fog.near=WX.near0+(WX.nearMin-WX.near0)*Math.pow(e,0.5);
     _fogC.copy(FOG_CLEAR).lerp(FOG_THICK,e);scene.fog.color.copy(_fogC);scene.background.copy(_fogC);
@@ -2316,7 +2318,7 @@ function weatherFrame(dt,now){
   const wa=map?0:WXS.wisp;wisp.m.visible=wa>0.02&&updWisps(dt,wa);
   /* valley cloud: its own slow cycle (~5 min), strongest when it's clear where you are */
   {const inv=WX.forceBank!=null?WX.forceBank:sstep(0.45,0.85,0.5+0.35*Math.sin(t*0.021+1.7)+0.15*Math.sin(t*0.0083+0.4));const bT=inv*(1-0.85*WXS.k);
-   WXS.bank=(WXS.bank||0)+(bT-(WXS.bank||0))*(WX.snap?1:1-Math.exp(-dt*0.15));const ba=map?0:WXS.bank;banks.m.visible=ba>0.02&&updBanks(dt,ba,t);}
+   WXS.bank=(WXS.bank||0)+(bT-(WXS.bank||0))*(wxSnap?1:1-Math.exp(-dt*0.15));const ba=map?0:WXS.bank;banks.m.visible=ba>0.02&&updBanks(dt,ba,t);}
 }
 window.__kr.weather=()=>({bank:+(WXS.bank||0).toFixed(2),bankVis:banks.m.visible,cloud:WX.force!=null?WX.force:null,k:+WXS.k.toFixed(3),snow:+WXS.snow.toFixed(3),wisp:+WXS.wisp.toFixed(3),near:Math.round(scene.fog.near),far:Math.round(scene.fog.far),camY:Math.round(camera.position.y),wispVis:wisp.m.visible,wispLive:wisp.w.filter(o=>o.live).length,wispD:wisp.w.filter(o=>o.live).map(o=>Math.round(Math.hypot(o.x-camera.position.x,o.z-camera.position.z))).sort((a,b)=>a-b).slice(0,4)});
 /* ---------- sound effects: skis on snow, carving edges, wind, landings, falls, tree hits, pole plants, lift towers ----------
@@ -2604,7 +2606,7 @@ function chalOffer(){const C=PEND_CHAL;if(!C)return;PEND_CHAL=null;try{history.r
   $('cNo').onclick=()=>$('chal').classList.add('hidden');$('chal').classList.remove('hidden');}
 /* same start point, heading and rolling speed as the run that made the link */
 function startChallenge(C){['chal','map','pick','start','finish'].forEach(i=>$(i).classList.add('hidden'));startAudio();
-  fade(()=>{const G=C.G,tr=C.tr,j=Math.min(G.n-1,2);
+  fade(()=>{runLight();const G=C.G,tr=C.tr,j=Math.min(G.n-1,2);
     RUN={x:G.X[0],z:G.Z[0],th:Math.atan2(G.X[j]-G.X[0],G.Z[j]-G.Z[0])||G.TH[0],top:C.top||shortName(tr.name),name:tr.name,dest:tr.dest,tr,chal:C};
     RUN.h0=H(RUN.x,RUN.z);RUN.h1=RUN.dest?Math.min(RUN.dest.h,RUN.h0-30):RUN.h0-200;
     updateTiles(RUN.x,RUN.z,999);reset();S.v=clamp(Math.hypot(G.X[j]-G.X[0],G.Z[j]-G.Z[0])/(j/GH_HZ),2,25);S.state='ride';showHud(true);
@@ -2624,29 +2626,38 @@ window.__kr.chal={encode:chalEncode,decode:chalDecode,fromHash:chalFromHash,star
    A preset sets the sun (direction, colour, strength), sky and ground fill, the haze colour and distance, the sky dome's colours,
    how far the weather may go, and the colour grade (GRADE, 03-scene.js). Changing one is a handful of uniform writes: no shader
    recompiles, nothing rebuilt. "Changing" is the original light with the full weather cycle; the others hold the weather to suit.
+   Default mode is Random: every run gets one of the four (never the same twice in a row), picked behind the fade when you drop in,
+   board a lift (the ride up and the run off the top share it), ride again or start a challenge. Tapping a preset pins it.
    grade: exposure, contrast (S-curve), saturation, black lift, shadow tint rgb, highlight tint rgb (offsets; 0 = none). */
 const LIGHTS={
   changing:{label:'Changing',sun:[0.37,0.52,0.8],sunC:0xfff0d8,sunI:0.78,hemi:[0xdcecff,0x8a93a3,0.56],fill:0.22,fog:0xcfe0f2,thick:0xdde3ea,far0:3800,near0:300,
     zen:[.16,.40,.80],hor:[.81,.88,.95],glow:[1,.88,.68],skyK:0,ridgeK:0,wx:[0,1],grade:[0,.35,.08,.012,-.018,-.004,.028,.006,.003,-.004]},
   bluebird:{label:'Bluebird',sun:[0.37,0.58,0.78],sunC:0xfff3e0,sunI:0.82,hemi:[0xd6e8ff,0x8a93a3,0.54],fill:0.22,fog:0xc9ddf3,thick:0xd6dfe9,far0:4200,near0:400,
     zen:[.10,.33,.78],hor:[.74,.85,.96],glow:[1,.9,.72],skyK:0,ridgeK:0,wx:[0,0.3],grade:[0,.4,.14,.01,-.02,-.004,.032,.006,.003,-.004]},
-  golden:{label:'Golden hour',sun:[-0.6,0.38,0.7],sunC:0xffb468,sunI:0.98,hemi:[0xd8cfe8,0x7a7280,0.62],fill:0.16,fog:0xe9cdb8,thick:0xddc9c2,far0:3400,near0:250,
-    zen:[.21,.33,.66],hor:[1,.79,.58],glow:[1,.6,.3],skyK:0,ridgeK:0.3,wx:[0,0.25],grade:[0,.4,.1,.014,-.016,0,.026,.04,.012,-.04]},
+  golden:{label:'Golden hour',sun:[-0.6,0.38,0.7],sunC:0xffb468,sunI:0.95,hemi:[0xe2d8ef,0x8f8794,0.86],fill:0.22,fog:0xe9cdb8,thick:0xddc9c2,far0:3400,near0:250,
+    zen:[.21,.33,.66],hor:[1,.79,.58],glow:[1,.6,.3],skyK:0,ridgeK:0.3,wx:[0,0.25],grade:[.03,.38,.1,.016,-.012,0,.02,.04,.012,-.04]},
   flat:{label:'Flat light',sun:[0.2,0.85,0.45],sunC:0xf1f4f9,sunI:0.3,hemi:[0xeef2f7,0xa6aeb9,0.92],fill:0.1,fog:0xd5dae0,thick:0xdde1e6,far0:2100,near0:120,
     zen:[.70,.74,.80],hor:[.86,.88,.91],glow:[.22,.22,.22],skyK:0.8,ridgeK:0.55,wx:[0.45,1],grade:[0,-.04,-.18,.02,0,0,.008,0,0,0]}};
-let lightId='changing';
+let lightId='changing',lightMode='random';
 function applyLight(id){const P=LIGHTS[id]||LIGHTS.changing;lightId=LIGHTS[id]?id:'changing';
   SUN_DIR.set(...P.sun).normalize();sun.position.copy(SUN_DIR).multiplyScalar(60);_sunAway.set(-SUN_DIR.x,0,-SUN_DIR.z).normalize();
   sun.color.setHex(P.sunC);SUN_I=P.sunI;sun.intensity=P.sunI;hemi.color.setHex(P.hemi[0]);hemi.groundColor.setHex(P.hemi[1]);hemi.intensity=P.hemi[2];fill.intensity=P.fill;
   FOG_CLEAR.setHex(P.fog);FOG_THICK.setHex(P.thick);Object.assign(WX,{far0:P.far0,near0:P.near0,skyK:P.skyK,ridgeK:P.ridgeK,lo:P.wx[0],hi:P.wx[1]});
   const u=skyMat.uniforms;u.uZen.value.setRGB(...P.zen);u.uHor.value.setRGB(...P.hor);u.uGlow.value.setRGB(...P.glow);
   const g=P.grade;GRADE.set([g[0],g[1],g[2],g[3],g[4],g[5],g[6],0,g[7],g[8],g[9],0]);
-  try{localStorage.setItem('kr_light',lightId);}catch(e){}
-  document.querySelectorAll('.lite button').forEach(b=>b.classList.toggle('on',b.dataset.l===lightId));}
-/* the light picker on the trail-map sheet: the map re-lights as you tap, so you see it before you drop in */
-function liteChips(){return '<div class="lite"><span>Light</span>'+Object.keys(LIGHTS).map(k=>'<button data-l="'+k+'"'+(k===lightId?' class="on"':'')+'>'+LIGHTS[k].label+'</button>').join('')+'</div>';}
-function wireLite(){document.querySelectorAll('.lite button').forEach(b=>b.onclick=()=>applyLight(b.dataset.l));}
-{let s=null;try{s=localStorage.getItem('kr_light');}catch(e){}applyLight(s||'changing');}
+  updLiteChips();}
+/* Math.random, not rnd(): rnd is the seeded world generator and must not shift */
+function pickLight(){const k=Object.keys(LIGHTS).filter(k=>k!==lightId);return k[Math.floor(Math.random()*k.length)];}
+/* a new run: in Random mode, roll the light and let the weather jump straight to it (we're behind the fade) */
+function runLight(){if(lightMode!=='random')return;applyLight(pickLight());WX.once=2;}
+function setLightMode(m){lightMode=LIGHTS[m]?m:'random';try{localStorage.setItem('kr_light2',lightMode);}catch(e){}
+  if(lightMode==='random')applyLight(pickLight());else applyLight(lightMode);}
+/* the light picker on the trail-map sheet: Random (filled) shows the current roll outlined; a preset pins it. The map re-lights as you tap */
+function updLiteChips(){document.querySelectorAll('.lite button').forEach(b=>{b.classList.toggle('on',b.dataset.l===lightMode);b.classList.toggle('cur',lightMode==='random'&&b.dataset.l===lightId);});}
+function liteChips(){return '<div class="lite"><span>Light</span>'+['random',...Object.keys(LIGHTS)].map(k=>'<button data-l="'+k+'">'+(k==='random'?'Random':LIGHTS[k].label)+'</button>').join('')+'</div>';}
+function wireLite(){document.querySelectorAll('.lite button').forEach(b=>b.onclick=()=>setLightMode(b.dataset.l));updLiteChips();}
+/* kr_light2: a new key, so a preset tapped before Random existed doesn't pin anyone */
+{let s=null;try{s=localStorage.getItem('kr_light2');}catch(e){}lightMode=LIGHTS[s]?s:'random';applyLight(lightMode==='random'?pickLight():lightMode);}
 
 /* speed streaks: 220 thin snow-dust streaks in a 22 m box that wraps around the camera, each stretched along your motion over the
    last ~0.075 s, so they read as speed. All in the vertex shader (one draw call, 440 triangles), only above ~35 mph. */
@@ -2676,7 +2687,7 @@ function lookFrame(dt){const cp=camera.position,u=streakMat.uniforms;
   const ride=S.state==='ride'||S.state==='finishing',sp=ride?S.v:0,tgt=STREAK.force!=null?STREAK.force:(STREAK.on&&ride?sstep(15,28,sp):0);
   STREAK.amt+=(tgt-STREAK.amt)*(1-Math.exp(-dt*4));streaks.visible=STREAK.amt>0.01;
   if(streaks.visible){u.uCam.value.copy(cp);u.uVel.value.copy(_lkV);if(!STREAK.vel&&ride){const l=_lkV.length();if(l>0.5)u.uVel.value.multiplyScalar(Math.max(sp,5)/l);}u.uAmt.value=STREAK.amt;const db=renderer.domElement;u.uRes.value.set(db.width,db.height);u.uW.value=Math.max(1.2,renderer.getPixelRatio()*1.1);}}
-window.__kr.light={apply:applyLight,get id(){return lightId},LIGHTS,GRADE,streaks};
+window.__kr.light={apply:applyLight,setMode:setLightMode,runLight,get id(){return lightId},get mode(){return lightMode},LIGHTS,GRADE,streaks};
 /* ---------- medals, flow meter, landing grades ----------
    Medals: bronze / silver / gold times per start trail and base, baked by tools/medals.js from a bot that tucks the whole way and
    boosts whenever it can (gold ≈ that bot +2%, silver +15%, bronze +35%). Best medal per trail is remembered.

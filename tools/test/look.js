@@ -6,6 +6,7 @@ const { open, AUTOPILOT, ROOT } = require('./harness'); const path = require('pa
   const { browser, page, errors } = await open(); await page.evaluate(AUTOPILOT);
   const shot = n => page.screenshot({ path: path.join(OUT, n + '.png') });
   const info = () => page.evaluate(() => { const i = window.__kr.renderer.info.render; return i.calls + ' draws, ' + (i.triangles / 1000 | 0) + 'k tris'; });
+  await shot('map-chips');   /* first load: Random on, this roll outlined */
   await page.evaluate(() => { window.__wx.snap = true; });
   for (const id of ['changing', 'bluebird', 'golden', 'flat']) {
     await page.evaluate(id => { window.__kr.light.apply(id); window.__wx.force = id === 'flat' ? null : 0; }, id); await page.waitForTimeout(1500); await shot('map-' + id);
@@ -34,5 +35,14 @@ const { open, AUTOPILOT, ROOT } = require('./harness'); const path = require('pa
       const R = new THREE.Vector3(1, 0, 0).applyQuaternion(k.camera.quaternion); let d = S.th - th0; d = Math.atan2(Math.sin(d), Math.cos(d));
       out.push({ steer: st, turning: d > 0 ? 'left' : 'right', rollDeg: +(window.__camr.r * 180 / Math.PI).toFixed(2), camRightY: +R.y.toFixed(3) }); }
     k.steerIn = 0; return out; }));
+  /* Random mode: a new light each run (drop-ins, a lift ride), never twice in a row; a tapped preset pins it */
+  const rolls = await page.evaluate(async () => { const k = window.__kr, L = k.light, out = { mode: L.mode, drops: [], lift: null, pinned: [] }, wait = ms => new Promise(r => setTimeout(r, ms));
+    const tr = k.TRAILS.filter(t => t.name === 'Superstar').sort((a, b) => b.L - a.L)[0];
+    for (let i = 0; i < 10; i++) { document.getElementById('finish').classList.add('hidden'); k.dropIn(tr, 'Skye Peak'); await wait(520); out.drops.push(L.id); }
+    const before = L.id; k.startLift(k.LIFTS.find(l => l.id === 'ss')); await wait(520); out.lift = { before, after: L.id, state: k.S.state };
+    L.setMode('golden'); for (let i = 0; i < 3; i++) { k.dropIn(tr, 'Skye Peak'); await wait(520); out.pinned.push(L.id); }
+    out.stored = localStorage.getItem('kr_light2'); L.setMode('random'); out.backToRandom = [L.mode, localStorage.getItem('kr_light2')];
+    out.repeats = out.drops.filter((d, i) => i && d === out.drops[i - 1]).length; out.kinds = [...new Set(out.drops)].length; return out; });
+  console.log('random per run', JSON.stringify(rolls));
   if (errors.length) console.log(errors.join('\n')); await browser.close();
 })();

@@ -25,7 +25,7 @@ function runFromTrail(tr,top){let i=0,hm=-1e9,im=0;for(let q=0;q<tr.s.length-2&&
   i=im;while(i<tr.s.length-2&&tr.cs[i]-tr.cs[im]<Math.min(10,tr.L*0.08))i++;let j=i;while(j<tr.s.length-1&&tr.cs[j]-tr.cs[i]<30)j++;const p=tr.s[i],q=tr.s[j];
   RUN={x:p[0],z:p[1],th:Math.atan2(q[0]-p[0],q[1]-p[1]),top:top||shortName(tr.name),name:tr.name,dest:tr.dest,tr};RUN.h0=H(RUN.x,RUN.z);RUN.h1=RUN.dest?Math.min(RUN.dest.h,RUN.h0-30):RUN.h0-200;}
 function dropIn(tr,top){$('map').classList.add('hidden');$('pick').classList.add('hidden');$('start').classList.add('hidden');$('finish').classList.add('hidden');startAudio();
-  fade(()=>{runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.curTr=tr;S.path=[tr.name];toast(shortName(tr.name));});}
+  fade(()=>{runLight();runFromTrail(tr,top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);$('ttext').textContent=tr.name.toUpperCase();$('ticon').innerHTML=diffIcon(tr.diff);curTrail=tr.name;S.curTr=tr;S.path=[tr.name];toast(shortName(tr.name));});}
 /* the card at the top of a lift (or from the menu): every trail off this top, with its real length and drop */
 let pickFrom=null;
 function showPicker(L,fromMenu){pickFrom=fromMenu?'menu':'lift';
@@ -50,7 +50,7 @@ let camSnapLift=false,lookYaw=0;
 function startLift(L){
   $('map').classList.add('hidden');$('finish').classList.add('hidden');$('start').classList.add('hidden');$('pick').classList.add('hidden');startAudio();
   fade(()=>{
-    S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
+    runLight();S.state='lift';S.lift=L;S.ls=22;S.lt=0;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.v=0;
     myChair.visible=false;myCab.visible=false;myRide=L.gond?myCab:myChair;
     gapChairs(L,S.ls);if(L.gond)myCab.userData.mat.color.setHex(L.col);else myChair.children[1].material.color.setHex(L.col);myRide.visible=true;blob.visible=false;castSh.visible=false;clearTracks();
     updateTiles(L.bx+L.dx*60,L.bz+L.dz*60,999);
@@ -97,7 +97,7 @@ $('perfBtn').onclick=()=>{perfOn=!perfOn;$('perf').classList.toggle('hidden',!pe
   b.innerHTML='<div class="chair" style="background:#'+L.col.toString(16).padStart(6,'0')+'">▲</div><div><b>'+L.top+'</b><small>'+L.trails.slice(0,4).map(t=>shortName(t.name)+' '+DSYM[t.diff]).join(' · ')+'</small><small>Top of '+L.name+' · '+L.trails.length+' trails</small></div><div class="go">›</div>';
   b.onclick=()=>{$('start').classList.add('hidden');showPicker(L,true);};box.appendChild(b);});})();
 let best=null;
-$('again').onclick=()=>{if(RUN.chal){startChallenge(RUN.chal);return;}$('finish').classList.add('hidden');fade(()=>{runFromTrail(RUN.tr,RUN.top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);toast('Drop in!');});};
+$('again').onclick=()=>{if(RUN.chal){startChallenge(RUN.chal);return;}$('finish').classList.add('hidden');fade(()=>{runLight();runFromTrail(RUN.tr,RUN.top);updateTiles(RUN.x,RUN.z,999);reset();S.state='ride';showHud(true);toast('Drop in!');});};
 /* has the skier reached a base (or skied off the edge of the map)? */
 function baseHit(){if(S.t<2)return null;const h=H(S.x,S.z);if(RUN.h0-h<25)return null;
   for(const b of BASES){let hit=Math.hypot(S.x-b.x,S.z-b.z)<b.trig;if(!hit)for(const L of b.L)if(Math.hypot(S.x-L.bx,S.z-L.bz)<45){hit=true;break;}if(hit&&(!b.mid||S.v<5))return b;}return null;}

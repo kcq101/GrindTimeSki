@@ -34,7 +34,7 @@ src/js/NN-*.js        the game: one closure split into ordered files that share 
   14-sfx              sound: glide + edge loops shaped by speed and lean, landings, falls, tree hits, pole plants, lift towers
   15-ghost            ghost of your best run from each trail top: 10 Hz recording, see-through replay + marker, HUD gap, finish-card line;
                       challenge links (5 Hz nibble-packed run in the URL hash) and the challenge card
-  16-look             light presets (Changing, Bluebird, Golden hour, Flat light) + the picker on the map sheet, speed streaks
+  16-look             light presets (Changing, Bluebird, Golden hour, Flat light), Random by default (a new one each run), the picker, speed streaks
   17-fun              medals per trail (times from data/medals.json), flow meter -> flow boost, landing grades + hit-stop + buzz
 assets/               skier.glb, helmet.glb, fonts/ (Barlow, OFL), sfx/ (sounds + SOURCES.md credits), all embedded into the page at build time
 data/                 dem_grid.txt, osm_features.json -> (bake) -> kdata.json

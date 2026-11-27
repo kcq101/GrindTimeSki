@@ -201,7 +201,7 @@ function chalOffer(){const C=PEND_CHAL;if(!C)return;PEND_CHAL=null;try{history.r
   $('cNo').onclick=()=>$('chal').classList.add('hidden');$('chal').classList.remove('hidden');}
 /* same start point, heading and rolling speed as the run that made the link */
 function startChallenge(C){['chal','map','pick','start','finish'].forEach(i=>$(i).classList.add('hidden'));startAudio();
-  fade(()=>{const G=C.G,tr=C.tr,j=Math.min(G.n-1,2);
+  fade(()=>{runLight();const G=C.G,tr=C.tr,j=Math.min(G.n-1,2);
     RUN={x:G.X[0],z:G.Z[0],th:Math.atan2(G.X[j]-G.X[0],G.Z[j]-G.Z[0])||G.TH[0],top:C.top||shortName(tr.name),name:tr.name,dest:tr.dest,tr,chal:C};
     RUN.h0=H(RUN.x,RUN.z);RUN.h1=RUN.dest?Math.min(RUN.dest.h,RUN.h0-30):RUN.h0-200;
     updateTiles(RUN.x,RUN.z,999);reset();S.v=clamp(Math.hypot(G.X[j]-G.X[0],G.Z[j]-G.Z[0])/(j/GH_HZ),2,25);S.state='ride';showHud(true);
