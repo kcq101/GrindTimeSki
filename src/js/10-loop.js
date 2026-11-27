@@ -95,7 +95,7 @@ function frame(now){
     placeCam(false,dt);
     if(window.__side){const yy=skier.position.y;camera.position.set(S.x-4,yy+1,S.z+0.5);camera.lookAt(S.x,yy+0.8,S.z);}
     if(window.__camHook)window.__camHook(camera,skier,S);   /* test hook: tools/test/skier-poses.js frames the skier close up */
-    {const f=64+Math.max(0,postS)*8+S.v*0.15;if(Math.abs(f-camera.fov)>0.01){camera.fov+=(f-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}}
+    {const f=64+Math.max(0,postS)*8+S.v*0.15+(S.fb>0?6:0);if(Math.abs(f-camera.fov)>0.01){camera.fov+=(f-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}}
     updCompass();updBoostBtn();updFlowHud();
     const mph=S.v*2.237;setTxt('spd',Math.round(mph));setTxt('time',S.pre?'Ski toward a sign':fmt(S.t));
     const hy=S.air?S.y:H(S.x,S.z);const ft=Math.max(0,(hy-RUN.h1)*3.281);setTxt('vert',(Math.round(ft/10)*10).toLocaleString()+' ft to go');

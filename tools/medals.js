@@ -1,6 +1,6 @@
 /* Bake medal times: ski every start you can pick off a lift twice on the auto-pilot's line: a cruising bot (stands tall above ~36 mph,
    never boosts) and a fast bot (tucked the whole way, boosting whenever it can, flow boosts included).
-   bronze = the cruiser's time, gold = the fast bot +8%, silver halfway. Keyed by start trail and the base reached (the same key as best
+   bronze = the cruiser's time +3%, gold = the fast bot +8%, silver halfway. Keyed by start trail and the base reached (the same key as best
    times); the fast bot's base wins if they differ. Starts it can't finish get no medals. Writes data/medals.json; rebuild after.
    Usage: node tools/medals.js [trail names…]   (re-run after physics or trail changes) */
 const { open, AUTOPILOT, ROOT } = require('./test/harness'); const fs = require('fs'), path = require('path');
@@ -18,10 +18,14 @@ const { open, AUTOPILOT, ROOT } = require('./test/harness'); const fs = require(
     for (const [tr, top] of starts) { const c = await ski(tr, top, false), f = await ski(tr, top, true); R.push({ name: tr.name, top, c, f }); }
     return R;
   }, only);
-  const file = path.join(ROOT, 'data/medals.json'); let M = {}; try { M = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) {}
+  /* a full bake starts a fresh table (so keys for bases the bot no longer reaches go away), but a start the fast bot failed this time keeps
+     its old entries; naming trails only updates those */
+  const file = path.join(ROOT, 'data/medals.json'); let OLD = {}; try { OLD = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (e) {}
+  const M = only.length ? Object.assign({}, OLD) : {};
+  if (!only.length) for (const r of rows) if (!r.f.base) for (const k of Object.keys(OLD)) if (k.startsWith(r.name + '>')) M[k] = OLD[k];
   const r1 = x => Math.round(x * 10) / 10;
   for (const r of rows) { const f = r.f, c = r.c; if (!f.base) { console.log(`${r.name} (${r.top}): fast bot reached no base, no medals`); continue; }
-    const gold = f.t * 1.08, bronze = c.base === f.base && c.t > gold * 1.15 ? c.t : gold * 1.4, key = r.name + '>' + f.base;
+    const gold = f.t * 1.08, bronze = (c.base === f.base && c.t > gold * 1.15 ? c.t : gold * 1.4) * 1.03, key = r.name + '>' + f.base;
     M[key] = [r1(gold), r1((gold + bronze) / 2), r1(bronze)];
     console.log(`${r.name} (${r.top}) -> ${f.baseName}: fast ${f.t}s (${f.crashes} crashes, ${JSON.stringify(f.flow)}), cruise ${c.t}s${c.base !== f.base ? ' to ' + c.baseName : ''} | gold ${M[key][0]} silver ${M[key][1]} bronze ${M[key][2]}`); }
   fs.writeFileSync(file, JSON.stringify(M, Object.keys(M).sort(), 0).replace(/\],"/g, '],\n"') + '\n');

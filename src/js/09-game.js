@@ -7,7 +7,7 @@ const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
 const diffIcon=d=>d==='g'?'<div class="ci"></div>':d==='b'?'<div class="sq"></div>':d==='dd'?'<div class="dia"></div><div class="dia"></div>':'<div class="dia"></div>';
-function reset(){S.runId=(S.runId||0)+1;Object.assign(FLOW,{v:0,chain:0,lastT:-9,edge:0,carveT:0,thAcc:0,skT:0,ready:false,n:{}});hitStop=0;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
+function reset(){S.runId=(S.runId||0)+1;S.fb=0;Object.assign(FLOW,{v:0,chain:0,lastT:-9,edge:0,carveT:0,thAcc:0,skT:0,ready:false,n:{}});hitStop=0;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
   S.x=RUN.x;S.z=RUN.z;S.gyp=undefined;S.gvp=undefined;setTxt('lblTop',RUN.top);setTxt('lblBot',RUN.dest?RUN.dest.name:'Base');S.th=RUN.th;S.v=2;S.t=0;S.top=0;S.crashes=0;S.cool=0;S.shake=0;S.finT=0;steer=0;steerIn=0;snapPrev();lerpIn(1);lerpOut();placeCam(true);}
 let curTrail='';
 function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
@@ -136,7 +136,7 @@ function addTracks(){
     trkPush(t,ax,H(ax,az)+0.03,az,bx,H(bx,bz)+0.03,bz);
     t.g.attributes.position.needsUpdate=true;t.g.setDrawRange(0,Math.max(0,(t.n-1)*6));});
 }
-function bail(msg){flowBreak(0.3);S.crashes++;S.cool=1.2;S.shake=0.5;S.air=false;updPips();if(mixer){S.crashed=true;S.v=0;setMode('fall');}else S.v=0;toast(msg);
+function bail(msg){if(S.fb>0){flowSave();return;}flowBreak(0.3);S.crashes++;S.cool=1.2;S.shake=0.5;S.air=false;updPips();if(mixer){S.crashed=true;S.v=0;setMode('fall');}else S.v=0;toast(msg);
   for(let i=0;i<40;i++)emit(S.x,H(S.x,S.z)+0.5,S.z,(rnd()-0.5)*5,rnd()*3,(rnd()-0.5)*5,0.9);}
 /* trees are forgiving (Nov 26): the woods between trails should be fun to duck into, not a minefield.
    - the hitbox is the trunk, not the branches (was 1.1*s+0.3 ≈ 1.5 m, now ≈ 0.6 m)
@@ -156,6 +156,9 @@ function treeHit(gy,dt){
       const r=TREE_R*t[2]+TREE_R0,d2=ddx*ddx+ddz*ddz;
       if(d2<r*r&&S.cool<=0){
         const L=Math.sqrt(d2)||1,sp=S.v,head=Math.max(0,-(ddx*fx+ddz*fz)/L);   /* 1 = straight into the trunk */
+        /* flow boost: blast through in a burst of snow off the branches, no slowdown */
+        if(S.fb>0){S.x=t[0]+ddx/L*(r+0.15);S.z=t[1]+ddz/L*(r+0.15);S.cool=0.2;sfxTree(sp*0.3);
+          for(let i=0;i<26;i++)emitPuff(t[0]+(rnd()-0.5)*2.4,gy+1.5+rnd()*3.5,t[1]+(rnd()-0.5)*2.4,(rnd()-0.5)*3,-0.3-rnd(),(rnd()-0.5)*3,1.1+rnd()*0.6);continue;}
         S.x=t[0]+ddx/L*(r+0.15);S.z=t[1]+ddz/L*(r+0.15);
         /* swing the heading to slide along the tangent, away from the trunk */
         const side=(ddx*rx+ddz*rz)>=0?1:-1;S.th+=side*(0.35+0.6*head);
@@ -174,7 +177,7 @@ function treeHit(gy,dt){
   if(!S.air&&S.v>2&&weave){const gain=clamp(S.v/12,0.4,1.6);S.th-=clamp(weave,-1.2,1.2)*gain*1.6*dt;}
   /* threading: brushed past within ~1.8 m of a trunk at speed */
   if(near&&!S.air&&S.v>9&&threadCd<=0){const d=Math.sqrt(nearD),r=TREE_R*near[2]+TREE_R0;if(d<r+1.3){
-    threadCd=0.45;threadN++;threadT=2.5;S.v=Math.min(41,S.v+0.35);flowAdd(0.06,0.4,'thread');
+    threadCd=0.45;threadN++;threadT=2.5;S.v=Math.min(vmax(),S.v+0.35);flowAdd(0.06,0.4,'thread');
     for(let i=0;i<10;i++)emitPuff(near[0]+(rnd()-0.5)*1.5,H(near[0],near[1])+1.8+rnd()*2.5,near[1]+(rnd()-0.5)*1.5,(rnd()-0.5)*1.5,-0.3-rnd()*0.6,(rnd()-0.5)*1.5,1.1);
     if(threadN===3)toast('Threading the trees!');else if(threadN===6)toast('Tree ninja!');else if(threadN===10)toast('GLADE MASTER!');}}
 }
@@ -191,7 +194,8 @@ function physics(dt){
   /* top of a lift: stand still until you steer, tuck or jump */
   if(!S.go){if(Math.abs(si)>0.05||Math.abs(pi)>0.05||S.air)S.go=true;else{S.v=0;return {tk:false,off:false};}}
   if(S.land>0)S.land-=dt;
-  if(S.bcd>0)S.bcd-=dt;if(S.bst>0){S.bst-=dt;S.v=Math.min(41,S.v+BOOST.acc*dt);}
+  if(S.fb>0){S.fb-=dt;if(S.fb<=0)flowBoostEnd();}
+  if(S.bcd>0)S.bcd-=dt;if(S.bst>0){S.bst-=dt;S.v=Math.min(vmax(),S.v+BOOST.acc*dt);}
   if(S.air){
     S.airT+=dt;S.vy-=GRAV*dt;S.y+=S.vy*dt;S.v*=1-0.03*dt;
     S.th-=steer*0.6*dt;
@@ -212,9 +216,9 @@ function physics(dt){
       const fe=Math.abs(S.flip-Math.round(S.flip/TAU)*TAU),se=Math.abs(S.spinT-S.spin)+Math.abs(S.spin-Math.round(S.spin/TAU)*TAU),err=Math.max(fe,se);
       const nf=Math.round(S.flip/TAU),ns=Math.round(Math.abs(S.spinT)/TAU);
       if(err>1.25){S.flip=0;S.spin=0;S.spinT=0;bail('BAILED!');S.y=gy;return {tk:false,off:false};}
-      else if(err>0.55){S.v*=0.6;S.shake=0.35;toast('Sketchy!');}
+      else if(err>0.55&&!(S.fb>0)){S.v*=0.6;S.shake=0.35;toast('Sketchy!');}
       else if(nf||ns){const fl=nf<0?(nf===-1?'Backflip':(nf===-2?'Double backflip':'Triple backflip')):(nf===1?'Front flip':(nf>1?'Double front flip':''));
-        const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(41,S.v+2);toast(name);}
+        const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(vmax(),S.v+2);toast(name);}
       else if(S.airT>(S.autoAir?(S.kick?0.6:1.4):0.9))toast(S.airT.toFixed(1)+'s AIR!');
       landGrade(err,nf,ns);
       S.flip=0;S.spin=0;S.spinT=0;
@@ -235,7 +239,8 @@ function physics(dt){
   {const tgt=S.air?0:sstep(0.6,0.95,Math.abs(steer))*sstep(7,14,S.v);S.sk=(S.sk||0)+(tgt-(S.sk||0))*Math.min(1,dt*(tgt>(S.sk||0)?6:3.5));
    a-=S.sk*(2+0.1*S.v);}
   const up=Math.max(0,-postS),cr=Math.max(0,postS);
-  a-=(0.0032-0.0016*cr+0.0038*up)*S.v*S.v;   /* 0.0042/0.0021 → 0.0036/0.0018 → 0.0032/0.0016: ~25% faster than the original overall */
+  a-=(0.0032-0.0016*cr+0.0038*up)*S.v*S.v*(S.fb>0?0.8:1);
+  if(S.fb>0)a+=FB.acc*(1-sstep(36,FB.vmax,S.v));   /* flow boost: a steady push and less drag */   /* 0.0042/0.0021 → 0.0036/0.0018 → 0.0032/0.0016: ~25% faster than the original overall */
   a-=0.7*up*(S.v>2?1:0);
   S.v+=a*dt;
   S.v*=1-Math.abs(steer)*0.19*dt;
@@ -244,7 +249,7 @@ function physics(dt){
   if(S.pre&&S.v<5.5)S.v+=2.2*dt;   /* skating across the top to the trail you want */
   else if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
   else if(S.v<4&&S.state==='ride'&&off)S.v+=3.2*dt;
-  S.v=clamp(S.v,0,41);
+  S.v=clamp(S.v,0,vmax());
   const rate=steer*(2.3-Math.min(1.25,S.v/22))*(1+0.3*(S.sk||0))*(1-0.28*(S.pw||0));
   S.th-=rate*dt;flowCarve(rate,off,dt);
   if(S.v<1.2&&Math.hypot(gx,gz)>0.03){let d=Math.atan2(-gx,-gz)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));S.th+=d*Math.min(1,dt*0.8);}

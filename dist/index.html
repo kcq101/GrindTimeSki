@@ -146,6 +146,12 @@
   /* flow meter: a gold arc just outside the boost ring; full = the button turns gold and the next boost is a flow boost */
   #boostBtn::after{content:'';position:absolute;inset:-7px;border-radius:50%;pointer-events:none;background:conic-gradient(#ffc23d calc(var(--flow,0)*360deg),rgba(255,255,255,.18) 0);
     -webkit-mask:radial-gradient(circle,transparent 63%,#000 65%);mask:radial-gradient(circle,transparent 63%,#000 65%)}
+  #boostBtn.star{color:#3a2400;background:radial-gradient(circle,#ffd45a 60%,transparent 61%),conic-gradient(#fff 360deg,#fff 0);animation:starB .4s ease-in-out infinite alternate}
+  @keyframes starB{from{box-shadow:0 0 10px rgba(255,194,61,.6),0 4px 14px rgba(0,0,0,.3)}to{box-shadow:0 0 26px rgba(255,214,90,1),0 4px 14px rgba(0,0,0,.3)}}
+  #vig::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%,rgba(255,206,70,0) 46%,rgba(255,188,40,.55) 100%);opacity:0;transition:opacity .35s}
+  #vig.star::after{opacity:1;animation:starV .4s ease-in-out infinite alternate}#vig.star.end::after{animation-duration:.14s}
+  @keyframes starV{from{opacity:.55}to{opacity:1}}
+  @media (prefers-reduced-motion:reduce){#vig.star::after,#boostBtn.star{animation:none}}
   #boostBtn.flow{color:#3a2400;background:radial-gradient(circle,#ffc23d 60%,transparent 61%),conic-gradient(#fff 360deg,#fff 0);box-shadow:0 0 18px rgba(255,194,61,.85),0 4px 14px rgba(0,0,0,.3)}
   #flowX{position:fixed;left:80px;bottom:212px;z-index:4;background:#ffc23d;color:#3a2400;border-radius:9px;padding:1px 6px;font:800 13px 'Barlow Condensed',sans-serif;pointer-events:none}
   #grade{position:fixed;left:0;right:0;top:21%;text-align:center;z-index:4;pointer-events:none;font:800 34px/1 'Barlow Condensed',sans-serif;letter-spacing:.06em;opacity:0;text-shadow:0 2px 10px rgba(0,0,0,.35)}
@@ -1434,7 +1440,7 @@ function jump(){
   if(S.state!=='ride'||S.crashed)return;
   if(!S.air){S.autoAir=false;S.flipArm=Math.abs(postS)<0.3;S.gyp=undefined;S.gvp=undefined;S.air=true;S.y=H(S.x,S.z)+0.05;S.vy=6+Math.min(2,S.v*0.06);S.boosts=0;S.airT=0;trkBreak=true;S.flip=0;S.spin=0;S.spinT=0;if(pendSpin&&performance.now()-pendSpin.t<450)S.spinT=-pendSpin.d*TAU;pendSpin=null;
     for(let i=0;i<14;i++)emit(S.x+(rnd()-0.5)*0.8,S.y,S.z+(rnd()-0.5)*0.8,(rnd()-0.5)*2,0.5+rnd()*1.2,(rnd()-0.5)*2,0.45);}
-  else if(S.boosts<2){S.boosts++;S.vy=Math.max(S.vy,0)+5.5;S.v=Math.min(41,S.v+1.5);
+  else if(S.boosts<2){S.boosts++;S.vy=Math.max(S.vy,0)+5.5;S.v=Math.min(vmax(),S.v+1.5);
     for(let i=0;i<18;i++)emit(S.x+(rnd()-0.5)*0.6,S.y+0.3,S.z+(rnd()-0.5)*0.6,(rnd()-0.5)*3,-1-rnd()*2,(rnd()-0.5)*3,0.5);
     toast(S.boosts===1?'DOUBLE!':'TRIPLE!');}
   updPips();
@@ -1455,7 +1461,7 @@ const toastEl=document.getElementById('toast');let toastT=0;
 function toast(msg){toastEl.textContent=msg;toastEl.style.opacity=1;toastT=1.3;}
 const $=id=>document.getElementById(id);
 const diffIcon=d=>d==='g'?'<div class="ci"></div>':d==='b'?'<div class="sq"></div>':d==='dd'?'<div class="dia"></div><div class="dia"></div>':'<div class="dia"></div>';
-function reset(){S.runId=(S.runId||0)+1;Object.assign(FLOW,{v:0,chain:0,lastT:-9,edge:0,carveT:0,thAcc:0,skT:0,ready:false,n:{}});hitStop=0;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
+function reset(){S.runId=(S.runId||0)+1;S.fb=0;Object.assign(FLOW,{v:0,chain:0,lastT:-9,edge:0,carveT:0,thAcc:0,skT:0,ready:false,n:{}});hitStop=0;S.bst=0;S.bcd=0;S.pre=null;S.go=true;S.curTr=null;S.curS=null;blob.visible=true;castSh.visible=true;simAcc=0;myRide.visible=false;camera.fov=64;curTrail='';S.path=[];S.endBase=null;S.crashed=false;S.air=false;S.flip=0;S.spin=0;S.spinT=0;S.tricks=0;qAlign.identity();S.boosts=0;S.land=0;S.skT=-1;postS=0;postIn=0;clearTracks();updPips();if(mixer){crouch=0.3;setMode('ride',0);mixer.update(0.016);}
   S.x=RUN.x;S.z=RUN.z;S.gyp=undefined;S.gvp=undefined;setTxt('lblTop',RUN.top);setTxt('lblBot',RUN.dest?RUN.dest.name:'Base');S.th=RUN.th;S.v=2;S.t=0;S.top=0;S.crashes=0;S.cool=0;S.shake=0;S.finT=0;steer=0;steerIn=0;snapPrev();lerpIn(1);lerpOut();placeCam(true);}
 let curTrail='';
 function updTrailHud(){const t=trailInfo(S.x,S.z);if(S.pre){preCommit();return;}if(!t.tr||t.d>t.w+6)return;const tr=t.tr;
@@ -1584,7 +1590,7 @@ function addTracks(){
     trkPush(t,ax,H(ax,az)+0.03,az,bx,H(bx,bz)+0.03,bz);
     t.g.attributes.position.needsUpdate=true;t.g.setDrawRange(0,Math.max(0,(t.n-1)*6));});
 }
-function bail(msg){flowBreak(0.3);S.crashes++;S.cool=1.2;S.shake=0.5;S.air=false;updPips();if(mixer){S.crashed=true;S.v=0;setMode('fall');}else S.v=0;toast(msg);
+function bail(msg){if(S.fb>0){flowSave();return;}flowBreak(0.3);S.crashes++;S.cool=1.2;S.shake=0.5;S.air=false;updPips();if(mixer){S.crashed=true;S.v=0;setMode('fall');}else S.v=0;toast(msg);
   for(let i=0;i<40;i++)emit(S.x,H(S.x,S.z)+0.5,S.z,(rnd()-0.5)*5,rnd()*3,(rnd()-0.5)*5,0.9);}
 /* trees are forgiving (Nov 26): the woods between trails should be fun to duck into, not a minefield.
    - the hitbox is the trunk, not the branches (was 1.1*s+0.3 ≈ 1.5 m, now ≈ 0.6 m)
@@ -1604,6 +1610,9 @@ function treeHit(gy,dt){
       const r=TREE_R*t[2]+TREE_R0,d2=ddx*ddx+ddz*ddz;
       if(d2<r*r&&S.cool<=0){
         const L=Math.sqrt(d2)||1,sp=S.v,head=Math.max(0,-(ddx*fx+ddz*fz)/L);   /* 1 = straight into the trunk */
+        /* flow boost: blast through in a burst of snow off the branches, no slowdown */
+        if(S.fb>0){S.x=t[0]+ddx/L*(r+0.15);S.z=t[1]+ddz/L*(r+0.15);S.cool=0.2;sfxTree(sp*0.3);
+          for(let i=0;i<26;i++)emitPuff(t[0]+(rnd()-0.5)*2.4,gy+1.5+rnd()*3.5,t[1]+(rnd()-0.5)*2.4,(rnd()-0.5)*3,-0.3-rnd(),(rnd()-0.5)*3,1.1+rnd()*0.6);continue;}
         S.x=t[0]+ddx/L*(r+0.15);S.z=t[1]+ddz/L*(r+0.15);
         /* swing the heading to slide along the tangent, away from the trunk */
         const side=(ddx*rx+ddz*rz)>=0?1:-1;S.th+=side*(0.35+0.6*head);
@@ -1622,7 +1631,7 @@ function treeHit(gy,dt){
   if(!S.air&&S.v>2&&weave){const gain=clamp(S.v/12,0.4,1.6);S.th-=clamp(weave,-1.2,1.2)*gain*1.6*dt;}
   /* threading: brushed past within ~1.8 m of a trunk at speed */
   if(near&&!S.air&&S.v>9&&threadCd<=0){const d=Math.sqrt(nearD),r=TREE_R*near[2]+TREE_R0;if(d<r+1.3){
-    threadCd=0.45;threadN++;threadT=2.5;S.v=Math.min(41,S.v+0.35);flowAdd(0.06,0.4,'thread');
+    threadCd=0.45;threadN++;threadT=2.5;S.v=Math.min(vmax(),S.v+0.35);flowAdd(0.06,0.4,'thread');
     for(let i=0;i<10;i++)emitPuff(near[0]+(rnd()-0.5)*1.5,H(near[0],near[1])+1.8+rnd()*2.5,near[1]+(rnd()-0.5)*1.5,(rnd()-0.5)*1.5,-0.3-rnd()*0.6,(rnd()-0.5)*1.5,1.1);
     if(threadN===3)toast('Threading the trees!');else if(threadN===6)toast('Tree ninja!');else if(threadN===10)toast('GLADE MASTER!');}}
 }
@@ -1639,7 +1648,8 @@ function physics(dt){
   /* top of a lift: stand still until you steer, tuck or jump */
   if(!S.go){if(Math.abs(si)>0.05||Math.abs(pi)>0.05||S.air)S.go=true;else{S.v=0;return {tk:false,off:false};}}
   if(S.land>0)S.land-=dt;
-  if(S.bcd>0)S.bcd-=dt;if(S.bst>0){S.bst-=dt;S.v=Math.min(41,S.v+BOOST.acc*dt);}
+  if(S.fb>0){S.fb-=dt;if(S.fb<=0)flowBoostEnd();}
+  if(S.bcd>0)S.bcd-=dt;if(S.bst>0){S.bst-=dt;S.v=Math.min(vmax(),S.v+BOOST.acc*dt);}
   if(S.air){
     S.airT+=dt;S.vy-=GRAV*dt;S.y+=S.vy*dt;S.v*=1-0.03*dt;
     S.th-=steer*0.6*dt;
@@ -1660,9 +1670,9 @@ function physics(dt){
       const fe=Math.abs(S.flip-Math.round(S.flip/TAU)*TAU),se=Math.abs(S.spinT-S.spin)+Math.abs(S.spin-Math.round(S.spin/TAU)*TAU),err=Math.max(fe,se);
       const nf=Math.round(S.flip/TAU),ns=Math.round(Math.abs(S.spinT)/TAU);
       if(err>1.25){S.flip=0;S.spin=0;S.spinT=0;bail('BAILED!');S.y=gy;return {tk:false,off:false};}
-      else if(err>0.55){S.v*=0.6;S.shake=0.35;toast('Sketchy!');}
+      else if(err>0.55&&!(S.fb>0)){S.v*=0.6;S.shake=0.35;toast('Sketchy!');}
       else if(nf||ns){const fl=nf<0?(nf===-1?'Backflip':(nf===-2?'Double backflip':'Triple backflip')):(nf===1?'Front flip':(nf>1?'Double front flip':''));
-        const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(41,S.v+2);toast(name);}
+        const name=(fl+(ns?(fl?' ':'')+(ns*360):'')).trim()+'!';S.tricks++;S.v=Math.min(vmax(),S.v+2);toast(name);}
       else if(S.airT>(S.autoAir?(S.kick?0.6:1.4):0.9))toast(S.airT.toFixed(1)+'s AIR!');
       landGrade(err,nf,ns);
       S.flip=0;S.spin=0;S.spinT=0;
@@ -1683,7 +1693,8 @@ function physics(dt){
   {const tgt=S.air?0:sstep(0.6,0.95,Math.abs(steer))*sstep(7,14,S.v);S.sk=(S.sk||0)+(tgt-(S.sk||0))*Math.min(1,dt*(tgt>(S.sk||0)?6:3.5));
    a-=S.sk*(2+0.1*S.v);}
   const up=Math.max(0,-postS),cr=Math.max(0,postS);
-  a-=(0.0032-0.0016*cr+0.0038*up)*S.v*S.v;   /* 0.0042/0.0021 → 0.0036/0.0018 → 0.0032/0.0016: ~25% faster than the original overall */
+  a-=(0.0032-0.0016*cr+0.0038*up)*S.v*S.v*(S.fb>0?0.8:1);
+  if(S.fb>0)a+=FB.acc*(1-sstep(36,FB.vmax,S.v));   /* flow boost: a steady push and less drag */   /* 0.0042/0.0021 → 0.0036/0.0018 → 0.0032/0.0016: ~25% faster than the original overall */
   a-=0.7*up*(S.v>2?1:0);
   S.v+=a*dt;
   S.v*=1-Math.abs(steer)*0.19*dt;
@@ -1692,7 +1703,7 @@ function physics(dt){
   if(S.pre&&S.v<5.5)S.v+=2.2*dt;   /* skating across the top to the trail you want */
   else if(S.v<4&&S.state==='ride'&&!off)S.v+=1.1*dt;
   else if(S.v<4&&S.state==='ride'&&off)S.v+=3.2*dt;
-  S.v=clamp(S.v,0,41);
+  S.v=clamp(S.v,0,vmax());
   const rate=steer*(2.3-Math.min(1.25,S.v/22))*(1+0.3*(S.sk||0))*(1-0.28*(S.pw||0));
   S.th-=rate*dt;flowCarve(rate,off,dt);
   if(S.v<1.2&&Math.hypot(gx,gz)>0.03){let d=Math.atan2(-gx,-gz)-S.th;d=Math.atan2(Math.sin(d),Math.cos(d));S.th+=d*Math.min(1,dt*0.8);}
@@ -1823,7 +1834,7 @@ function frame(now){
     placeCam(false,dt);
     if(window.__side){const yy=skier.position.y;camera.position.set(S.x-4,yy+1,S.z+0.5);camera.lookAt(S.x,yy+0.8,S.z);}
     if(window.__camHook)window.__camHook(camera,skier,S);   /* test hook: tools/test/skier-poses.js frames the skier close up */
-    {const f=64+Math.max(0,postS)*8+S.v*0.15;if(Math.abs(f-camera.fov)>0.01){camera.fov+=(f-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}}
+    {const f=64+Math.max(0,postS)*8+S.v*0.15+(S.fb>0?6:0);if(Math.abs(f-camera.fov)>0.01){camera.fov+=(f-camera.fov)*(1-Math.exp(-dt*3));camera.updateProjectionMatrix();}}
     updCompass();updBoostBtn();updFlowHud();
     const mph=S.v*2.237;setTxt('spd',Math.round(mph));setTxt('time',S.pre?'Ski toward a sign':fmt(S.t));
     const hy=S.air?S.y:H(S.x,S.z);const ft=Math.max(0,(hy-RUN.h1)*3.281);setTxt('vert',(Math.round(ft/10)*10).toLocaleString()+' ft to go');
@@ -2638,13 +2649,13 @@ const LIGHTS={
     zen:[.21,.33,.66],hor:[1,.79,.58],glow:[1,.6,.3],skyK:0,ridgeK:0.3,wx:[0,0.25],grade:[.03,.38,.1,.016,-.012,0,.02,.04,.012,-.04]},
   flat:{label:'Flat light',sun:[0.2,0.85,0.45],sunC:0xf1f4f9,sunI:0.3,hemi:[0xeef2f7,0xa6aeb9,0.92],fill:0.1,fog:0xd5dae0,thick:0xdde1e6,far0:2100,near0:120,
     zen:[.70,.74,.80],hor:[.86,.88,.91],glow:[.22,.22,.22],skyK:0.8,ridgeK:0.55,wx:[0.45,1],grade:[0,-.04,-.18,.02,0,0,.008,0,0,0]}};
-let lightId='changing',lightMode='random';
+let lightId='changing',lightMode='random';const GBASE=new Float32Array(12);   /* the preset's grade; star mode layers on top of it */
 function applyLight(id){const P=LIGHTS[id]||LIGHTS.changing;lightId=LIGHTS[id]?id:'changing';
   SUN_DIR.set(...P.sun).normalize();sun.position.copy(SUN_DIR).multiplyScalar(60);_sunAway.set(-SUN_DIR.x,0,-SUN_DIR.z).normalize();
   sun.color.setHex(P.sunC);SUN_I=P.sunI;sun.intensity=P.sunI;hemi.color.setHex(P.hemi[0]);hemi.groundColor.setHex(P.hemi[1]);hemi.intensity=P.hemi[2];fill.intensity=P.fill;
   FOG_CLEAR.setHex(P.fog);FOG_THICK.setHex(P.thick);Object.assign(WX,{far0:P.far0,near0:P.near0,skyK:P.skyK,ridgeK:P.ridgeK,lo:P.wx[0],hi:P.wx[1]});
   const u=skyMat.uniforms;u.uZen.value.setRGB(...P.zen);u.uHor.value.setRGB(...P.hor);u.uGlow.value.setRGB(...P.glow);
-  const g=P.grade;GRADE.set([g[0],g[1],g[2],g[3],g[4],g[5],g[6],0,g[7],g[8],g[9],0]);
+  const g=P.grade;GRADE.set([g[0],g[1],g[2],g[3],g[4],g[5],g[6],0,g[7],g[8],g[9],0]);GBASE.set(GRADE);
   updLiteChips();}
 /* Math.random, not rnd(): rnd is the seeded world generator and must not shift */
 function pickLight(){const k=Object.keys(LIGHTS).filter(k=>k!==lightId);return k[Math.floor(Math.random()*k.length)];}
@@ -2663,7 +2674,7 @@ function wireLite(){document.querySelectorAll('.lite button').forEach(b=>b.oncli
    last ~0.075 s, so they read as speed. All in the vertex shader (one draw call, 440 triangles), only above ~35 mph. */
 const STREAK_N=220,STREAK_B=22;
 const streakMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
-  uniforms:{uCam:{value:new THREE.Vector3()},uVel:{value:new THREE.Vector3()},uAmt:{value:0},uW:{value:1.5},uRes:{value:new THREE.Vector2(1,1)}},
+  uniforms:{uCam:{value:new THREE.Vector3()},uVel:{value:new THREE.Vector3()},uAmt:{value:0},uW:{value:1.5},uRes:{value:new THREE.Vector2(1,1)},uCol:{value:new THREE.Color(.9,.95,1)}},
   vertexShader:`attribute vec4 aSeed;attribute vec2 aEnd;uniform vec3 uCam,uVel;uniform float uAmt,uW;uniform vec2 uRes;varying float vA,vS;
   void main(){float B=${STREAK_B.toFixed(1)};
     vec3 p=vec3(aSeed.x*B,aSeed.y*6.,aSeed.z*B);p=mod(p-uCam+vec3(B*.5,2.,B*.5),vec3(B,6.,B))-vec3(B*.5,2.,B*.5)+uCam;
@@ -2672,7 +2683,7 @@ const streakMat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,fog:
     if(vA<.004||h.w<.3||q.w<.3){gl_Position=vec4(0.,0.,2.,1.);vA=0.;vS=0.;return;}
     vec2 a=h.xy/h.w,b=q.xy/q.w,dd=(a-b)*uRes;vec2 n=normalize(vec2(-dd.y,dd.x)+1e-4)/uRes;
     vec4 c=mix(h,q,aEnd.x);c.xy+=n*aEnd.y*uW*2.*c.w;vS=aEnd.y;gl_Position=c;}`,
-  fragmentShader:`varying float vA,vS;void main(){gl_FragColor=vec4(vec3(.9,.95,1.)*vA*(1.-vS*vS)*.5,1.);}`});
+  fragmentShader:`uniform vec3 uCol;varying float vA,vS;void main(){gl_FragColor=vec4(uCol*vA*(1.-vS*vS)*.5,1.);}`});
 const streaks=(function(){const N=STREAK_N,S4=new Float32Array(N*4*4),E=new Float32Array(N*4*2),I=[];
   for(let i=0;i<N;i++){const sd=[hash2(i,1,701),hash2(i,2,702),hash2(i,3,703),0.45+0.55*hash2(i,4,704)];
     [[0,-1],[0,1],[1,-1],[1,1]].forEach(([e,s],v)=>{const o=i*4+v;S4.set(sd,o*4);E[o*2]=e;E[o*2+1]=s;});const b=i*4;I.push(b,b+2,b+1,b+1,b+2,b+3);}
@@ -2685,70 +2696,83 @@ function lookFrame(dt){const cp=camera.position,u=streakMat.uniforms;
   if(STREAK.vel)_lkV.copy(STREAK.vel);   /* tests: a fixed motion */
   /* strength and length follow the skier's real speed (the camera can lurch when it catches up); the camera gives the direction */
   const ride=S.state==='ride'||S.state==='finishing',sp=ride?S.v:0,tgt=STREAK.force!=null?STREAK.force:(STREAK.on&&ride?sstep(15,28,sp):0);
-  STREAK.amt+=(tgt-STREAK.amt)*(1-Math.exp(-dt*4));streaks.visible=STREAK.amt>0.01;
+  starFrame(dt,ride);
+  STREAK.amt+=(Math.max(tgt,STAR.a*0.9)-STREAK.amt)*(1-Math.exp(-dt*4));streaks.visible=STREAK.amt>0.01;u.uCol.value.setRGB(.9+.1*STAR.a,.95-.12*STAR.a,1-.62*STAR.a);
   if(streaks.visible){u.uCam.value.copy(cp);u.uVel.value.copy(_lkV);if(!STREAK.vel&&ride){const l=_lkV.length();if(l>0.5)u.uVel.value.multiplyScalar(Math.max(sp,5)/l);}u.uAmt.value=STREAK.amt;const db=renderer.domElement;u.uRes.value.set(db.width,db.height);u.uW.value=Math.max(1.2,renderer.getPixelRatio()*1.1);}}
-window.__kr.light={apply:applyLight,setMode:setLightMode,runLight,get id(){return lightId},get mode(){return lightMode},LIGHTS,GRADE,streaks};
+/* star mode (flow boost) look: eases in over ~0.25 s and out over ~0.6 s. On top of the preset's grade: a touch brighter and punchier, more
+   saturated, warm shadows, the blue pulled out of the highlights (gold without blowing the snow out), all pulsing ~2.5 times a second (7 in the last 2 s). The skier's own materials glow gold in time, and the
+   vignette (a DOM layer that's already drawn) gets a pulsing gold edge. */
+const STAR={a:0,on:false,mats:null};const vigEl=document.getElementById('vig');
+function starFrame(dt,ride){const want=ride&&S.fb>0?1:0;STAR.a+=(want-STAR.a)*(1-Math.exp(-dt*(want?9:4)));if(STAR.a<0.003&&!want)STAR.a=0;
+  const end=S.fb>0&&S.fb<2;if(!!want!==STAR.on||vigEl.classList.contains('end')!==end){STAR.on=!!want;vigEl.classList.toggle('star',STAR.on);vigEl.classList.toggle('end',end);}
+  if(want&&!STAR.mats){STAR.mats=[];skier.traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive&&!STAR.mats.includes(o.material))STAR.mats.push(o.material);});}   /* the loaded model's materials, so first use */
+  if(STAR.a===0&&!STAR.dirty)return;STAR.dirty=STAR.a>0;
+  const a=STAR.a,p=0.5+0.5*Math.sin(performance.now()/1000*Math.PI*2*(end?7:2.5));
+  GRADE.set(GBASE);GRADE[0]+=a*(0.012+0.03*p);GRADE[1]+=a*0.06;GRADE[2]+=a*0.16;GRADE[4]+=a*0.055;GRADE[5]+=a*0.038;GRADE[6]-=a*0.05;GRADE[8]+=a*(0.012+0.02*p);GRADE[9]+=a*(0.01+0.015*p);GRADE[10]-=a*(0.075+0.035*p);
+  const e=a*(0.14+0.2*p);for(const m of STAR.mats||[])m.emissive.setRGB(e,e*0.72,e*0.18);}
+window.__kr.light={STAR,GBASE,apply:applyLight,setMode:setLightMode,runLight,get id(){return lightId},get mode(){return lightMode},LIGHTS,GRADE,streaks};
 /* ---------- medals, flow meter, landing grades ----------
    Medals: bronze / silver / gold times per start trail and base, baked by tools/medals.js from a bot that tucks the whole way and
    boosts whenever it can (gold ≈ that bot +2%, silver +15%, bronze +35%). Best medal per trail is remembered.
    Flow: linked clean carves (on edge at speed, no skid, the edge changes after a real turn), tree threading and clean landings fill
    the meter and cut the boost recharge; events within ~3 s chain (each link worth +15%, up to ×2.2). Skids, tree hits and bails break
-   the chain and drain it. Full meter: the next BOOST is a flow boost (about twice as long, ignores the recharge).
+   the chain and drain it. Full meter: the next BOOST is a flow boost: star mode for FB.T s (below).
    Landings: any air over 0.6 s (or a trick) gets a grade: PERFECT (square, soft), GREAT, GOOD. Big ones (1.1 s+ or a trick) graded
    GREAT or better freeze the action for ~0.1 s; big ones buzz the phone where the browser allows it. */
-const MEDALS={"Alpine Training Venue>rh":[70.5,91.6,112.7],
-"Bear Claw>bear":[47.4,69.7,91.9],
-"Blue Heaven>bear":[173.2,207.9,242.5],
-"Bunny Buster - Upper>k1":[47.2,64.2,81.2],
-"Carpenter's Run>sky1":[200.4,239.6,278.8],
-"Cascade - Headwall>k1":[60.6,99.5,138.5],
-"Catwalk - Upper>k1":[80.3,106.5,132.8],
-"Chute>k1":[53.1,69.9,86.7],
-"Devil's Fiddle>bear":[58,73.3,88.7],
-"Double Dipper - Upper>k1":[65.6,89.5,113.3],
-"Downdraft>k1":[74,98.5,123.1],
-"Dream Maker Headwall>bear":[58.9,78.7,98.6],
-"Easy Street>rh":[85.6,110.1,134.6],
-"Frolic>rh":[106.3,145.7,185],
-"Full House>k1":[46.1,60.7,75.3],
-"Gateway>bear":[157,207,257],
-"Great Eastern>sky1":[262,352.3,442.6],
-"Growler>bear":[51.1,61.3,71.5],
-"Header>rh":[44.9,68,91.2],
-"High Traverse>k1":[100.7,139.2,177.8],
-"Highlander>shs":[37.6,45.1,52.6],
-"Killink>k1":[83.7,110.8,137.9],
-"Low Traverse>k1":[74.1,98.5,123],
-"Mouse Run - Upper>k1":[40.6,65.1,89.6],
-"Needle's Eye>mid":[38,52.9,67.7],
-"North Star>k1":[61.2,80.2,99.2],
-"Old Superstar>k1":[41.7,56,70.3],
-"Outer Limits>bear":[41.8,52.5,63.1],
-"Ovation>k1":[45.6,63.4,81.1],
-"Panic Button>mid":[33,43.9,54.8],
-"Pipe Dream>bear":[166.9,226.6,286.4],
-"Powerline>k1":[96.6,123.8,151.1],
-"Reason>k1":[86.8,116.1,145.3],
-"Ridge Run>k1":[96.6,126.4,156.3],
-"Ridgeview>bear":[52.3,66.2,80.1],
-"Rime>k1":[77.5,107.6,137.7],
-"Royal Flush - Upper>k1":[58.9,77.5,96.2],
-"Skye Hawk>k1":[38.5,49.6,60.7],
-"Skyeburst - Upper>bear":[50,69.5,89.1],
-"Skyelark - Upper>k1":[51,67.3,83.6],
-"Snowshed Slope>shs":[40.5,59.3,78.2],
-"Solitude>bear":[155.7,219.7,283.8],
-"South Ridge Link>bear":[163.3,222.8,282.3],
-"Stash Way>bear":[160,208.6,257.2],
-"Stitch Line>mid":[27.4,37.3,47.2],
-"Superstar>k1":[29,38.6,48.3],
-"The Jug - Upper>bear":[153,210.7,268.4],
-"The Stairs>mid":[36.8,49.7,62.5],
-"The Stash>bear":[56.9,75.5,94.2],
-"Thimble>mid":[39.5,52.9,66.4],
-"Twister>rh":[65.8,86.3,106.7],
-"Vertigo - Headwall>mid":[37.4,48.3,59.3],
-"Wildfire>bear":[44.3,57.9,71.5]}||{};
+const MEDALS={"Alpine Training Venue>rh":[70.5,93.4,116.3],
+"Bear Claw>bear":[46,70.3,94.6],
+"Blue Heaven>bear":[172,210.0,247.9],
+"Bunny Buster - Upper>k1":[47.2,65.4,83.6],
+"Carpenter's Run>sky1":[200.1,243.6,287.2],
+"Cascade - Headwall>k1":[58.5,102.0,145.4],
+"Catwalk - Upper>k1":[82.8,109.7,136.6],
+"Chute>k1":[53,71.2,89.3],
+"Devil's Fiddle>bear":[55.4,73.9,92.4],
+"Double Dipper - Upper>k1":[65.6,90.9,116.2],
+"Downdraft>k1":[74,100.4,126.8],
+"Dream Maker Headwall>bear":[59.5,80.6,101.6],
+"Easy Street>rh":[85.7,112.1,138.5],
+"Frolic>rh":[105.3,148.0,190.6],
+"Full House>k1":[46.1,61.8,77.6],
+"Gateway>bear":[157.6,211.4,265.1],
+"Great Eastern>sky1":[262,349.9,437.8],
+"Great Northern>k1":[130.1,201.0,271.9],
+"Growler>bear":[35.6,43.0,50.3],
+"Header>rh":[44.8,69.4,93.9],
+"High Traverse>k1":[100.5,141.8,183.2],
+"Highlander>k1":[29.6,36.2,42.7],
+"Killink>k1":[83.8,112.8,141.9],
+"Low Traverse>k1":[73.9,100.3,126.7],
+"Mouse Run - Upper>k1":[40.6,66.6,92.6],
+"Needle's Eye>mid":[38,53.8,69.7],
+"North Star>k1":[60.7,81.8,103.0],
+"Old Superstar>k1":[42.4,57.4,72.4],
+"Outer Limits>bear":[39.1,52.1,65.1],
+"Ovation>k1":[46.3,64.9,83.5],
+"Panic Button>mid":[33,44.8,56.5],
+"Pipe Dream>bear":[165.6,230.0,294.4],
+"Powerline>k1":[96.6,126.2,155.8],
+"Reason>k1":[86.8,118.1,149.4],
+"Ridge Run>k1":[96.6,128.8,161.1],
+"Ridgeview>bear":[49,66.2,83.4],
+"Rime>k1":[77.5,109.6,141.8],
+"Royal Flush - Upper>k1":[58.8,78.9,99.0],
+"Skye Hawk>k1":[38.5,50.6,62.6],
+"Skyeburst - Upper>bear":[50,70.9,91.8],
+"Skyelark - Upper>k1":[51,68.4,85.9],
+"Snowshed Slope>shs":[40.6,60.6,80.5],
+"Solitude>bear":[150.8,221.4,292.0],
+"South Ridge Link>bear":[163.9,227.4,290.8],
+"Stash Way>bear":[161.1,213.0,264.9],
+"Stitch Line>mid":[27.4,38.0,48.6],
+"Superstar>k1":[28.5,39.0,49.6],
+"The Jug - Upper>bear":[152.6,214.4,276.1],
+"The Stairs>mid":[36.8,50.6,64.4],
+"The Stash>bear":[55.4,76.2,97.0],
+"Thimble>mid":[39.5,54.0,68.4],
+"Twister>rh":[66.2,88.1,109.9],
+"Vertigo - Headwall>mid":[37.4,49.2,60.9],
+"Wildfire>bear":[44.1,58.8,73.6]}||{};
 const MEDAL_N=['','gold','silver','bronze'];
 function medalFor(key,t){const m=MEDALS[key];if(!m)return 0;return t<=m[0]?1:t<=m[1]?2:t<=m[2]?3:0;}
 function medalBest(name){let b=0;try{b=+localStorage.getItem('kr_medalT_'+name)||0;}catch(e){}return b;}
@@ -2765,7 +2789,7 @@ function medalDot(name){const b=medalBest(name);return b?'<i class="mdot '+MEDAL
 
 function flowAdd(a,cd,kind){if(S.state!=='ride'||S.pre)return;
   FLOW.chain=S.t-FLOW.lastT<3.2?Math.min(9,FLOW.chain+1):1;FLOW.lastT=S.t;
-  FLOW.v=Math.min(1,FLOW.v+a*(1+0.15*(FLOW.chain-1)));S.bcd=Math.max(0,(S.bcd||0)-cd);FLOW.n[kind]=(FLOW.n[kind]||0)+1;
+  if(!(S.fb>0))FLOW.v=Math.min(1,FLOW.v+a*(1+0.15*(FLOW.chain-1)));   /* the meter doesn't refill during a flow boost */S.bcd=Math.max(0,(S.bcd||0)-cd);FLOW.n[kind]=(FLOW.n[kind]||0)+1;
   if(FLOW.v>=1&&!FLOW.ready){FLOW.ready=true;toast('FLOW BOOST READY');}}
 function flowBreak(keep){FLOW.chain=0;FLOW.edge=0;FLOW.carveT=0;FLOW.thAcc=0;if(!FLOW.ready)FLOW.v*=keep;}
 /* called every physics step: a clean carve is held on one edge for 0.3 s+ through 20°+ of turn, then the edge changes or the turn ends */
@@ -2778,11 +2802,24 @@ function flowCarve(rate,off,dt){
   /* a long skid (hockey stop) breaks the chain */
   if((S.sk||0)>0.5){FLOW.skT+=dt;if(FLOW.skT>0.45){flowBreak(0.8);FLOW.skT=-1e9;}}else FLOW.skT=0;
   if(!FLOW.ready&&S.t-FLOW.lastT>4)FLOW.v=Math.max(0,FLOW.v-0.04*dt);}
-function flowBoost(){FLOW.ready=false;FLOW.v=0;FLOW.n.boost=(FLOW.n.boost||0)+1;S.go=true;S.bst=BOOST.push*2.4;S.bcd=Math.min(S.bcd||0,BOOST.cd*0.5);sfxSkate();toast('FLOW BOOST!');buzz(25);
-  for(let i=0;i<26;i++)emitPuff(S.x-Math.sin(S.th)*(0.6+rnd()*0.9),(S.air?S.y:H(S.x,S.z))+0.15,S.z-Math.cos(S.th)*(0.6+rnd()*0.9),(rnd()-0.5)*3-Math.sin(S.th)*3,0.5+rnd()*1.6,(rnd()-0.5)*3-Math.cos(S.th)*3,0.8);}
+/* Flow boost = star mode, FB.T seconds: a big shove off the line, then a steady push with less drag and top speed 41 → 45 m/s (92 → 100 mph);
+   you can't crash (trees burst into snow and you carry on, slams, bails, ejections and sketchy landings are saved); and the world goes a
+   little gold: the grade warms and pulses, the speed streaks turn gold and stay on, a gold edge glow, the skier glows, the view widens.
+   The last 2 s pulse faster, like a star running out. The look is applied per frame in 16-look.js (starFrame). */
+const FB={T:11,acc:2.4,vmax:45};
+function vmax(){return S.fb>0?FB.vmax:41;}
+function flowBoost(){FLOW.ready=false;FLOW.v=0;FLOW.n.boost=(FLOW.n.boost||0)+1;S.go=true;S.fb=FB.T;S.bst=BOOST.push*3;S.bcd=Math.min(S.bcd||0,BOOST.cd*0.5);sfxSkate();sfxStar(true);toast('FLOW BOOST!');buzz([30,30,30,30,60]);
+  for(let i=0;i<40;i++)emitPuff(S.x-Math.sin(S.th)*(0.6+rnd()*0.9),(S.air?S.y:H(S.x,S.z))+0.15,S.z-Math.cos(S.th)*(0.6+rnd()*0.9),(rnd()-0.5)*4-Math.sin(S.th)*3,0.5+rnd()*2,(rnd()-0.5)*4-Math.cos(S.th)*3,0.9);}
+function flowBoostEnd(){S.fb=0;sfxStar(false);}
+/* a crash that star mode turns into a save */
+function flowSave(){S.shake=Math.max(S.shake,0.2);S.cool=0.4;FLOW.n.save=(FLOW.n.save||0)+1;toast('FLOW SAVE!');buzz(30);}
+/* a short rising chime (and a falling one when it runs out): our own four notes, sine + a little triangle */
+function sfxStar(up){if(!SFX.on||!actx||!SFX.master)return;const t0=actx.currentTime,notes=up?[659,880,1109,1319,1760]:[1319,988,740];
+  notes.forEach((f,i)=>{const t=t0+i*(up?0.055:0.08);['sine','triangle'].forEach((ty,j)=>{const o=actx.createOscillator(),g=actx.createGain();o.type=ty;o.frequency.value=f*(j?2:1);
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(j?0.03:0.09,t+0.01);g.gain.exponentialRampToValueAtTime(0.0008,t+(up?0.32:0.25));o.connect(g);g.connect(SFX.master);o.start(t);o.stop(t+0.4);});});}
 let _flS=-1,_flC=-1,_flR=null;const flowX=document.getElementById('flowX');
-function updFlowHud(){const v=Math.round(FLOW.v*40)/40;if(v!==_flS){_flS=v;boostBtn.style.setProperty('--flow',v);}
-  if(FLOW.ready!==_flR){_flR=FLOW.ready;boostBtn.classList.toggle('flow',FLOW.ready);boostBtn.textContent=FLOW.ready?'FLOW':'BOOST';}
+function updFlowHud(){const star=S.fb>0,v=Math.round((star?S.fb/FB.T:FLOW.v)*40)/40;if(v!==_flS){_flS=v;boostBtn.style.setProperty('--flow',v);}   /* during star mode the gold ring counts down */
+  const st=FLOW.ready?'ready':star?'star':'';if(st!==_flR){_flR=st;boostBtn.classList.toggle('flow',st==='ready');boostBtn.classList.toggle('star',st==='star');boostBtn.textContent=st==='ready'?'FLOW':'BOOST';}
   const c=S.t-FLOW.lastT<3.2?FLOW.chain:0;if(c!==_flC){_flC=c;flowX.textContent='×'+c;flowX.classList.toggle('hidden',c<2);}}
 
 function buzz(p){try{if(navigator.vibrate)navigator.vibrate(p);}catch(e){}}
@@ -2795,7 +2832,7 @@ function landGrade(err,nf,ns){const trick=!!(nf||ns);if(S.airT<0.6&&!trick)retur
   flowAdd([0,.07,.12,.18][g]+(trick?0.08*(Math.abs(nf)+ns):0),[0,.5,.9,1.3][g]+(trick?0.5:0),'land');
   const big=S.airT>=1.1||trick;if(big){if(g>=2)hitStop=Math.max(hitStop,g===3?0.11:0.08);buzz(g===3?[35,40,55]:g===2?45:20);}
   FLOW.last={g,big,airT:+S.airT.toFixed(2),vr:+vr.toFixed(1),hs:big&&g>=2?(g===3?0.11:0.08):0};}
-window.__kr.fun={FLOW,MEDALS,medalFor,landGrade,flowAdd,get hitStop(){return hitStop},boost:()=>boost()};
+window.__kr.fun={FLOW,FB,flowBoost,MEDALS,medalFor,landGrade,flowAdd,get hitStop(){return hitStop},boost:()=>boost()};
 })();
 </script>
 </body>
